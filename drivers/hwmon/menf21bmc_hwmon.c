@@ -21,6 +21,7 @@
 #include <linux/jiffies.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/err.h>
 
 #define DRV_NAME  "menf21bmc_hwmon"
 
@@ -218,7 +219,6 @@ static struct platform_driver menf21bmc_hwmon = {
 	.probe		= menf21bmc_hwmon_probe,
 	.driver		= {
 		.name		= DRV_NAME,
-		.owner		= THIS_MODULE,
 	},
 };
 

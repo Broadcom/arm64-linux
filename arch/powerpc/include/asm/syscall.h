@@ -19,7 +19,7 @@
 
 /* ftrace syscalls requires exporting the sys_call_table */
 #ifdef CONFIG_FTRACE_SYSCALLS
-extern const unsigned long *sys_call_table;
+extern const unsigned long sys_call_table[];
 #endif /* CONFIG_FTRACE_SYSCALLS */
 
 static inline long syscall_get_nr(struct task_struct *task,
@@ -90,6 +90,10 @@ static inline void syscall_set_arguments(struct task_struct *task,
 
 static inline int syscall_get_arch(void)
 {
-	return is_32bit_task() ? AUDIT_ARCH_PPC : AUDIT_ARCH_PPC64;
+	int arch = is_32bit_task() ? AUDIT_ARCH_PPC : AUDIT_ARCH_PPC64;
+#ifdef __LITTLE_ENDIAN__
+	arch |= __AUDIT_ARCH_LE;
+#endif
+	return arch;
 }
 #endif	/* _ASM_SYSCALL_H */

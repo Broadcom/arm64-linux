@@ -454,7 +454,7 @@ static int orion_spi_probe(struct platform_device *pdev)
 	spi->master = master;
 
 	of_id = of_match_device(orion_spi_of_match_table, &pdev->dev);
-	devdata = of_id->data;
+	devdata = (of_id) ? of_id->data : &orion_spi_dev_data;
 	spi->devdata = devdata;
 
 	spi->clk = devm_clk_get(&pdev->dev, NULL);
@@ -523,7 +523,7 @@ static int orion_spi_remove(struct platform_device *pdev)
 
 MODULE_ALIAS("platform:" DRIVER_NAME);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int orion_spi_runtime_suspend(struct device *dev)
 {
 	struct spi_master *master = dev_get_drvdata(dev);
@@ -551,7 +551,6 @@ static const struct dev_pm_ops orion_spi_pm_ops = {
 static struct platform_driver orion_spi_driver = {
 	.driver = {
 		.name	= DRIVER_NAME,
-		.owner	= THIS_MODULE,
 		.pm	= &orion_spi_pm_ops,
 		.of_match_table = of_match_ptr(orion_spi_of_match_table),
 	},

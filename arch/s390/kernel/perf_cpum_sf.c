@@ -1383,7 +1383,6 @@ static int cpumsf_pmu_add(struct perf_event *event, int flags)
 		cpuhw->lsctl.ed = 1;
 
 	/* Set in_use flag and store event */
-	event->hw.idx = 0;	  /* only one sampling event per CPU supported */
 	cpuhw->event = event;
 	cpuhw->flags |= PMU_F_IN_USE;
 
@@ -1409,11 +1408,6 @@ static void cpumsf_pmu_del(struct perf_event *event, int flags)
 
 	perf_event_update_userpage(event);
 	perf_pmu_enable(event->pmu);
-}
-
-static int cpumsf_pmu_event_idx(struct perf_event *event)
-{
-	return event->hw.idx;
 }
 
 CPUMF_EVENT_ATTR(SF, SF_CYCLES_BASIC, PERF_EVENT_CPUM_SF);
@@ -1458,7 +1452,6 @@ static struct pmu cpumf_sampling = {
 	.stop	      = cpumsf_pmu_stop,
 	.read	      = cpumsf_pmu_read,
 
-	.event_idx    = cpumsf_pmu_event_idx,
 	.attr_groups  = cpumsf_pmu_attr_groups,
 };
 

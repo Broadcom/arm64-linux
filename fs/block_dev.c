@@ -235,7 +235,10 @@ struct super_block *freeze_bdev(struct block_device *bdev)
 	sb = get_active_super(bdev);
 	if (!sb)
 		goto out;
-	error = freeze_super(sb);
+	if (sb->s_op->freeze_super)
+		error = sb->s_op->freeze_super(sb);
+	else
+		error = freeze_super(sb);
 	if (error) {
 		deactivate_super(sb);
 		bdev->bd_fsfreeze_count--;
@@ -272,7 +275,10 @@ int thaw_bdev(struct block_device *bdev, struct super_block *sb)
 	if (!sb)
 		goto out;
 
-	error = thaw_super(sb);
+	if (sb->s_op->thaw_super)
+		error = sb->s_op->thaw_super(sb);
+	else
+		error = thaw_super(sb);
 	if (error) {
 		bdev->bd_fsfreeze_count++;
 		mutex_unlock(&bdev->bd_fsfreeze_mutex);
@@ -1585,7 +1591,7 @@ ssize_t blkdev_write_iter(struct kiocb *iocb, struct iov_iter *from)
 }
 EXPORT_SYMBOL_GPL(blkdev_write_iter);
 
-static ssize_t blkdev_read_iter(struct kiocb *iocb, struct iov_iter *to)
+ssize_t blkdev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
 	struct file *file = iocb->ki_filp;
 	struct inode *bd_inode = file->f_mapping->host;
@@ -1599,6 +1605,7 @@ static ssize_t blkdev_read_iter(struct kiocb *iocb, struct iov_iter *to)
 	iov_iter_truncate(to, size);
 	return generic_file_read_iter(iocb, to);
 }
+EXPORT_SYMBOL_GPL(blkdev_read_iter);
 
 /*
  * Try to release a page associated with block device when the system

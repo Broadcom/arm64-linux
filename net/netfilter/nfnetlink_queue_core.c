@@ -665,7 +665,7 @@ nfqnl_enqueue_packet(struct nf_queue_entry *entry, unsigned int queuenum)
 	 * returned by nf_queue.  For instance, callers rely on -ECANCELED to
 	 * mean 'ignore this hook'.
 	 */
-	if (IS_ERR(segs))
+	if (IS_ERR_OR_NULL(segs))
 		goto out_err;
 	queued = 0;
 	err = 0;
@@ -1242,12 +1242,13 @@ static int seq_show(struct seq_file *s, void *v)
 {
 	const struct nfqnl_instance *inst = v;
 
-	return seq_printf(s, "%5d %6d %5d %1d %5d %5d %5d %8d %2d\n",
-			  inst->queue_num,
-			  inst->peer_portid, inst->queue_total,
-			  inst->copy_mode, inst->copy_range,
-			  inst->queue_dropped, inst->queue_user_dropped,
-			  inst->id_sequence, 1);
+	seq_printf(s, "%5d %6d %5d %1d %5d %5d %5d %8d %2d\n",
+		   inst->queue_num,
+		   inst->peer_portid, inst->queue_total,
+		   inst->copy_mode, inst->copy_range,
+		   inst->queue_dropped, inst->queue_user_dropped,
+		   inst->id_sequence, 1);
+	return seq_has_overflowed(s);
 }
 
 static const struct seq_operations nfqnl_seq_ops = {

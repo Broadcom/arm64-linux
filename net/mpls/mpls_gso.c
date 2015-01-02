@@ -34,8 +34,7 @@ static struct sk_buff *mpls_gso_segment(struct sk_buff *skb,
 				  SKB_GSO_TCP_ECN |
 				  SKB_GSO_GRE |
 				  SKB_GSO_GRE_CSUM |
-				  SKB_GSO_IPIP |
-				  SKB_GSO_MPLS)))
+				  SKB_GSO_IPIP)))
 		goto out;
 
 	/* Setup inner SKB. */
@@ -48,7 +47,7 @@ static struct sk_buff *mpls_gso_segment(struct sk_buff *skb,
 	__skb_push(skb, skb->mac_len);
 
 	/* Segment inner packet. */
-	mpls_features = skb->dev->mpls_features & netif_skb_features(skb);
+	mpls_features = skb->dev->mpls_features & features;
 	segs = skb_mac_gso_segment(skb, mpls_features);
 
 
@@ -59,8 +58,7 @@ static struct sk_buff *mpls_gso_segment(struct sk_buff *skb,
 	 * above pulled.  It will be re-pushed after returning
 	 * skb_mac_gso_segment(), an indirect caller of this function.
 	 */
-	__skb_push(skb, skb->data - skb_mac_header(skb));
-
+	__skb_pull(skb, skb->data - skb_mac_header(skb));
 out:
 	return segs;
 }

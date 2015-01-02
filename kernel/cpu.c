@@ -64,6 +64,8 @@ static struct {
 	 * an ongoing cpu hotplug operation.
 	 */
 	int refcount;
+	/* And allows lockless put_online_cpus(). */
+	atomic_t puts_pending;
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 	struct lockdep_map dep_map;
@@ -84,6 +86,16 @@ static struct {
 #define cpuhp_lock_acquire()      lock_map_acquire(&cpu_hotplug.dep_map)
 #define cpuhp_lock_release()      lock_map_release(&cpu_hotplug.dep_map)
 
+static void apply_puts_pending(int max)
+{
+	int delta;
+
+	if (atomic_read(&cpu_hotplug.puts_pending) >= max) {
+		delta = atomic_xchg(&cpu_hotplug.puts_pending, 0);
+		cpu_hotplug.refcount -= delta;
+	}
+}
+
 void get_online_cpus(void)
 {
 	might_sleep();
@@ -91,6 +103,7 @@ void get_online_cpus(void)
 		return;
 	cpuhp_lock_acquire_read();
 	mutex_lock(&cpu_hotplug.lock);
+	apply_puts_pending(65536);
 	cpu_hotplug.refcount++;
 	mutex_unlock(&cpu_hotplug.lock);
 }
@@ -103,6 +116,7 @@ bool try_get_online_cpus(void)
 	if (!mutex_trylock(&cpu_hotplug.lock))
 		return false;
 	cpuhp_lock_acquire_tryread();
+	apply_puts_pending(65536);
 	cpu_hotplug.refcount++;
 	mutex_unlock(&cpu_hotplug.lock);
 	return true;
@@ -113,7 +127,11 @@ void put_online_cpus(void)
 {
 	if (cpu_hotplug.active_writer == current)
 		return;
-	mutex_lock(&cpu_hotplug.lock);
+	if (!mutex_trylock(&cpu_hotplug.lock)) {
+		atomic_inc(&cpu_hotplug.puts_pending);
+		cpuhp_lock_release();
+		return;
+	}
 
 	if (WARN_ON(!cpu_hotplug.refcount))
 		cpu_hotplug.refcount++; /* try to fix things up */
@@ -155,6 +173,7 @@ void cpu_hotplug_begin(void)
 	cpuhp_lock_acquire();
 	for (;;) {
 		mutex_lock(&cpu_hotplug.lock);
+		apply_puts_pending(1);
 		if (likely(!cpu_hotplug.refcount))
 			break;
 		__set_current_state(TASK_UNINTERRUPTIBLE);
