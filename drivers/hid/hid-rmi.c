@@ -274,6 +274,46 @@ static inline int rmi_read(struct hid_device *hdev, u16 addr, void *buf)
 	return rmi_read_block(hdev, addr, buf, 1);
 }
 
+static int rmi_write_block(struct hid_device *hdev, u16 addr, void *buf,
+		const int len)
+{
+	struct rmi_data *data = hid_get_drvdata(hdev);
+	int ret;
+
+	mutex_lock(&data->page_mutex);
+
+	if (RMI_PAGE(addr) != data->page) {
+		ret = rmi_set_page(hdev, RMI_PAGE(addr));
+		if (ret < 0)
+			goto exit;
+	}
+
+	data->writeReport[0] = RMI_WRITE_REPORT_ID;
+	data->writeReport[1] = len;
+	data->writeReport[2] = addr & 0xFF;
+	data->writeReport[3] = (addr >> 8) & 0xFF;
+	memcpy(&data->writeReport[4], buf, len);
+
+	ret = rmi_write_report(hdev, data->writeReport,
+					data->output_report_size);
+	if (ret < 0) {
+		dev_err(&hdev->dev,
+			"failed to write request output report (%d)\n",
+			ret);
+		goto exit;
+	}
+	ret = 0;
+
+exit:
+	mutex_unlock(&data->page_mutex);
+	return ret;
+}
+
+static inline int rmi_write(struct hid_device *hdev, u16 addr, void *buf)
+{
+	return rmi_write_block(hdev, addr, buf, 1);
+}
+
 static void rmi_f11_process_touch(struct rmi_data *hdata, int slot,
 		u8 finger_state, u8 *touch_data)
 {
@@ -711,6 +751,8 @@ static int rmi_populate_f11(struct hid_device *hdev)
 	bool has_gestures;
 	bool has_rel;
 	bool has_data40 = false;
+	bool has_dribble = false;
+	bool has_palm_detect = false;
 	unsigned x_size, y_size;
 	u16 query_offset;
 
@@ -752,6 +794,14 @@ static int rmi_populate_f11(struct hid_device *hdev)
 	has_rel = !!(buf[0] & BIT(3));
 	has_gestures = !!(buf[0] & BIT(5));
 
+	ret = rmi_read(hdev, data->f11.query_base_addr + 5, buf);
+	if (ret) {
+		hid_err(hdev, "can not get absolute data sources: %d.\n", ret);
+		return ret;
+	}
+
+	has_dribble = !!(buf[0] & BIT(4));
+
 	/*
 	 * At least 4 queries are guaranteed to be present in F11
 	 * +1 for query 5 which is present since absolute events are
@@ -771,6 +821,7 @@ static int rmi_populate_f11(struct hid_device *hdev)
 				ret);
 			return ret;
 		}
+		has_palm_detect = !!(buf[0] & BIT(0));
 		has_query10 = !!(buf[0] & BIT(2));
 
 		query_offset += 2; /* query 7 and 8 are present */
@@ -857,16 +908,37 @@ static int rmi_populate_f11(struct hid_device *hdev)
 	 * retrieve the ctrl registers
 	 * the ctrl register has a size of 20 but a fw bug split it into 16 + 4,
 	 * and there is no way to know if the first 20 bytes are here or not.
-	 * We use only the first 10 bytes, so get only them.
+	 * We use only the first 12 bytes, so get only them.
 	 */
-	ret = rmi_read_block(hdev, data->f11.control_base_addr, buf, 10);
+	ret = rmi_read_block(hdev, data->f11.control_base_addr, buf, 12);
 	if (ret) {
-		hid_err(hdev, "can not read ctrl block of size 10: %d.\n", ret);
+		hid_err(hdev, "can not read ctrl block of size 11: %d.\n", ret);
 		return ret;
 	}
 
 	data->max_x = buf[6] | (buf[7] << 8);
 	data->max_y = buf[8] | (buf[9] << 8);
+
+	if (has_dribble) {
+		buf[0] = buf[0] & ~BIT(6);
+		ret = rmi_write(hdev, data->f11.control_base_addr, buf);
+		if (ret) {
+			hid_err(hdev, "can not write to control reg 0: %d.\n",
+				ret);
+			return ret;
+		}
+	}
+
+	if (has_palm_detect) {
+		buf[11] = buf[11] & ~BIT(0);
+		ret = rmi_write(hdev, data->f11.control_base_addr + 11,
+				&buf[11]);
+		if (ret) {
+			hid_err(hdev, "can not write to control reg 11: %d.\n",
+				ret);
+			return ret;
+		}
+	}
 
 	return 0;
 }
