@@ -45,6 +45,24 @@ static unsigned short batcap_gr[8] = { 1, 15, 25, 35, 50, 70, 100, 100 };
  */
 static unsigned short batcap_i4[8] = { 1, 15, 30, 45, 60, 70, 85, 100 };
 
+static void wacom_notify_battery(struct wacom_wac *wacom_wac,
+	int bat_capacity, bool bat_charging, bool ps_connected)
+{
+	struct wacom *wacom = container_of(wacom_wac, struct wacom, wacom_wac);
+	bool changed = wacom_wac->battery_capacity != bat_capacity  ||
+		       wacom_wac->bat_charging     != bat_charging  ||
+		       wacom_wac->ps_connected     != ps_connected;
+
+	if (changed) {
+		wacom_wac->battery_capacity = bat_capacity;
+		wacom_wac->bat_charging = bat_charging;
+		wacom_wac->ps_connected = ps_connected;
+
+		if (wacom->battery.dev)
+			power_supply_changed(&wacom->battery);
+	}
+}
+
 static int wacom_penpartner_irq(struct wacom_wac *wacom)
 {
 	unsigned char *data = wacom->data;
@@ -419,12 +437,8 @@ static int wacom_graphire_irq(struct wacom_wac *wacom)
 		rw = (data[7] >> 2 & 0x07);
 		battery_capacity = batcap_gr[rw];
 		ps_connected = rw == 7;
-		if ((wacom->battery_capacity != battery_capacity) ||
-		    (wacom->ps_connected != ps_connected)) {
-			wacom->battery_capacity = battery_capacity;
-			wacom->ps_connected = ps_connected;
-			wacom_notify_battery(wacom);
-		}
+		wacom_notify_battery(wacom, battery_capacity, ps_connected,
+				     ps_connected);
 	}
 exit:
 	return retval;
@@ -1022,15 +1036,8 @@ static int wacom_intuos_bt_irq(struct wacom_wac *wacom, size_t len)
 		bat_charging = (power_raw & 0x08) ? 1 : 0;
 		ps_connected = (power_raw & 0x10) ? 1 : 0;
 		battery_capacity = batcap_i4[power_raw & 0x07];
-		if ((wacom->battery_capacity != battery_capacity) ||
-		    (wacom->bat_charging != bat_charging) ||
-		    (wacom->ps_connected != ps_connected)) {
-			wacom->battery_capacity = battery_capacity;
-			wacom->bat_charging = bat_charging;
-			wacom->ps_connected = ps_connected;
-			wacom_notify_battery(wacom);
-		}
-
+		wacom_notify_battery(wacom, battery_capacity, bat_charging,
+				     ps_connected);
 		break;
 	default:
 		dev_dbg(wacom->input->dev.parent,
@@ -1759,22 +1766,8 @@ static int wacom_bpt_pen(struct wacom_wac *wacom)
 	unsigned char *data = wacom->data;
 	int prox = 0, x = 0, y = 0, p = 0, d = 0, pen = 0, btn1 = 0, btn2 = 0;
 
-	if (data[0] != WACOM_REPORT_PENABLED && data[0] != WACOM_REPORT_USB)
+	if (data[0] != WACOM_REPORT_PENABLED)
 	    return 0;
-
-	if (data[0] == WACOM_REPORT_USB) {
-		if (features->type == INTUOSHT &&
-		    wacom->shared->touch_input &&
-		    features->touch_max) {
-			input_report_switch(wacom->shared->touch_input,
-					    SW_MUTE_DEVICE, data[8] & 0x40);
-			input_sync(wacom->shared->touch_input);
-		}
-		return 0;
-	}
-
-	if (wacom->shared->touch_down)
-		return 0;
 
 	prox = (data[1] & 0x20) == 0x20;
 
@@ -1943,7 +1936,7 @@ static int wacom_wireless_irq(struct wacom_wac *wacom, size_t len)
 
 	connected = data[1] & 0x01;
 	if (connected) {
-		int pid, battery, ps_connected;
+		int pid, battery, charging;
 
 		if ((wacom->shared->type == INTUOSHT) &&
 		    wacom->shared->touch_input &&
@@ -1955,30 +1948,63 @@ static int wacom_wireless_irq(struct wacom_wac *wacom, size_t len)
 
 		pid = get_unaligned_be16(&data[6]);
 		battery = (data[5] & 0x3f) * 100 / 31;
-		ps_connected = !!(data[5] & 0x80);
+		charging = !!(data[5] & 0x80);
 		if (wacom->pid != pid) {
 			wacom->pid = pid;
 			wacom_schedule_work(wacom);
 		}
 
-		if (wacom->shared->type &&
-		    (battery != wacom->battery_capacity ||
-		     ps_connected != wacom->ps_connected)) {
-			wacom->battery_capacity = battery;
-			wacom->ps_connected = ps_connected;
-			wacom->bat_charging = ps_connected &&
-						wacom->battery_capacity < 100;
-			wacom_notify_battery(wacom);
-		}
+		if (wacom->shared->type)
+			wacom_notify_battery(wacom, battery, charging, 0);
+
 	} else if (wacom->pid != 0) {
 		/* disconnected while previously connected */
 		wacom->pid = 0;
 		wacom_schedule_work(wacom);
-		wacom->battery_capacity = 0;
-		wacom->bat_charging = 0;
-		wacom->ps_connected = 0;
+		wacom_notify_battery(wacom, 0, 0, 0);
 	}
 
+	return 0;
+}
+
+static int wacom_status_irq(struct wacom_wac *wacom_wac, size_t len)
+{
+	struct wacom *wacom = container_of(wacom_wac, struct wacom, wacom_wac);
+	struct wacom_features *features = &wacom_wac->features;
+	unsigned char *data = wacom_wac->data;
+
+	if (data[0] != WACOM_REPORT_USB)
+		return 0;
+
+	if (features->type == INTUOSHT &&
+	    wacom_wac->shared->touch_input &&
+	    features->touch_max) {
+		input_report_switch(wacom_wac->shared->touch_input,
+				    SW_MUTE_DEVICE, data[8] & 0x40);
+		input_sync(wacom_wac->shared->touch_input);
+	}
+
+	if (data[9] & 0x02) { /* wireless module is attached */
+		int battery = (data[8] & 0x3f) * 100 / 31;
+		bool charging = !!(data[8] & 0x80);
+
+		wacom_notify_battery(wacom_wac, battery, charging,
+				     1);
+
+		if (!wacom->battery.dev &&
+		    !(features->quirks & WACOM_QUIRK_BATTERY)) {
+			features->quirks |= WACOM_QUIRK_BATTERY;
+			INIT_WORK(&wacom->work, wacom_battery_work);
+			wacom_schedule_work(wacom_wac);
+		}
+	}
+	else if ((features->quirks & WACOM_QUIRK_BATTERY) &&
+		 wacom->battery.dev) {
+		features->quirks &= ~WACOM_QUIRK_BATTERY;
+		INIT_WORK(&wacom->work, wacom_battery_work);
+		wacom_schedule_work(wacom_wac);
+		wacom_notify_battery(wacom_wac, 0, 0, 0);
+	}
 	return 0;
 }
 
@@ -2051,6 +2077,8 @@ void wacom_wac_irq(struct wacom_wac *wacom_wac, size_t len)
 	case INTUOSPL:
 		if (len == WACOM_PKGLEN_BBTOUCH3)
 			sync = wacom_bpt3_touch(wacom_wac);
+		else if (wacom_wac->data[0] == WACOM_REPORT_USB)
+			sync = wacom_status_irq(wacom_wac, len);
 		else
 			sync = wacom_intuos_irq(wacom_wac);
 		break;
@@ -2066,7 +2094,10 @@ void wacom_wac_irq(struct wacom_wac *wacom_wac, size_t len)
 
 	case BAMBOO_PT:
 	case INTUOSHT:
-		sync = wacom_bpt_irq(wacom_wac, len);
+		if (wacom_wac->data[0] == WACOM_REPORT_USB)
+			sync = wacom_status_irq(wacom_wac, len);
+		else
+			sync = wacom_bpt_irq(wacom_wac, len);
 		break;
 
 	case BAMBOO_PAD:
