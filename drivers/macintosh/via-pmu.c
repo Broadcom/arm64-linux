@@ -329,10 +329,11 @@ int __init find_via_pmu(void)
 				gaddr = of_translate_address(gpiop, reg);
 			if (gaddr != OF_BAD_ADDR)
 				gpio_reg = ioremap(gaddr, 0x10);
+			of_node_put(gpiop);
 		}
 		if (gpio_reg == NULL) {
 			printk(KERN_ERR "via-pmu: Can't find GPIO reg !\n");
-			goto fail_gpio;
+			goto fail;
 		}
 	} else
 		pmu_kind = PMU_UNKNOWN;
@@ -340,7 +341,7 @@ int __init find_via_pmu(void)
 	via = ioremap(taddr, 0x2000);
 	if (via == NULL) {
 		printk(KERN_ERR "via-pmu: Can't map address !\n");
-		goto fail;
+		goto fail_via_remap;
 	}
 	
 	out_8(&via[IER], IER_CLR | 0x7f);	/* disable all intrs */
@@ -348,10 +349,8 @@ int __init find_via_pmu(void)
 
 	pmu_state = idle;
 
-	if (!init_pmu()) {
-		via = NULL;
-		return 0;
-	}
+	if (!init_pmu())
+		goto fail_init;
 
 	printk(KERN_INFO "PMU driver v%d initialized for %s, firmware: %02x\n",
 	       PMU_DRIVER_VERSION, pbook_type[pmu_kind], pmu_version);
@@ -359,11 +358,15 @@ int __init find_via_pmu(void)
 	sys_ctrler = SYS_CTRLER_PMU;
 	
 	return 1;
- fail:
-	of_node_put(vias);
+
+ fail_init:
+	iounmap(via);
+	via = NULL;
+ fail_via_remap:
 	iounmap(gpio_reg);
 	gpio_reg = NULL;
- fail_gpio:
+ fail:
+	of_node_put(vias);
 	vias = NULL;
 	return 0;
 }
