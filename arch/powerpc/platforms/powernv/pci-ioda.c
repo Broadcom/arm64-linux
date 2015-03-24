@@ -2078,9 +2078,6 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 	phb->get_pe_state = pnv_ioda_get_pe_state;
 	phb->freeze_pe = pnv_ioda_freeze_pe;
 	phb->unfreeze_pe = pnv_ioda_unfreeze_pe;
-#ifdef CONFIG_EEH
-	phb->eeh_ops = &ioda_eeh_ops;
-#endif
 
 	/* Setup RID -> PE mapping function */
 	phb->bdfn_to_pe = pnv_ioda_bdfn_to_pe;
@@ -2121,8 +2118,8 @@ static void __init pnv_pci_init_ioda_phb(struct device_node *np,
 	 */
 	if (is_kdump_kernel()) {
 		pr_info("  Issue PHB reset ...\n");
-		ioda_eeh_phb_reset(hose, EEH_RESET_FUNDAMENTAL);
-		ioda_eeh_phb_reset(hose, EEH_RESET_DEACTIVATE);
+		pnv_eeh_phb_reset(hose, EEH_RESET_FUNDAMENTAL);
+		pnv_eeh_phb_reset(hose, EEH_RESET_DEACTIVATE);
 	}
 
 	/* Remove M64 resource if we can't configure it successfully */
