@@ -928,3 +928,4 @@
 };
 
 #include "exynos5433-pinctrl.dtsi"
+#include "exynos5433-tmu.dtsi"
