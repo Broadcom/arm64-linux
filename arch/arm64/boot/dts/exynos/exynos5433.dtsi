@@ -836,6 +836,61 @@
 			status = "disabled";
 		};
 
+		tmu_atlas0: tmu@10060000 {
+			compatible = "samsung,exynos5433-tmu";
+			reg = <0x10060000 0x200>;
+			interrupts = <0 95 0>;
+			clocks = <&cmu_peris CLK_PCLK_TMU0_APBIF>,
+				 <&cmu_peris CLK_SCLK_TMU0>;
+			clock-names = "tmu_apbif", "tmu_sclk";
+			#include "exynos5433-tmu-sensor-conf.dtsi"
+			status = "disabled";
+		};
+
+		tmu_atlas1: tmu@10068000 {
+			compatible = "samsung,exynos5433-tmu";
+			reg = <0x10068000 0x200>;
+			interrupts = <0 96 0>;
+			clocks = <&cmu_peris CLK_PCLK_TMU0_APBIF>,
+				 <&cmu_peris CLK_SCLK_TMU0>;
+			clock-names = "tmu_apbif", "tmu_sclk";
+			#include "exynos5433-tmu-sensor-conf.dtsi"
+			status = "disabled";
+		};
+
+		tmu_g3d: tmu@10070000 {
+			compatible = "samsung,exynos5433-tmu";
+			reg = <0x10070000 0x200>;
+			interrupts = <0 99 0>;
+			clocks = <&cmu_peris CLK_PCLK_TMU1_APBIF>,
+				 <&cmu_peris CLK_SCLK_TMU1>;
+			clock-names = "tmu_apbif", "tmu_sclk";
+			#include "exynos5433-tmu-sensor-conf.dtsi"
+			status = "disabled";
+		};
+
+		tmu_apollo: tmu@10078000 {
+			compatible = "samsung,exynos5433-tmu";
+			reg = <0x10078000 0x200>;
+			interrupts = <0 115 0>;
+			clocks = <&cmu_peris CLK_PCLK_TMU1_APBIF>,
+				 <&cmu_peris CLK_SCLK_TMU1>;
+			clock-names = "tmu_apbif", "tmu_sclk";
+			#include "exynos5433-tmu-sensor-conf.dtsi"
+			status = "disabled";
+		};
+
+		tmu_isp: tmu@1007c000 {
+			compatible = "samsung,exynos5433-tmu";
+			reg = <0x1007c000 0x200>;
+			interrupts = <0 94 0>;
+			clocks = <&cmu_peris CLK_PCLK_TMU1_APBIF>,
+				 <&cmu_peris CLK_SCLK_TMU1>;
+			clock-names = "tmu_apbif", "tmu_sclk";
+			#include "exynos5433-tmu-sensor-conf.dtsi"
+			status = "disabled";
+		};
+
 		pmu_system_controller: system-controller@105c0000 {
 			compatible = "samsung,exynos5433-pmu", "syscon";
 			reg = <0x105c0000 0x5008>;
