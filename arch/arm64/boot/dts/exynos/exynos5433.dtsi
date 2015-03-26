@@ -807,6 +807,14 @@
 			fifo-depth = <0x40>;
 			status = "disabled";
 		};
+
+		pmu_system_controller: system-controller@105c0000 {
+			compatible = "samsung,exynos5433-pmu", "syscon";
+			reg = <0x105c0000 0x5008>;
+			#clock-cells = <1>;
+			clock-names = "clkout16";
+			clocks = <&xxti>;
+		};
 	};
 
 	timer {
