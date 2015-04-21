@@ -40,6 +40,8 @@ include ../lib.mk
 kdbus-test: $(OBJS)
 	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 
+TEST_PROGS := kdbus-test
+
 run_tests:
 	./kdbus-test --tap
 
