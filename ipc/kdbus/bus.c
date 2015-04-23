@@ -365,7 +365,7 @@ void kdbus_bus_eavesdrop(struct kdbus_bus *bus,
  * @domain:		domain to operate on
  * @argp:		command payload
  *
- * Return: Newly created bus on success, ERR_PTR on failure.
+ * Return: NULL or newly created bus on success, ERR_PTR on failure.
  */
 struct kdbus_bus *kdbus_cmd_bus_make(struct kdbus_domain *domain,
 				     void __user *argp)
@@ -459,7 +459,7 @@ exit:
  * @conn:		connection to operate on
  * @argp:		command payload
  *
- * Return: 0 on success, negative error code on failure.
+ * Return: >=0 on success, negative error code on failure.
  */
 int kdbus_cmd_bus_creator_info(struct kdbus_conn *conn, void __user *argp)
 {

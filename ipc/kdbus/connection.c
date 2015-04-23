@@ -1589,7 +1589,7 @@ bool kdbus_conn_policy_see_notification(struct kdbus_conn *conn,
  * @privileged:		Whether the caller is privileged
  * @argp:		Command payload
  *
- * Return: Newly created connection on success, ERR_PTR on failure.
+ * Return: NULL or newly created connection on success, ERR_PTR on failure.
  */
 struct kdbus_conn *kdbus_cmd_hello(struct kdbus_ep *ep, bool privileged,
 				   void __user *argp)
@@ -1676,7 +1676,7 @@ exit:
  *
  * The caller must not hold any active reference to @conn or this will deadlock.
  *
- * Return: 0 on success, negative error code on failure.
+ * Return: >=0 on success, negative error code on failure.
  */
 int kdbus_cmd_byebye_unlocked(struct kdbus_conn *conn, void __user *argp)
 {
@@ -1708,7 +1708,7 @@ int kdbus_cmd_byebye_unlocked(struct kdbus_conn *conn, void __user *argp)
  * @conn:		connection to operate on
  * @argp:		command payload
  *
- * Return: 0 on success, negative error code on failure.
+ * Return: >=0 on success, negative error code on failure.
  */
 int kdbus_cmd_conn_info(struct kdbus_conn *conn, void __user *argp)
 {
@@ -1838,7 +1838,7 @@ exit:
  * @conn:		connection to operate on
  * @argp:		command payload
  *
- * Return: 0 on success, negative error code on failure.
+ * Return: >=0 on success, negative error code on failure.
  */
 int kdbus_cmd_update(struct kdbus_conn *conn, void __user *argp)
 {
@@ -1935,7 +1935,7 @@ exit:
  * @f:			file this command was called on
  * @argp:		command payload
  *
- * Return: 0 on success, negative error code on failure.
+ * Return: >=0 on success, negative error code on failure.
  */
 int kdbus_cmd_send(struct kdbus_conn *conn, struct file *f, void __user *argp)
 {
@@ -2031,7 +2031,7 @@ exit:
  * @conn:		connection to operate on
  * @argp:		command payload
  *
- * Return: 0 on success, negative error code on failure.
+ * Return: >=0 on success, negative error code on failure.
  */
 int kdbus_cmd_recv(struct kdbus_conn *conn, void __user *argp)
 {
@@ -2154,7 +2154,7 @@ exit:
  * @conn:		connection to operate on
  * @argp:		command payload
  *
- * Return: 0 on success, negative error code on failure.
+ * Return: >=0 on success, negative error code on failure.
  */
 int kdbus_cmd_free(struct kdbus_conn *conn, void __user *argp)
 {
