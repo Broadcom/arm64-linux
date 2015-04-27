@@ -961,7 +961,7 @@ static int wacom_battery_get_property(struct power_supply *psy,
 				      enum power_supply_property psp,
 				      union power_supply_propval *val)
 {
-	struct wacom *wacom = container_of(psy, struct wacom, battery);
+	struct wacom *wacom = power_supply_get_drvdata(psy);
 	int ret = 0;
 
 	switch (psp) {
@@ -998,7 +998,7 @@ static int wacom_ac_get_property(struct power_supply *psy,
 				enum power_supply_property psp,
 				union power_supply_propval *val)
 {
-	struct wacom *wacom = container_of(psy, struct wacom, ac);
+	struct wacom *wacom = power_supply_get_drvdata(psy);
 	int ret = 0;
 
 	switch (psp) {
@@ -1020,42 +1020,46 @@ static int wacom_ac_get_property(struct power_supply *psy,
 static int wacom_initialize_battery(struct wacom *wacom)
 {
 	static atomic_t battery_no = ATOMIC_INIT(0);
-	int error;
+	struct power_supply_config psy_cfg = { .drv_data = wacom, };
 	unsigned long n;
 
 	if (wacom->wacom_wac.features.quirks & WACOM_QUIRK_BATTERY) {
+		struct power_supply_desc *bat_desc = &wacom->battery_desc;
+		struct power_supply_desc *ac_desc = &wacom->ac_desc;
 		n = atomic_inc_return(&battery_no) - 1;
 
-		wacom->battery.properties = wacom_battery_props;
-		wacom->battery.num_properties = ARRAY_SIZE(wacom_battery_props);
-		wacom->battery.get_property = wacom_battery_get_property;
+		bat_desc->properties = wacom_battery_props;
+		bat_desc->num_properties = ARRAY_SIZE(wacom_battery_props);
+		bat_desc->get_property = wacom_battery_get_property;
 		sprintf(wacom->wacom_wac.bat_name, "wacom_battery_%ld", n);
-		wacom->battery.name = wacom->wacom_wac.bat_name;
-		wacom->battery.type = POWER_SUPPLY_TYPE_BATTERY;
-		wacom->battery.use_for_apm = 0;
+		bat_desc->name = wacom->wacom_wac.bat_name;
+		bat_desc->type = POWER_SUPPLY_TYPE_BATTERY;
+		bat_desc->use_for_apm = 0;
 
-		wacom->ac.properties = wacom_ac_props;
-		wacom->ac.num_properties = ARRAY_SIZE(wacom_ac_props);
-		wacom->ac.get_property = wacom_ac_get_property;
+		ac_desc->properties = wacom_ac_props;
+		ac_desc->num_properties = ARRAY_SIZE(wacom_ac_props);
+		ac_desc->get_property = wacom_ac_get_property;
 		sprintf(wacom->wacom_wac.ac_name, "wacom_ac_%ld", n);
-		wacom->ac.name = wacom->wacom_wac.ac_name;
-		wacom->ac.type = POWER_SUPPLY_TYPE_MAINS;
-		wacom->ac.use_for_apm = 0;
+		ac_desc->name = wacom->wacom_wac.ac_name;
+		ac_desc->type = POWER_SUPPLY_TYPE_MAINS;
+		ac_desc->use_for_apm = 0;
 
-		error = power_supply_register(&wacom->hdev->dev,
-					      &wacom->battery);
-		if (error)
-			return error;
+		wacom->battery = power_supply_register(&wacom->hdev->dev,
+					      &wacom->battery_desc, &psy_cfg);
+		if (IS_ERR(wacom->battery))
+			return PTR_ERR(wacom->battery);
 
-		power_supply_powers(&wacom->battery, &wacom->hdev->dev);
+		power_supply_powers(wacom->battery, &wacom->hdev->dev);
 
-		error = power_supply_register(&wacom->hdev->dev, &wacom->ac);
-		if (error) {
-			power_supply_unregister(&wacom->battery);
-			return error;
+		wacom->ac = power_supply_register(&wacom->hdev->dev,
+						  &wacom->ac_desc,
+						  &psy_cfg);
+		if (IS_ERR(wacom->ac)) {
+			power_supply_unregister(wacom->battery);
+			return PTR_ERR(wacom->ac);
 		}
 
-		power_supply_powers(&wacom->ac, &wacom->hdev->dev);
+		power_supply_powers(wacom->ac, &wacom->hdev->dev);
 	}
 
 	return 0;
@@ -1063,11 +1067,11 @@ static int wacom_initialize_battery(struct wacom *wacom)
 
 static void wacom_destroy_battery(struct wacom *wacom)
 {
-	if (wacom->battery.dev) {
-		power_supply_unregister(&wacom->battery);
-		wacom->battery.dev = NULL;
-		power_supply_unregister(&wacom->ac);
-		wacom->ac.dev = NULL;
+	if (wacom->battery) {
+		power_supply_unregister(wacom->battery);
+		wacom->battery = NULL;
+		power_supply_unregister(wacom->ac);
+		wacom->ac = NULL;
 	}
 }
 
@@ -1339,11 +1343,11 @@ void wacom_battery_work(struct work_struct *work)
 	struct wacom *wacom = container_of(work, struct wacom, work);
 
 	if ((wacom->wacom_wac.features.quirks & WACOM_QUIRK_BATTERY) &&
-	     !wacom->battery.dev) {
+	     !wacom->battery) {
 		wacom_initialize_battery(wacom);
 	}
 	else if (!(wacom->wacom_wac.features.quirks & WACOM_QUIRK_BATTERY) &&
-		 wacom->battery.dev) {
+		 wacom->battery) {
 		wacom_destroy_battery(wacom);
 	}
 }
@@ -1365,6 +1369,12 @@ static void wacom_set_default_phy(struct wacom_features *features)
 
 static void wacom_calculate_res(struct wacom_features *features)
 {
+	/* set unit to "100th of a mm" for devices not reported by HID */
+	if (!features->unit) {
+		features->unit = 0x11;
+		features->unitExpo = -3;
+	}
+
 	features->x_resolution = wacom_calc_hid_res(features->x_max,
 						    features->x_phy,
 						    features->unit,
@@ -1471,50 +1481,7 @@ static int wacom_probe(struct hid_device *hdev,
 	/* Retrieve the physical and logical size for touch devices */
 	wacom_retrieve_hid_descriptor(hdev, features);
 
-	/*
-	 * Intuos5 has no useful data about its touch interface in its
-	 * HID descriptor. If this is the touch interface (PacketSize
-	 * of WACOM_PKGLEN_BBTOUCH3), override the table values.
-	 */
-	if (features->type >= INTUOS5S && features->type <= INTUOSHT) {
-		if (features->pktlen == WACOM_PKGLEN_BBTOUCH3) {
-			features->device_type = BTN_TOOL_FINGER;
-
-			features->x_max = 4096;
-			features->y_max = 4096;
-		} else {
-			features->device_type = BTN_TOOL_PEN;
-		}
-	}
-
-	/*
-	 * Same thing for Bamboo 3rd gen.
-	 */
-	if ((features->type == BAMBOO_PT) &&
-	    (features->pktlen == WACOM_PKGLEN_BBTOUCH3) &&
-	    (features->device_type == BTN_TOOL_PEN)) {
-		features->device_type = BTN_TOOL_FINGER;
-
-		features->x_max = 4096;
-		features->y_max = 4096;
-	}
-
-	/*
-	 * Same thing for Bamboo PAD
-	 */
-	if (features->type == BAMBOO_PAD)
-		features->device_type = BTN_TOOL_FINGER;
-
-	if (hdev->bus == BUS_BLUETOOTH)
-		features->quirks |= WACOM_QUIRK_BATTERY;
-
-	wacom_setup_device_quirks(features);
-
-	/* set unit to "100th of a mm" for devices not reported by HID */
-	if (!features->unit) {
-		features->unit = 0x11;
-		features->unitExpo = -3;
-	}
+	wacom_setup_device_quirks(wacom);
 	wacom_calculate_res(features);
 
 	strlcpy(wacom_wac->name, features->name, sizeof(wacom_wac->name));

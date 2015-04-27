@@ -119,8 +119,10 @@ struct wacom {
 		u8 img_lum;   /* OLED matrix display brightness */
 	} led;
 	bool led_initialized;
-	struct power_supply battery;
-	struct power_supply ac;
+	struct power_supply *battery;
+	struct power_supply *ac;
+	struct power_supply_desc battery_desc;
+	struct power_supply_desc ac_desc;
 };
 
 static inline void wacom_schedule_work(struct wacom_wac *wacom_wac)
@@ -132,7 +134,7 @@ static inline void wacom_schedule_work(struct wacom_wac *wacom_wac)
 extern const struct hid_device_id wacom_ids[];
 
 void wacom_wac_irq(struct wacom_wac *wacom_wac, size_t len);
-void wacom_setup_device_quirks(struct wacom_features *features);
+void wacom_setup_device_quirks(struct wacom *wacom);
 int wacom_setup_pentouch_input_capabilities(struct input_dev *input_dev,
 				   struct wacom_wac *wacom_wac);
 int wacom_setup_pad_input_capabilities(struct input_dev *input_dev,

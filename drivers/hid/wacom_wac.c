@@ -61,8 +61,8 @@ static void wacom_notify_battery(struct wacom_wac *wacom_wac,
 		wacom_wac->bat_connected = bat_connected;
 		wacom_wac->ps_connected = ps_connected;
 
-		if (wacom->battery.dev)
-			power_supply_changed(&wacom->battery);
+		if (wacom->battery)
+			power_supply_changed(wacom->battery);
 	}
 }
 
@@ -1072,9 +1072,8 @@ static int wacom_wac_finger_count_touches(struct wacom_wac *wacom)
 	int count = 0;
 	int i;
 
-	/* non-HID_GENERIC single touch input doesn't call this routine */
-	if ((touch_max == 1) && (wacom->features.type == HID_GENERIC))
-		return wacom->hid_data.tipswitch &&
+	if (touch_max == 1)
+		return test_bit(BTN_TOUCH, input->key) &&
 		       !wacom->shared->stylus_in_proximity;
 
 	for (i = 0; i < input->mt->num_slots; i++) {
@@ -1991,7 +1990,7 @@ static int wacom_status_irq(struct wacom_wac *wacom_wac, size_t len)
 		wacom_notify_battery(wacom_wac, battery, charging,
 				     battery || charging, 1);
 
-		if (!wacom->battery.dev &&
+		if (!wacom->battery &&
 		    !(features->quirks & WACOM_QUIRK_BATTERY)) {
 			features->quirks |= WACOM_QUIRK_BATTERY;
 			INIT_WORK(&wacom->work, wacom_battery_work);
@@ -1999,7 +1998,7 @@ static int wacom_status_irq(struct wacom_wac *wacom_wac, size_t len)
 		}
 	}
 	else if ((features->quirks & WACOM_QUIRK_BATTERY) &&
-		 wacom->battery.dev) {
+		 wacom->battery) {
 		features->quirks &= ~WACOM_QUIRK_BATTERY;
 		INIT_WORK(&wacom->work, wacom_battery_work);
 		wacom_schedule_work(wacom_wac);
@@ -2164,14 +2163,42 @@ static void wacom_setup_intuos(struct wacom_wac *wacom_wac)
 	input_set_abs_params(input_dev, ABS_THROTTLE, -1023, 1023, 0, 0);
 }
 
-void wacom_setup_device_quirks(struct wacom_features *features)
+void wacom_setup_device_quirks(struct wacom *wacom)
 {
+	struct wacom_features *features = &wacom->wacom_wac.features;
 
 	/* touch device found but size is not defined. use default */
 	if (features->device_type == BTN_TOOL_FINGER && !features->x_max) {
 		features->x_max = 1023;
 		features->y_max = 1023;
 	}
+
+	/*
+	 * Intuos5/Pro and Bamboo 3rd gen have no useful data about its
+	 * touch interface in its HID descriptor. If this is the touch
+	 * interface (PacketSize of WACOM_PKGLEN_BBTOUCH3), override the
+	 * tablet values.
+	 */
+	if ((features->type >= INTUOS5S && features->type <= INTUOSHT) ||
+		(features->type == BAMBOO_PT)) {
+		if (features->pktlen == WACOM_PKGLEN_BBTOUCH3) {
+			features->device_type = BTN_TOOL_FINGER;
+
+			features->x_max = 4096;
+			features->y_max = 4096;
+		} else {
+			features->device_type = BTN_TOOL_PEN;
+		}
+	}
+
+	/*
+	 * Same thing for Bamboo PAD
+	 */
+	if (features->type == BAMBOO_PAD)
+		features->device_type = BTN_TOOL_FINGER;
+
+	if (wacom->hdev->bus == BUS_BLUETOOTH)
+		features->quirks |= WACOM_QUIRK_BATTERY;
 
 	/* quirk for bamboo touch with 2 low res touches */
 	if (features->type == BAMBOO_PT &&
@@ -2919,6 +2946,9 @@ static const struct wacom_features wacom_features_0x32F =
 	{ "Wacom DTU1031X", 22472, 12728, 511, 0,
 	  DTUSX, WACOM_INTUOS_RES, WACOM_INTUOS_RES,
 	  WACOM_DTU_OFFSET, WACOM_DTU_OFFSET };
+static const struct wacom_features wacom_features_0x336 =
+	{ "Wacom DTU1141", 23472, 13203, 1023, 0,
+	  DTUS, WACOM_INTUOS_RES, WACOM_INTUOS_RES };
 static const struct wacom_features wacom_features_0x57 =
 	{ "Wacom DTK2241", 95640, 54060, 2047, 63,
 	  DTK, WACOM_INTUOS3_RES, WACOM_INTUOS3_RES,
@@ -3272,6 +3302,7 @@ const struct hid_device_id wacom_ids[] = {
 	{ USB_DEVICE_WACOM(0x32F) },
 	{ USB_DEVICE_WACOM(0x333) },
 	{ USB_DEVICE_WACOM(0x335) },
+	{ USB_DEVICE_WACOM(0x336) },
 	{ USB_DEVICE_WACOM(0x4001) },
 	{ USB_DEVICE_WACOM(0x4004) },
 	{ USB_DEVICE_WACOM(0x5000) },
