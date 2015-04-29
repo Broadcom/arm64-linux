@@ -91,7 +91,7 @@ static inline void native_apic_mem_write(u32 reg, u32 v)
 {
 	volatile u32 *addr = (volatile u32 *)(APIC_BASE + reg);
 
-	alternative_io("movl %0, %1", "xchgl %0, %1", X86_BUG_11AP,
+	alternative_io("movl %0, %P1", "xchgl %0, %P1", X86_BUG_11AP,
 		       ASM_OUTPUT2("=r" (v), "=m" (*addr)),
 		       ASM_OUTPUT2("0" (v), "m" (*addr)));
 }
@@ -204,7 +204,6 @@ extern void clear_local_APIC(void);
 extern void disconnect_bsp_APIC(int virt_wire_setup);
 extern void disable_local_APIC(void);
 extern void lapic_shutdown(void);
-extern int verify_local_APIC(void);
 extern void sync_Arb_IDs(void);
 extern void init_bsp_APIC(void);
 extern void setup_local_APIC(void);
@@ -213,7 +212,15 @@ void register_lapic_address(unsigned long address);
 extern void setup_boot_APIC_clock(void);
 extern void setup_secondary_APIC_clock(void);
 extern int APIC_init_uniprocessor(void);
+
+#ifdef CONFIG_X86_64
+static inline int apic_force_enable(unsigned long addr)
+{
+	return -1;
+}
+#else
 extern int apic_force_enable(unsigned long addr);
+#endif
 
 extern int apic_bsp_setup(bool upmode);
 extern void apic_ap_setup(void);

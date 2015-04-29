@@ -80,7 +80,7 @@ static irqreturn_t xenvif_tx_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-int xenvif_poll(struct napi_struct *napi, int budget)
+static int xenvif_poll(struct napi_struct *napi, int budget)
 {
 	struct xenvif_queue *queue =
 		container_of(napi, struct xenvif_queue, napi);
@@ -340,12 +340,11 @@ static void xenvif_get_ethtool_stats(struct net_device *dev,
 	unsigned int num_queues = vif->num_queues;
 	int i;
 	unsigned int queue_index;
-	struct xenvif_stats *vif_stats;
 
 	for (i = 0; i < ARRAY_SIZE(xenvif_stats); i++) {
 		unsigned long accum = 0;
 		for (queue_index = 0; queue_index < num_queues; ++queue_index) {
-			vif_stats = &vif->queues[queue_index].stats;
+			void *vif_stats = &vif->queues[queue_index].stats;
 			accum += *(unsigned long *)(vif_stats + xenvif_stats[i].offset);
 		}
 		data[i] = accum;

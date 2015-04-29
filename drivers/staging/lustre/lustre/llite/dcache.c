@@ -128,7 +128,7 @@ static int find_cbdata(struct inode *inode)
 	rc = md_find_cbdata(sbi->ll_md_exp, ll_inode2fid(inode),
 			    return_if_equal, NULL);
 	if (rc != 0)
-		 return rc;
+		return rc;
 
 	lsm = ccc_inode_lsm_get(inode);
 	if (lsm == NULL)
@@ -263,14 +263,6 @@ void ll_invalidate_aliases(struct inode *inode)
 		       dentry, dentry, dentry->d_parent,
 		       dentry->d_inode, dentry->d_flags);
 
-		if (unlikely(dentry == dentry->d_sb->s_root)) {
-			CERROR("%s: called on root dentry=%p, fid="DFID"\n",
-			       ll_get_fsname(dentry->d_sb, NULL, 0),
-			       dentry, PFID(ll_inode2fid(inode)));
-			lustre_dump_dentry(dentry, 1);
-			dump_stack();
-		}
-
 		d_lustre_invalidate(dentry, 0);
 	}
 	ll_unlock_dcache(inode);
@@ -278,7 +270,7 @@ void ll_invalidate_aliases(struct inode *inode)
 
 int ll_revalidate_it_finish(struct ptlrpc_request *request,
 			    struct lookup_intent *it,
-			    struct dentry *de)
+			    struct inode *inode)
 {
 	int rc = 0;
 
@@ -288,19 +280,17 @@ int ll_revalidate_it_finish(struct ptlrpc_request *request,
 	if (it_disposition(it, DISP_LOOKUP_NEG))
 		return -ENOENT;
 
-	rc = ll_prep_inode(&de->d_inode, request, NULL, it);
+	rc = ll_prep_inode(&inode, request, NULL, it);
 
 	return rc;
 }
 
-void ll_lookup_finish_locks(struct lookup_intent *it, struct dentry *dentry)
+void ll_lookup_finish_locks(struct lookup_intent *it, struct inode *inode)
 {
 	LASSERT(it != NULL);
-	LASSERT(dentry != NULL);
 
-	if (it->d.lustre.it_lock_mode && dentry->d_inode != NULL) {
-		struct inode *inode = dentry->d_inode;
-		struct ll_sb_info *sbi = ll_i2sbi(dentry->d_inode);
+	if (it->d.lustre.it_lock_mode && inode != NULL) {
+		struct ll_sb_info *sbi = ll_i2sbi(inode);
 
 		CDEBUG(D_DLMTRACE, "setting l_data to inode %p (%lu/%u)\n",
 		       inode, inode->i_ino, inode->i_generation);
@@ -349,13 +339,10 @@ static int ll_revalidate_dentry(struct dentry *dentry,
  */
 static int ll_revalidate_nd(struct dentry *dentry, unsigned int flags)
 {
-	int rc;
-
 	CDEBUG(D_VFSTRACE, "VFS Op:name=%pd, flags=%u\n",
 	       dentry, flags);
 
-	rc = ll_revalidate_dentry(dentry, flags);
-	return rc;
+	return ll_revalidate_dentry(dentry, flags);
 }
 
 

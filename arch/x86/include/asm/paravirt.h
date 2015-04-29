@@ -80,16 +80,16 @@ static inline void write_cr3(unsigned long x)
 	PVOP_VCALL1(pv_mmu_ops.write_cr3, x);
 }
 
-static inline unsigned long read_cr4(void)
+static inline unsigned long __read_cr4(void)
 {
 	return PVOP_CALL0(unsigned long, pv_cpu_ops.read_cr4);
 }
-static inline unsigned long read_cr4_safe(void)
+static inline unsigned long __read_cr4_safe(void)
 {
 	return PVOP_CALL0(unsigned long, pv_cpu_ops.read_cr4_safe);
 }
 
-static inline void write_cr4(unsigned long x)
+static inline void __write_cr4(unsigned long x)
 {
 	PVOP_VCALL1(pv_cpu_ops.write_cr4, x);
 }
@@ -976,11 +976,6 @@ extern void default_banner(void);
 	PARA_SITE(PARA_PATCH(pv_cpu_ops, PV_CPU_usergs_sysret64),	\
 		  CLBR_NONE,						\
 		  jmp PARA_INDIRECT(pv_cpu_ops+PV_CPU_usergs_sysret64))
-
-#define ENABLE_INTERRUPTS_SYSEXIT32					\
-	PARA_SITE(PARA_PATCH(pv_cpu_ops, PV_CPU_irq_enable_sysexit),	\
-		  CLBR_NONE,						\
-		  jmp PARA_INDIRECT(pv_cpu_ops+PV_CPU_irq_enable_sysexit))
 #endif	/* CONFIG_X86_32 */
 
 #endif /* __ASSEMBLY__ */

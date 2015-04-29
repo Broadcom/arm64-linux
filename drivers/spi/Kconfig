@@ -29,7 +29,7 @@ menuconfig SPI
 if SPI
 
 config SPI_DEBUG
-	boolean "Debug support for SPI drivers"
+	bool "Debug support for SPI drivers"
 	depends on DEBUG_KERNEL
 	help
 	  Say "yes" to enable debug messaging (like dev_dbg and pr_debug),
@@ -40,8 +40,8 @@ config SPI_DEBUG
 #
 
 config SPI_MASTER
-#	boolean "SPI Master Support"
-	boolean
+#	bool "SPI Master Support"
+	bool
 	default SPI
 	help
 	  If your system has an master-capable SPI controller (which
@@ -159,10 +159,9 @@ config SPI_BUTTERFLY
 
 config SPI_CADENCE
 	tristate "Cadence SPI controller"
-	depends on ARM
 	help
 	  This selects the Cadence SPI controller master driver
-	  used by Xilinx Zynq.
+	  used by Xilinx Zynq and ZynqMP.
 
 config SPI_CLPS711X
 	tristate "CLPS711X host SPI controller"
@@ -632,7 +631,7 @@ config SPI_DW_PCI
 
 config SPI_DW_MID_DMA
 	bool "DMA support for DW SPI controller on Intel MID platform"
-	depends on SPI_DW_PCI && INTEL_MID_DMAC
+	depends on SPI_DW_PCI && DW_DMAC_PCI
 
 config SPI_DW_MMIO
 	tristate "Memory-mapped io interface driver for DW SPI core"

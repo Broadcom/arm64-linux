@@ -96,6 +96,7 @@ extern void purge_tlb_entries(struct mm_struct *, unsigned long);
 #if PT_NLEVELS == 3
 #define BITS_PER_PMD	(PAGE_SHIFT + PMD_ORDER - BITS_PER_PMD_ENTRY)
 #else
+#define __PAGETABLE_PMD_FOLDED
 #define BITS_PER_PMD	0
 #endif
 #define PTRS_PER_PMD    (1UL << BITS_PER_PMD)
@@ -134,7 +135,7 @@ extern void purge_tlb_entries(struct mm_struct *, unsigned long);
  * pgd entries used up by user/kernel:
  */
 
-#define FIRST_USER_ADDRESS	0
+#define FIRST_USER_ADDRESS	0UL
 
 /* NB: The tlb miss handlers make certain assumptions about the order */
 /*     of the following bits, so be careful (One example, bits 25-31  */

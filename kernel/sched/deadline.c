@@ -69,7 +69,7 @@ void init_dl_bw(struct dl_bw *dl_b)
 	dl_b->total_bw = 0;
 }
 
-void init_dl_rq(struct dl_rq *dl_rq, struct rq *rq)
+void init_dl_rq(struct dl_rq *dl_rq)
 {
 	dl_rq->rb_root = RB_ROOT;
 
@@ -216,6 +216,52 @@ static inline bool need_pull_dl_task(struct rq *rq, struct task_struct *prev)
 static inline void set_post_schedule(struct rq *rq)
 {
 	rq->post_schedule = has_pushable_dl_tasks(rq);
+}
+
+static struct rq *find_lock_later_rq(struct task_struct *task, struct rq *rq);
+
+static void dl_task_offline_migration(struct rq *rq, struct task_struct *p)
+{
+	struct rq *later_rq = NULL;
+	bool fallback = false;
+
+	later_rq = find_lock_later_rq(p, rq);
+
+	if (!later_rq) {
+		int cpu;
+
+		/*
+		 * If we cannot preempt any rq, fall back to pick any
+		 * online cpu.
+		 */
+		fallback = true;
+		cpu = cpumask_any_and(cpu_active_mask, tsk_cpus_allowed(p));
+		if (cpu >= nr_cpu_ids) {
+			/*
+			 * Fail to find any suitable cpu.
+			 * The task will never come back!
+			 */
+			BUG_ON(dl_bandwidth_enabled());
+
+			/*
+			 * If admission control is disabled we
+			 * try a little harder to let the task
+			 * run.
+			 */
+			cpu = cpumask_any(cpu_active_mask);
+		}
+		later_rq = cpu_rq(cpu);
+		double_lock_balance(rq, later_rq);
+	}
+
+	deactivate_task(rq, p, 0);
+	set_task_cpu(p, later_rq->cpu);
+	activate_task(later_rq, p, ENQUEUE_REPLENISH);
+
+	if (!fallback)
+		resched_curr(later_rq);
+
+	double_unlock_balance(rq, later_rq);
 }
 
 #else
@@ -511,16 +557,10 @@ static enum hrtimer_restart dl_task_timer(struct hrtimer *timer)
 						     struct sched_dl_entity,
 						     dl_timer);
 	struct task_struct *p = dl_task_of(dl_se);
+	unsigned long flags;
 	struct rq *rq;
-again:
-	rq = task_rq(p);
-	raw_spin_lock(&rq->lock);
 
-	if (rq != task_rq(p)) {
-		/* Task was moved, retrying. */
-		raw_spin_unlock(&rq->lock);
-		goto again;
-	}
+	rq = task_rq_lock(p, &flags);
 
 	/*
 	 * We need to take care of several possible races here:
@@ -541,6 +581,37 @@ again:
 
 	sched_clock_tick();
 	update_rq_clock(rq);
+
+#ifdef CONFIG_SMP
+	/*
+	 * If we find that the rq the task was on is no longer
+	 * available, we need to select a new rq.
+	 */
+	if (unlikely(!rq->online)) {
+		dl_task_offline_migration(rq, p);
+		goto unlock;
+	}
+#endif
+
+	/*
+	 * If the throttle happened during sched-out; like:
+	 *
+	 *   schedule()
+	 *     deactivate_task()
+	 *       dequeue_task_dl()
+	 *         update_curr_dl()
+	 *           start_dl_timer()
+	 *         __dequeue_task_dl()
+	 *     prev->on_rq = 0;
+	 *
+	 * We can be both throttled and !queued. Replenish the counter
+	 * but do not enqueue -- wait for our wakeup to do that.
+	 */
+	if (!task_on_rq_queued(p)) {
+		replenish_dl_entity(dl_se, dl_se);
+		goto unlock;
+	}
+
 	enqueue_task_dl(rq, p, ENQUEUE_REPLENISH);
 	if (dl_task(rq->curr))
 		check_preempt_curr_dl(rq, p, 0);
@@ -555,7 +626,7 @@ again:
 		push_dl_task(rq);
 #endif
 unlock:
-	raw_spin_unlock(&rq->lock);
+	task_rq_unlock(rq, p, &flags);
 
 	return HRTIMER_NORESTART;
 }
@@ -898,7 +969,14 @@ static void yield_task_dl(struct rq *rq)
 		rq->curr->dl.dl_yielded = 1;
 		p->dl.runtime = 0;
 	}
+	update_rq_clock(rq);
 	update_curr_dl(rq);
+	/*
+	 * Tell update_rq_clock() that we've just updated,
+	 * so we don't do microscopic update in schedule()
+	 * and double the fastpath cost.
+	 */
+	rq_clock_skip_update(rq, true);
 }
 
 #ifdef CONFIG_SMP
@@ -1643,14 +1721,6 @@ static void switched_from_dl(struct rq *rq, struct task_struct *p)
 static void switched_to_dl(struct rq *rq, struct task_struct *p)
 {
 	int check_resched = 1;
-
-	/*
-	 * If p is throttled, don't consider the possibility
-	 * of preempting rq->curr, the check will be done right
-	 * after its runtime will get replenished.
-	 */
-	if (unlikely(p->dl.dl_throttled))
-		return;
 
 	if (task_on_rq_queued(p) && rq->curr != p) {
 #ifdef CONFIG_SMP

@@ -171,7 +171,7 @@ static int __dma_supported(struct device *dev, u64 mask, bool warn)
 	 */
 	if (sizeof(mask) != sizeof(dma_addr_t) &&
 	    mask > (dma_addr_t)~0 &&
-	    dma_to_pfn(dev, ~0) < max_pfn) {
+	    dma_to_pfn(dev, ~0) < max_pfn - 1) {
 		if (warn) {
 			dev_warn(dev, "Coherent DMA mask %#llx is larger than dma_addr_t allows\n",
 				 mask);
@@ -1106,7 +1106,7 @@ static struct page **__iommu_alloc_buffer(struct device *dev, size_t size,
 	int i = 0;
 
 	if (array_size <= PAGE_SIZE)
-		pages = kzalloc(array_size, gfp);
+		pages = kzalloc(array_size, GFP_KERNEL);
 	else
 		pages = vzalloc(array_size);
 	if (!pages)
@@ -2025,6 +2025,13 @@ static bool arm_setup_iommu_dma_ops(struct device *dev, u64 dma_base, u64 size,
 	struct dma_iommu_mapping *mapping;
 
 	if (!iommu)
+		return false;
+
+	/*
+	 * currently arm_iommu_create_mapping() takes a max of size_t
+	 * for size param. So check this limit for now.
+	 */
+	if (size > SIZE_MAX)
 		return false;
 
 	mapping = arm_iommu_create_mapping(dev->bus, dma_base, size);

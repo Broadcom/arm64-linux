@@ -15,7 +15,7 @@
 
 / {
 	compatible = "ti,am4372", "ti,am43";
-	interrupt-parent = <&gic>;
+	interrupt-parent = <&wakeupgen>;
 
 
 	aliases {
@@ -48,6 +48,15 @@
 		#interrupt-cells = <3>;
 		reg = <0x48241000 0x1000>,
 		      <0x48240100 0x0100>;
+		interrupt-parent = <&gic>;
+	};
+
+	wakeupgen: interrupt-controller@48281000 {
+		compatible = "ti,omap4-wugen-mpu";
+		interrupt-controller;
+		#interrupt-cells = <3>;
+		reg = <0x48281000 0x1000>;
+		interrupt-parent = <&gic>;
 	};
 
 	l2-cache-controller@48242000 {
@@ -946,6 +955,22 @@
 			reg = <0x481d0000 0x2000>;
 			syscon-raminit = <&am43xx_control_module 0x644 1>;
 			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		vpfe0: vpfe@48326000 {
+			compatible = "ti,am437x-vpfe";
+			reg = <0x48326000 0x2000>;
+			interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
+			ti,hwmods = "vpfe0";
+			status = "disabled";
+		};
+
+		vpfe1: vpfe@48328000 {
+			compatible = "ti,am437x-vpfe";
+			reg = <0x48328000 0x2000>;
+			interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
+			ti,hwmods = "vpfe1";
 			status = "disabled";
 		};
 	};
