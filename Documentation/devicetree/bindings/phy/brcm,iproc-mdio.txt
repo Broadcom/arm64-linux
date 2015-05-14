@@ -1,0 +1,11 @@
+Broadcom iProc MDC/MDIO interface
+
+Required properties:
+- compatible: Must be "brcm,iproc-mdio"
+- reg: base address and length of the MDC/MDIO block
+
+Example:
+	mdio: mdio@18002000 {
+		compatible = "brcm,iproc-mdio";
+		reg = <0x18002000 0x8>;
+	};
