@@ -291,4 +291,15 @@ config PHY_QCOM_UFS
 	help
 	  Support for UFS PHY on QCOM chipsets.
 
+config PHY_IPROC_MDIO
+	bool "Broadcom iProc MDC/MDIO driver"
+	depends on ARCH_BCM_IPROC || COMPILE_TEST
+	default ARCH_BCM_IPROC
+	help
+	  This supports the generic MDC/MDIO interface found in iProc family
+	  of SoCs. The generic MDC/MDIO interface can be used to communicate
+	  with various types of Serdes/PHYs including Ethernet, USB, and PCIe
+
+	  If unsure, say N.
+
 endmenu
