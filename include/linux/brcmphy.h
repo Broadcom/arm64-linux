@@ -21,6 +21,8 @@
 #define PHY_ID_BCM7439			0x600d8480
 #define PHY_ID_BCM7445			0x600d8510
 
+#define PHY_ID_BCM_CYGNUS		0xae025200
+
 #define PHY_BCM_OUI_MASK		0xfffffc00
 #define PHY_BCM_OUI_1			0x00206000
 #define PHY_BCM_OUI_2			0x0143bc00
