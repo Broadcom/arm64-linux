@@ -11,7 +11,6 @@ OBJS= \
 	kdbus-test.o		\
 	kdbus-test.o		\
 	test-activator.o	\
-	test-attach-flags.o	\
 	test-benchmark.o	\
 	test-bus.o		\
 	test-chat.o		\
