@@ -1588,10 +1588,8 @@ bool kdbus_conn_policy_see_notification(struct kdbus_conn *conn,
 	 *     to a peer if, and only if, that peer can see the name this
 	 *     notification is for.
 	 *
-	 * KDBUS_ITEM_ID_{ADD,REMOVE}: As new peers cannot have names, and all
-	 *     names are dropped before a peer is removed, those notifications
-	 *     cannot be seen on custom endpoints. Thus, we only pass them
-	 *     through on default endpoints.
+	 * KDBUS_ITEM_ID_{ADD,REMOVE}: Notifications for ID changes are
+	 *     broadcast to everyone, to allow tracking peers.
 	 */
 
 	switch (kmsg->notify_type) {
@@ -1603,7 +1601,7 @@ bool kdbus_conn_policy_see_notification(struct kdbus_conn *conn,
 
 	case KDBUS_ITEM_ID_ADD:
 	case KDBUS_ITEM_ID_REMOVE:
-		return !conn->ep->user;
+		return true;
 
 	default:
 		WARN(1, "Invalid type for notification broadcast: %llu\n",
