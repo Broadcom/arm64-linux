@@ -753,7 +753,7 @@ void kdbus_conn_quota_dec(struct kdbus_conn *c, struct kdbus_user *u,
  *
  * kdbus is reliable. That means, we try hard to never lose messages. However,
  * memory is limited, so we cannot rely on transmissions to never fail.
- * Therefore, we use quota-limits to let callers know if there unicast message
+ * Therefore, we use quota-limits to let callers know if their unicast message
  * cannot be transmitted to a peer. This works fine for unicasts, but for
  * broadcasts we cannot make the caller handle the transmission failure.
  * Instead, we must let the destination know that it couldn't receive a
