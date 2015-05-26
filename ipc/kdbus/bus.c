@@ -293,12 +293,12 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
 			if (!kdbus_conn_policy_talk(conn_dst, NULL, conn_src))
 				continue;
 
-			/*
-			 * Keep sending messages even if we cannot acquire the
-			 * requested metadata. It's up to the receiver to drop
-			 * messages that lack expected metadata.
-			 */
-			kdbus_kmsg_collect_metadata(kmsg, conn_src, conn_dst);
+			ret = kdbus_kmsg_collect_metadata(kmsg, conn_src,
+							  conn_dst);
+			if (ret < 0) {
+				kdbus_conn_lost_message(conn_dst);
+				continue;
+			}
 		} else {
 			/*
 			 * Check if there is a policy db that prevents the
@@ -344,14 +344,14 @@ void kdbus_bus_eavesdrop(struct kdbus_bus *bus,
 
 	down_read(&bus->conn_rwlock);
 	list_for_each_entry(conn_dst, &bus->monitors_list, monitor_entry) {
-		/*
-		 * Collect metadata requested by the destination connection.
-		 * Ignore errors, as receivers need to check metadata
-		 * availability, anyway. So it's still better to send messages
-		 * that lack data, than to skip it entirely.
-		 */
-		if (conn_src)
-			kdbus_kmsg_collect_metadata(kmsg, conn_src, conn_dst);
+		if (conn_src) {
+			ret = kdbus_kmsg_collect_metadata(kmsg, conn_src,
+							  conn_dst);
+			if (ret < 0) {
+				kdbus_conn_lost_message(conn_dst);
+				continue;
+			}
+		}
 
 		ret = kdbus_conn_entry_insert(conn_src, conn_dst, kmsg, NULL);
 		if (ret < 0)
