@@ -285,8 +285,6 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
 			continue;
 
 		if (conn_src) {
-			u64 attach_flags;
-
 			/*
 			 * Anyone can send broadcasts, as they have no
 			 * destination. But a receiver needs TALK access to
@@ -295,19 +293,12 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
 			if (!kdbus_conn_policy_talk(conn_dst, NULL, conn_src))
 				continue;
 
-			attach_flags = kdbus_meta_calc_attach_flags(conn_src,
-								    conn_dst);
-
 			/*
 			 * Keep sending messages even if we cannot acquire the
 			 * requested metadata. It's up to the receiver to drop
 			 * messages that lack expected metadata.
 			 */
-			if (!conn_src->faked_meta)
-				kdbus_meta_proc_collect(kmsg->proc_meta,
-							attach_flags);
-			kdbus_meta_conn_collect(kmsg->conn_meta, kmsg, conn_src,
-						attach_flags);
+			kdbus_kmsg_collect_metadata(kmsg, conn_src, conn_dst);
 		} else {
 			/*
 			 * Check if there is a policy db that prevents the
@@ -359,17 +350,8 @@ void kdbus_bus_eavesdrop(struct kdbus_bus *bus,
 		 * availability, anyway. So it's still better to send messages
 		 * that lack data, than to skip it entirely.
 		 */
-		if (conn_src) {
-			u64 attach_flags;
-
-			attach_flags = kdbus_meta_calc_attach_flags(conn_src,
-								    conn_dst);
-			if (!conn_src->faked_meta)
-				kdbus_meta_proc_collect(kmsg->proc_meta,
-							attach_flags);
-			kdbus_meta_conn_collect(kmsg->conn_meta, kmsg, conn_src,
-						attach_flags);
-		}
+		if (conn_src)
+			kdbus_kmsg_collect_metadata(kmsg, conn_src, conn_dst);
 
 		ret = kdbus_conn_entry_insert(conn_src, conn_dst, kmsg, NULL);
 		if (ret < 0)

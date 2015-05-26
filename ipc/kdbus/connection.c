@@ -1098,7 +1098,6 @@ static int kdbus_conn_reply(struct kdbus_conn *src, struct kdbus_kmsg *kmsg)
 	struct kdbus_reply *reply, *wake = NULL;
 	struct kdbus_conn *dst = NULL;
 	struct kdbus_bus *bus = src->ep->bus;
-	u64 attach;
 	int ret;
 
 	if (WARN_ON(kmsg->msg.dst_id == KDBUS_DST_ID_BROADCAST) ||
@@ -1131,15 +1130,7 @@ static int kdbus_conn_reply(struct kdbus_conn *src, struct kdbus_kmsg *kmsg)
 
 	/* attach metadata */
 
-	attach = kdbus_meta_calc_attach_flags(src, dst);
-
-	if (!src->faked_meta) {
-		ret = kdbus_meta_proc_collect(kmsg->proc_meta, attach);
-		if (ret < 0)
-			goto exit;
-	}
-
-	ret = kdbus_meta_conn_collect(kmsg->conn_meta, kmsg, src, attach);
+	ret = kdbus_kmsg_collect_metadata(kmsg, src, dst);
 	if (ret < 0)
 		goto exit;
 
@@ -1167,7 +1158,6 @@ static struct kdbus_reply *kdbus_conn_call(struct kdbus_conn *src,
 	struct kdbus_reply *wait = NULL;
 	struct kdbus_conn *dst = NULL;
 	struct kdbus_bus *bus = src->ep->bus;
-	u64 attach;
 	int ret;
 
 	if (WARN_ON(kmsg->msg.dst_id == KDBUS_DST_ID_BROADCAST) ||
@@ -1218,15 +1208,7 @@ static struct kdbus_reply *kdbus_conn_call(struct kdbus_conn *src,
 
 	/* attach metadata */
 
-	attach = kdbus_meta_calc_attach_flags(src, dst);
-
-	if (!src->faked_meta) {
-		ret = kdbus_meta_proc_collect(kmsg->proc_meta, attach);
-		if (ret < 0)
-			goto exit;
-	}
-
-	ret = kdbus_meta_conn_collect(kmsg->conn_meta, kmsg, src, attach);
+	ret = kdbus_kmsg_collect_metadata(kmsg, src, dst);
 	if (ret < 0)
 		goto exit;
 
@@ -1257,7 +1239,6 @@ static int kdbus_conn_unicast(struct kdbus_conn *src, struct kdbus_kmsg *kmsg)
 	struct kdbus_conn *dst = NULL;
 	struct kdbus_bus *bus = src->ep->bus;
 	bool is_signal = (kmsg->msg.flags & KDBUS_MSG_SIGNAL);
-	u64 attach;
 	int ret = 0;
 
 	if (WARN_ON(kmsg->msg.dst_id == KDBUS_DST_ID_BROADCAST) ||
@@ -1296,16 +1277,8 @@ static int kdbus_conn_unicast(struct kdbus_conn *src, struct kdbus_kmsg *kmsg)
 
 	/* attach metadata */
 
-	attach = kdbus_meta_calc_attach_flags(src, dst);
-
-	if (!src->faked_meta) {
-		ret = kdbus_meta_proc_collect(kmsg->proc_meta, attach);
-		if (ret < 0 && !is_signal)
-			goto exit;
-	}
-
-	ret = kdbus_meta_conn_collect(kmsg->conn_meta, kmsg, src, attach);
-	if (ret < 0 && !is_signal)
+	ret = kdbus_kmsg_collect_metadata(kmsg, src, dst);
+	if (ret < 0)
 		goto exit;
 
 	/* send message */
