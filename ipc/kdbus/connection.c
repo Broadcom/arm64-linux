@@ -432,7 +432,7 @@ static int kdbus_conn_connect(struct kdbus_conn *conn, const char *name)
 	 * directly, and won't cause any notifications.
 	 */
 	if (!kdbus_conn_is_monitor(conn)) {
-		ret = kdbus_notify_id_change(conn->ep->bus, KDBUS_ITEM_ID_ADD,
+		ret = kdbus_notify_id_change(bus, KDBUS_ITEM_ID_ADD,
 					     conn->id, conn->flags);
 		if (ret < 0)
 			goto exit_disconnect;
