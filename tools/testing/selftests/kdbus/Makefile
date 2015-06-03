@@ -34,7 +34,7 @@ all: kdbus-test
 
 include ../lib.mk
 
-%.o: %.c
+%.o: %.c kdbus-enum.h kdbus-test.h kdbus-util.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 kdbus-test: $(OBJS)
