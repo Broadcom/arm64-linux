@@ -40,7 +40,7 @@
 ({									\
 	u64 __user *_sz =						\
 		(void __user *)((u8 __user *)(_b) + offsetof(_t, _m));	\
-	copy_to_user(_sz, _s, sizeof(((_t *)0)->_m));			\
+	copy_to_user(_sz, _s, FIELD_SIZEOF(_t, _m));			\
 })
 
 /**
