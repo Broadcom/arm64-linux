@@ -126,7 +126,7 @@ static void iproc_pcie_reset(struct iproc_pcie *pcie)
 static int iproc_pcie_check_link(struct iproc_pcie *pcie, struct pci_bus *bus)
 {
 	u8 hdr_type;
-	u32 link_ctrl;
+	u32 link_ctrl, class;
 	u16 pos, link_status;
 	int link_is_active = 0;
 
@@ -137,9 +137,17 @@ static int iproc_pcie_check_link(struct iproc_pcie *pcie, struct pci_bus *bus)
 		return -EFAULT;
 	}
 
-	/* force class to PCI_CLASS_BRIDGE_PCI (0x0604) */
-	pci_bus_write_config_word(bus, 0, PCI_CLASS_DEVICE,
-				  PCI_CLASS_BRIDGE_PCI);
+	/*
+	 * Force class to PCI_CLASS_BRIDGE_PCI (0x0604) through the register
+	 * from host configuration space at offset 0x43c
+	 */
+#define PCI_BRIDGE_CTRL_REG_OFFSET 0x43c
+#define PCI_CLASS_BRIDGE_MASK      0xffff00
+#define PCI_CLASS_BRIDGE_SHIFT     8
+	pci_bus_read_config_dword(bus, 0, PCI_BRIDGE_CTRL_REG_OFFSET, &class);
+	class &= ~PCI_CLASS_BRIDGE_MASK;
+	class |= (PCI_CLASS_BRIDGE_PCI << PCI_CLASS_BRIDGE_SHIFT);
+	pci_bus_write_config_dword(bus, 0, PCI_BRIDGE_CTRL_REG_OFFSET, class);
 
 	/* check link status to see if link is active */
 	pos = pci_bus_find_capability(bus, 0, PCI_CAP_ID_EXP);
