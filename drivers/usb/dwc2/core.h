@@ -150,6 +150,7 @@ struct s3c_hsotg_ep {
 	unsigned int            periodic:1;
 	unsigned int            isochronous:1;
 	unsigned int            send_zlp:1;
+	unsigned int            parity_set:1;
 
 	char                    name[10];
 };

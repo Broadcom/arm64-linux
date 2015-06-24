@@ -1949,6 +1949,8 @@ static void s3c_hsotg_epint(struct dwc2_hsotg *hsotg, unsigned int idx,
 		ints &= ~DXEPINT_XFERCOMPL;
 
 	if (ints & DXEPINT_XFERCOMPL) {
+		if (hs_ep->isochronous && !hs_ep->parity_set)
+			hs_ep->parity_set = 1;
 		if (hs_ep->isochronous && hs_ep->interval == 1) {
 			if (ctrl & DXEPCTL_EOFRNUM)
 				ctrl |= DXEPCTL_SETEVENFR;
@@ -2311,7 +2313,8 @@ void s3c_hsotg_core_init_disconnected(struct dwc2_hsotg *hsotg,
 		GINTSTS_GOUTNAKEFF | GINTSTS_GINNAKEFF |
 		GINTSTS_CONIDSTSCHNG | GINTSTS_USBRST |
 		GINTSTS_ENUMDONE | GINTSTS_OTGINT |
-		GINTSTS_USBSUSP | GINTSTS_WKUPINT,
+		GINTSTS_USBSUSP | GINTSTS_WKUPINT |
+		GINTSTS_INCOMPL_SOIN | GINTSTS_INCOMPL_SOOUT,
 		hsotg->regs + GINTMSK);
 
 	if (using_dma(hsotg))
@@ -2563,6 +2566,48 @@ irq_retry:
 		s3c_hsotg_dump(hsotg);
 	}
 
+	if (gintsts & GINTSTS_INCOMPL_SOIN) {
+		u32 idx;
+		struct s3c_hsotg_ep *hs_ep;
+
+		dev_dbg(hsotg->dev, "%s: GINTSTS_INCOMPL_SOIN\n", __func__);
+		for (idx = 1; idx < MAX_EPS_CHANNELS; idx++) {
+			hs_ep = hsotg->eps_in[idx];
+			if (hs_ep->isochronous && !hs_ep->parity_set) {
+				u32 epctl_reg = DIEPCTL(idx);
+				u32 ctrl = readl(hsotg->regs + epctl_reg);
+
+				if (ctrl & DXEPCTL_EOFRNUM)
+					ctrl |= DXEPCTL_SETEVENFR;
+				else
+					ctrl |= DXEPCTL_SETODDFR;
+				writel(ctrl, hsotg->regs + epctl_reg);
+			}
+		}
+		writel(GINTSTS_INCOMPL_SOIN, hsotg->regs + GINTSTS);
+	}
+
+	if (gintsts & GINTSTS_INCOMPL_SOOUT) {
+		u32 idx;
+		struct s3c_hsotg_ep *hs_ep;
+
+		dev_dbg(hsotg->dev, "%s: GINTSTS_INCOMPL_SOOUT\n", __func__);
+		for (idx = 1; idx < MAX_EPS_CHANNELS; idx++) {
+			hs_ep = hsotg->eps_out[idx];
+			if (hs_ep->isochronous && !hs_ep->parity_set) {
+				u32 epctl_reg = DOEPCTL(idx);
+				u32 ctrl = readl(hsotg->regs + epctl_reg);
+
+				if (ctrl & DXEPCTL_EOFRNUM)
+					ctrl |= DXEPCTL_SETEVENFR;
+				else
+					ctrl |= DXEPCTL_SETODDFR;
+				writel(ctrl, hsotg->regs + epctl_reg);
+			}
+		}
+		writel(GINTSTS_INCOMPL_SOOUT, hsotg->regs + GINTSTS);
+	}
+
 	/*
 	 * if we've had fifo events, we should try and go around the
 	 * loop again to see if there's any point in returning yet.
@@ -2649,6 +2694,7 @@ static int s3c_hsotg_ep_enable(struct usb_ep *ep,
 	hs_ep->periodic = 0;
 	hs_ep->halted = 0;
 	hs_ep->interval = desc->bInterval;
+	hs_ep->parity_set = 0;
 
 	if (hs_ep->interval > 1 && hs_ep->mc > 1)
 		dev_err(hsotg->dev, "MC > 1 when interval is not 1\n");
