@@ -58,21 +58,12 @@ static struct irq_chip core_chip = {
 };
 
 static int prio_to_virq[NR_PRIORITY_IRQS];
+static struct irq_domain *core_domain;
 
 asmlinkage void c6x_do_IRQ(unsigned int prio, struct pt_regs *regs)
 {
-	struct pt_regs *old_regs = set_irq_regs(regs);
-
-	irq_enter();
-
-	generic_handle_irq(prio_to_virq[prio]);
-
-	irq_exit();
-
-	set_irq_regs(old_regs);
+	__handle_domain_irq(core_domain, prio, true, regs);
 }
-
-static struct irq_domain *core_domain;
 
 static int core_domain_map(struct irq_domain *h, unsigned int virq,
 			   irq_hw_number_t hw)
