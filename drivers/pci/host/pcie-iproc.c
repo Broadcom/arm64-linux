@@ -58,10 +58,12 @@
 #define SYS_RC_INTX_EN               0x330
 #define SYS_RC_INTX_MASK             0xf
 
+#ifdef CONFIG_ARM
 static inline struct iproc_pcie *sys_to_pcie(struct pci_sys_data *sys)
 {
 	return sys->private_data;
 }
+#endif
 
 /**
  * Note access to the configuration registers are protected at the higher layer
@@ -71,8 +73,12 @@ static void __iomem *iproc_pcie_map_cfg_bus(struct pci_bus *bus,
 					    unsigned int devfn,
 					    int where)
 {
+#ifdef CONFIG_ARM
 	struct pci_sys_data *sys = bus->sysdata;
 	struct iproc_pcie *pcie = sys_to_pcie(sys);
+#else
+	struct iproc_pcie *pcie = bus->sysdata;
+#endif
 	unsigned slot = PCI_SLOT(devfn);
 	unsigned fn = PCI_FUNC(devfn);
 	unsigned busno = bus->number;
@@ -216,10 +222,14 @@ int iproc_pcie_setup(struct iproc_pcie *pcie)
 
 	iproc_pcie_reset(pcie);
 
+#ifdef CONFIG_ARM
 	pcie->sysdata.private_data = pcie;
-
 	bus = pci_create_root_bus(pcie->dev, 0, &iproc_pcie_ops,
 				  &pcie->sysdata, pcie->resources);
+#else
+	bus = pci_create_root_bus(pcie->dev, 0, &iproc_pcie_ops, pcie,
+				  pcie->resources);
+#endif
 	if (!bus) {
 		dev_err(pcie->dev, "unable to create PCI root bus\n");
 		ret = -ENOMEM;
@@ -237,7 +247,9 @@ int iproc_pcie_setup(struct iproc_pcie *pcie)
 
 	pci_scan_child_bus(bus);
 	pci_assign_unassigned_bus_resources(bus);
+#ifdef CONFIG_ARM
 	pci_fixup_irqs(pci_common_swizzle, of_irq_parse_and_map_pci);
+#endif
 	pci_bus_add_devices(bus);
 
 	return 0;
