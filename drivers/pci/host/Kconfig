@@ -117,7 +117,7 @@ config PCIE_IPROC
 
 config PCIE_IPROC_PLATFORM
 	tristate "Broadcom iProc PCIe platform bus driver"
-	depends on ARM && (ARCH_BCM_IPROC || COMPILE_TEST)
+	depends on ARCH_BCM_IPROC || (ARM && COMPILE_TEST)
 	depends on OF
 	select PCIE_IPROC
 	default ARCH_BCM_IPROC
