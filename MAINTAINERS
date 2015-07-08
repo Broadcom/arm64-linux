@@ -51,9 +51,9 @@ trivial patch so apply some common sense.
 	or does something very odd once a month document it.
 
 	PLEASE remember that submissions must be made under the terms
-	of the OSDL certificate of contribution and should include a
-	Signed-off-by: line.  The current version of this "Developer's
-	Certificate of Origin" (DCO) is listed in the file
+	of the Linux Foundation certificate of contribution and should
+	include a Signed-off-by: line.  The current version of this
+	"Developer's Certificate of Origin" (DCO) is listed in the file
 	Documentation/SubmittingPatches.
 
 6.	Make sure you have the right to send any changes you make. If you
@@ -2250,6 +2250,13 @@ N:	bcm9583*
 N:	bcm583*
 N:	bcm113*
 
+BROADCOM BRCMSTB GPIO DRIVER
+M:	Gregory Fong <gregory.0xf0@gmail.com>
+L:	bcm-kernel-feedback-list@broadcom.com>
+S:	Supported
+F:	drivers/gpio/gpio-brcmstb.c
+F:	Documentation/devicetree/bindings/gpio/brcm,brcmstb-gpio.txt
+
 BROADCOM KONA GPIO DRIVER
 M:	Ray Jui <rjui@broadcom.com>
 L:	bcm-kernel-feedback-list@broadcom.com
@@ -2427,7 +2434,6 @@ L:	linux-security-module@vger.kernel.org
 S:	Supported
 F:	include/linux/capability.h
 F:	include/uapi/linux/capability.h
-F:	security/capability.c
 F:	security/commoncap.c
 F:	kernel/capability.c
 
@@ -3825,10 +3831,11 @@ M:	David Woodhouse <dwmw2@infradead.org>
 L:	linux-embedded@vger.kernel.org
 S:	Maintained
 
-EMULEX LPFC FC SCSI DRIVER
-M:	James Smart <james.smart@emulex.com>
+EMULEX/AVAGO LPFC FC/FCOE SCSI DRIVER
+M:	James Smart <james.smart@avagotech.com>
+M:	Dick Kennedy <dick.kennedy@avagotech.com>
 L:	linux-scsi@vger.kernel.org
-W:	http://sourceforge.net/projects/lpfcxxxx
+W:	http://www.avagotech.com
 S:	Supported
 F:	drivers/scsi/lpfc/
 
@@ -4891,13 +4898,23 @@ M:	Marcelo Henrique Cerri <mhcerri@linux.vnet.ibm.com>
 M:	Fionnuala Gunter <fin@linux.vnet.ibm.com>
 L:	linux-crypto@vger.kernel.org
 S:	Supported
-F:	drivers/crypto/nx/
+F:	drivers/crypto/nx/Makefile
+F:	drivers/crypto/nx/Kconfig
+F:	drivers/crypto/nx/nx-aes*
+F:	drivers/crypto/nx/nx-sha*
+F:	drivers/crypto/nx/nx.*
+F:	drivers/crypto/nx/nx_csbcpb.h
+F:	drivers/crypto/nx/nx_debugfs.h
 
 IBM Power 842 compression accelerator
 M:	Dan Streetman <ddstreet@us.ibm.com>
 S:	Supported
-F:	drivers/crypto/nx/nx-842.c
-F:	include/linux/nx842.h
+F:	drivers/crypto/nx/Makefile
+F:	drivers/crypto/nx/Kconfig
+F:	drivers/crypto/nx/nx-842*
+F:	include/linux/sw842.h
+F:	crypto/842.c
+F:	lib/842/
 
 IBM Power Linux RAID adapter
 M:	Brian King <brking@us.ibm.com>
@@ -7587,6 +7604,7 @@ F:	drivers/pci/host/pci-exynos.c
 
 PCI DRIVER FOR SYNOPSIS DESIGNWARE
 M:	Jingoo Han <jingoohan1@gmail.com>
+M:	Pratyush Anand <pratyush.anand@gmail.com>
 L:	linux-pci@vger.kernel.org
 S:	Maintained
 F:	drivers/pci/host/*designware*
@@ -7600,9 +7618,18 @@ F:	Documentation/devicetree/bindings/pci/host-generic-pci.txt
 F:	drivers/pci/host/pci-host-generic.c
 
 PCIE DRIVER FOR ST SPEAR13XX
+M:	Pratyush Anand <pratyush.anand@gmail.com>
 L:	linux-pci@vger.kernel.org
-S:	Orphan
+S:	Maintained
 F:	drivers/pci/host/*spear*
+
+PCI MSI DRIVER FOR APPLIEDMICRO XGENE
+M:	Duc Dang <dhdang@apm.com>
+L:	linux-pci@vger.kernel.org
+L:	linux-arm-kernel@lists.infradead.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/pci/xgene-pci-msi.txt
+F:	drivers/pci/host/pci-xgene-msi.c
 
 PCMCIA SUBSYSTEM
 P:	Linux PCMCIA Team
@@ -7644,7 +7671,6 @@ F:	kernel/delayacct.c
 
 PERFORMANCE EVENTS SUBSYSTEM
 M:	Peter Zijlstra <a.p.zijlstra@chello.nl>
-M:	Paul Mackerras <paulus@samba.org>
 M:	Ingo Molnar <mingo@redhat.com>
 M:	Arnaldo Carvalho de Melo <acme@kernel.org>
 L:	linux-kernel@vger.kernel.org
@@ -8841,9 +8867,11 @@ F:	drivers/misc/phantom.c
 F:	include/uapi/linux/phantom.h
 
 SERVER ENGINES 10Gbps iSCSI - BladeEngine 2 DRIVER
-M:	Jayamohan Kallickal <jayamohan.kallickal@emulex.com>
+M:	Jayamohan Kallickal <jayamohan.kallickal@avagotech.com>
+M:	Minh Tran <minh.tran@avagotech.com>
+M:	John Soni Jose <sony.john-n@avagotech.com>
 L:	linux-scsi@vger.kernel.org
-W:	http://www.emulex.com
+W:	http://www.avagotech.com
 S:	Supported
 F:	drivers/scsi/be2iscsi/
 
@@ -10025,7 +10053,7 @@ F:	include/linux/toshiba.h
 F:	include/uapi/linux/toshiba.h
 
 TMIO MMC DRIVER
-M:	Ian Molton <ian.molton@codethink.co.uk>
+M:	Ian Molton <ian@mnementh.co.uk>
 L:	linux-mmc@vger.kernel.org
 S:	Maintained
 F:	drivers/mmc/host/tmio_mmc*
@@ -10597,8 +10625,7 @@ F:	drivers/virtio/virtio_input.c
 F:	include/uapi/linux/virtio_input.h
 
 VIA RHINE NETWORK DRIVER
-M:	Roger Luethi <rl@hellgate.ch>
-S:	Maintained
+S:	Orphan
 F:	drivers/net/ethernet/via/via-rhine.c
 
 VIA SD/MMC CARD CONTROLLER DRIVER
@@ -10904,7 +10931,7 @@ M:	Andy Lutomirski <luto@amacapital.net>
 L:	linux-kernel@vger.kernel.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip.git x86/vdso
 S:	Maintained
-F:	arch/x86/vdso/
+F:	arch/x86/entry/vdso/
 
 XC2028/3028 TUNER DRIVER
 M:	Mauro Carvalho Chehab <mchehab@osg.samsung.com>

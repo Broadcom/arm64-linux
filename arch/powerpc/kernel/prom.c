@@ -46,7 +46,6 @@
 #include <asm/mmu.h>
 #include <asm/paca.h>
 #include <asm/pgtable.h>
-#include <asm/pci.h>
 #include <asm/iommu.h>
 #include <asm/btext.h>
 #include <asm/sections.h>
@@ -800,6 +799,7 @@ int of_get_ibm_chip_id(struct device_node *np)
 	}
 	return -1;
 }
+EXPORT_SYMBOL(of_get_ibm_chip_id);
 
 /**
  * cpu_to_chip_id - Return the cpus chip-id
