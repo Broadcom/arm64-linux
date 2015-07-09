@@ -22,7 +22,6 @@
 #include "regs-hdmi.h"
 
 #include <linux/kernel.h>
-#include <linux/spinlock.h>
 #include <linux/wait.h>
 #include <linux/i2c.h>
 #include <linux/platform_device.h>
@@ -188,7 +187,6 @@ struct hdmi_context {
 	struct drm_encoder		*encoder;
 	bool				powered;
 	bool				dvi_mode;
-	struct mutex			hdmi_mutex;
 
 	void __iomem			*regs;
 	int				irq;
@@ -1769,10 +1767,8 @@ static void hdmi_conf_apply(struct hdmi_context *hdata)
 	hdmiphy_conf_reset(hdata);
 	hdmiphy_conf_apply(hdata);
 
-	mutex_lock(&hdata->hdmi_mutex);
 	hdmi_start(hdata, false);
 	hdmi_conf_init(hdata);
-	mutex_unlock(&hdata->hdmi_mutex);
 
 	hdmi_audio_init(hdata);
 
@@ -2024,12 +2020,8 @@ static void hdmi_commit(struct exynos_drm_display *display)
 {
 	struct hdmi_context *hdata = display_to_hdmi(display);
 
-	mutex_lock(&hdata->hdmi_mutex);
-	if (!hdata->powered) {
-		mutex_unlock(&hdata->hdmi_mutex);
+	if (!hdata->powered)
 		return;
-	}
-	mutex_unlock(&hdata->hdmi_mutex);
 
 	hdmi_conf_apply(hdata);
 }
@@ -2038,15 +2030,10 @@ static void hdmi_poweron(struct hdmi_context *hdata)
 {
 	struct hdmi_resources *res = &hdata->res;
 
-	mutex_lock(&hdata->hdmi_mutex);
-	if (hdata->powered) {
-		mutex_unlock(&hdata->hdmi_mutex);
+	if (hdata->powered)
 		return;
-	}
 
 	hdata->powered = true;
-
-	mutex_unlock(&hdata->hdmi_mutex);
 
 	pm_runtime_get_sync(hdata->dev);
 
@@ -2068,10 +2055,8 @@ static void hdmi_poweroff(struct hdmi_context *hdata)
 {
 	struct hdmi_resources *res = &hdata->res;
 
-	mutex_lock(&hdata->hdmi_mutex);
 	if (!hdata->powered)
-		goto out;
-	mutex_unlock(&hdata->hdmi_mutex);
+		return;
 
 	/* HDMI System Disable */
 	hdmi_reg_writemask(hdata, HDMI_CON_0, 0, HDMI_EN);
@@ -2091,11 +2076,7 @@ static void hdmi_poweroff(struct hdmi_context *hdata)
 
 	pm_runtime_put_sync(hdata->dev);
 
-	mutex_lock(&hdata->hdmi_mutex);
 	hdata->powered = false;
-
-out:
-	mutex_unlock(&hdata->hdmi_mutex);
 }
 
 static void hdmi_dpms(struct exynos_drm_display *display, int mode)
@@ -2324,8 +2305,6 @@ static int hdmi_probe(struct platform_device *pdev)
 
 	hdata->display.type = EXYNOS_DISPLAY_TYPE_HDMI;
 	hdata->display.ops = &hdmi_display_ops;
-
-	mutex_init(&hdata->hdmi_mutex);
 
 	platform_set_drvdata(pdev, hdata);
 
