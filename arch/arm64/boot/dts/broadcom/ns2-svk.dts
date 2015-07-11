@@ -47,6 +47,10 @@
 		reg = <0x000000000 0x80000000 0x00000000 0x40000000>;
 	};
 
+	pcie4: pcie@50020000 {
+		status = "ok";
+	};
+
 	soc: soc {
 		uart3: serial@66130000 {
 			status = "ok";
