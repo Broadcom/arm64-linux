@@ -1683,12 +1683,7 @@ init_hw_perf_events(void)
 		counters = counters_total_to_per_cpu(counters);
 #endif
 
-	if (get_c0_perfcount_int)
-		irq = get_c0_perfcount_int();
-	else if (cp0_perfcount_irq >= 0)
-		irq = MIPS_CPU_IRQ_BASE + cp0_perfcount_irq;
-	else
-		irq = -1;
+	irq = get_c0_perfcount_int();
 
 	mipspmu.map_raw_event = mipsxx_pmu_map_raw_event;
 
