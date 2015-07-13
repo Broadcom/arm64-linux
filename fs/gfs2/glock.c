@@ -76,7 +76,7 @@ static DEFINE_SPINLOCK(lru_lock);
 #define GFS2_GL_HASH_SHIFT      15
 #define GFS2_GL_HASH_SIZE       (1 << GFS2_GL_HASH_SHIFT)
 
-struct rhashtable_params ht_parms = {
+static struct rhashtable_params ht_parms = {
 	.nelem_hint = GFS2_GL_HASH_SIZE * 3 / 4,
 	.key_len = sizeof(struct lm_lockname),
 	.key_offset = offsetof(struct gfs2_glock, gl_name),
