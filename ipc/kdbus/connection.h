@@ -31,7 +31,7 @@
 					 KDBUS_HELLO_MONITOR)
 
 struct kdbus_quota;
-struct kdbus_kmsg;
+struct kdbus_staging;
 
 /**
  * struct kdbus_conn - connection to a bus
@@ -54,11 +54,13 @@ struct kdbus_kmsg;
  * @work:		Delayed work to handle timeouts
  *			activator for
  * @match_db:		Subscription filter to broadcast messages
- * @meta:		Active connection creator's metadata/credentials,
- *			either from the handle or from HELLO
+ * @meta_proc:		Process metadata of connection creator, or NULL
+ * @meta_fake:		Faked metadata, or NULL
  * @pool:		The user's buffer to receive messages
  * @user:		Owner of the connection
  * @cred:		The credentials of the connection at creation time
+ * @pid:		Pid at creation time
+ * @root_path:		Root path at creation time
  * @name_count:		Number of owned well-known names
  * @request_count:	Number of pending requests issued by this
  *			connection that are waiting for replies from
@@ -72,7 +74,6 @@ struct kdbus_kmsg;
  * @names_list:		List of well-known names
  * @names_queue_list:	Well-known names this connection waits for
  * @privileged:		Whether this connection is privileged on the bus
- * @faked_meta:		Whether the metadata was faked on HELLO
  */
 struct kdbus_conn {
 	struct kref kref;
@@ -93,10 +94,13 @@ struct kdbus_conn {
 	struct list_head reply_list;
 	struct delayed_work work;
 	struct kdbus_match_db *match_db;
-	struct kdbus_meta_proc *meta;
+	struct kdbus_meta_proc *meta_proc;
+	struct kdbus_meta_fake *meta_fake;
 	struct kdbus_pool *pool;
 	struct kdbus_user *user;
 	const struct cred *cred;
+	struct pid *pid;
+	struct path root_path;
 	atomic_t name_count;
 	atomic_t request_count;
 	atomic_t lost_count;
@@ -112,7 +116,6 @@ struct kdbus_conn {
 	struct list_head names_queue_list;
 
 	bool privileged:1;
-	bool faked_meta:1;
 };
 
 struct kdbus_conn *kdbus_conn_ref(struct kdbus_conn *conn);
@@ -129,8 +132,9 @@ void kdbus_conn_quota_dec(struct kdbus_conn *c, struct kdbus_user *u,
 void kdbus_conn_lost_message(struct kdbus_conn *c);
 int kdbus_conn_entry_insert(struct kdbus_conn *conn_src,
 			    struct kdbus_conn *conn_dst,
-			    const struct kdbus_kmsg *kmsg,
-			    struct kdbus_reply *reply);
+			    struct kdbus_staging *staging,
+			    struct kdbus_reply *reply,
+			    const struct kdbus_name_entry *name);
 void kdbus_conn_move_messages(struct kdbus_conn *conn_dst,
 			      struct kdbus_conn *conn_src,
 			      u64 name_id);
@@ -147,7 +151,7 @@ bool kdbus_conn_policy_see_name_unlocked(struct kdbus_conn *conn,
 					 const char *name);
 bool kdbus_conn_policy_see_notification(struct kdbus_conn *conn,
 					const struct cred *curr_creds,
-					const struct kdbus_kmsg *kmsg);
+					const struct kdbus_msg *msg);
 
 /* command dispatcher */
 struct kdbus_conn *kdbus_cmd_hello(struct kdbus_ep *ep, bool privileged,

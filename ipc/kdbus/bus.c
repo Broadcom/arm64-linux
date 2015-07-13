@@ -66,22 +66,15 @@ static struct kdbus_bus *kdbus_bus_new(struct kdbus_domain *domain,
 				       const char *name,
 				       struct kdbus_bloom_parameter *bloom,
 				       const u64 *pattach_owner,
-				       const u64 *pattach_recv,
 				       u64 flags, kuid_t uid, kgid_t gid)
 {
 	struct kdbus_bus *b;
 	u64 attach_owner;
-	u64 attach_recv;
 	int ret;
 
 	if (bloom->size < 8 || bloom->size > KDBUS_BUS_BLOOM_MAX_SIZE ||
 	    !KDBUS_IS_ALIGNED8(bloom->size) || bloom->n_hash < 1)
 		return ERR_PTR(-EINVAL);
-
-	ret = kdbus_sanitize_attach_flags(pattach_recv ? *pattach_recv : 0,
-					  &attach_recv);
-	if (ret < 0)
-		return ERR_PTR(ret);
 
 	ret = kdbus_sanitize_attach_flags(pattach_owner ? *pattach_owner : 0,
 					  &attach_owner);
@@ -111,7 +104,6 @@ static struct kdbus_bus *kdbus_bus_new(struct kdbus_domain *domain,
 
 	b->id = atomic64_inc_return(&domain->last_id);
 	b->bus_flags = flags;
-	b->attach_flags_req = attach_recv;
 	b->attach_flags_owner = attach_owner;
 	generate_random_uuid(b->id128);
 	b->bloom = *bloom;
@@ -240,9 +232,9 @@ struct kdbus_conn *kdbus_bus_find_conn_by_id(struct kdbus_bus *bus, u64 id)
  * kdbus_bus_broadcast() - send a message to all subscribed connections
  * @bus:	The bus the connections are connected to
  * @conn_src:	The source connection, may be %NULL for kernel notifications
- * @kmsg:	The message to send.
+ * @staging:	Staging object containing the message to send
  *
- * Send @kmsg to all connections that are currently active on the bus.
+ * Send message to all connections that are currently active on the bus.
  * Connections must still have matches installed in order to let the message
  * pass.
  *
@@ -250,7 +242,7 @@ struct kdbus_conn *kdbus_bus_find_conn_by_id(struct kdbus_bus *bus, u64 id)
  */
 void kdbus_bus_broadcast(struct kdbus_bus *bus,
 			 struct kdbus_conn *conn_src,
-			 struct kdbus_kmsg *kmsg)
+			 struct kdbus_staging *staging)
 {
 	struct kdbus_conn *conn_dst;
 	unsigned int i;
@@ -267,12 +259,10 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
 	 * can re-construct order via sequence numbers), but we should at least
 	 * try to avoid re-ordering for monitors.
 	 */
-	kdbus_bus_eavesdrop(bus, conn_src, kmsg);
+	kdbus_bus_eavesdrop(bus, conn_src, staging);
 
 	down_read(&bus->conn_rwlock);
 	hash_for_each(bus->conn_hash, i, conn_dst, hentry) {
-		if (conn_dst->id == kmsg->msg.src_id)
-			continue;
 		if (!kdbus_conn_is_ordinary(conn_dst))
 			continue;
 
@@ -280,8 +270,8 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
 		 * Check if there is a match for the kmsg object in
 		 * the destination connection match db
 		 */
-		if (!kdbus_match_db_match_kmsg(conn_dst->match_db, conn_src,
-					       kmsg))
+		if (!kdbus_match_db_match_msg(conn_dst->match_db, conn_src,
+					      staging))
 			continue;
 
 		if (conn_src) {
@@ -292,13 +282,6 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
 			 */
 			if (!kdbus_conn_policy_talk(conn_dst, NULL, conn_src))
 				continue;
-
-			ret = kdbus_kmsg_collect_metadata(kmsg, conn_src,
-							  conn_dst);
-			if (ret < 0) {
-				kdbus_conn_lost_message(conn_dst);
-				continue;
-			}
 		} else {
 			/*
 			 * Check if there is a policy db that prevents the
@@ -306,11 +289,12 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
 			 * notification
 			 */
 			if (!kdbus_conn_policy_see_notification(conn_dst, NULL,
-								kmsg))
+								staging->msg))
 				continue;
 		}
 
-		ret = kdbus_conn_entry_insert(conn_src, conn_dst, kmsg, NULL);
+		ret = kdbus_conn_entry_insert(conn_src, conn_dst, staging,
+					      NULL, NULL);
 		if (ret < 0)
 			kdbus_conn_lost_message(conn_dst);
 	}
@@ -321,16 +305,16 @@ void kdbus_bus_broadcast(struct kdbus_bus *bus,
  * kdbus_bus_eavesdrop() - send a message to all subscribed monitors
  * @bus:	The bus the monitors are connected to
  * @conn_src:	The source connection, may be %NULL for kernel notifications
- * @kmsg:	The message to send.
+ * @staging:	Staging object containing the message to send
  *
- * Send @kmsg to all monitors that are currently active on the bus. Monitors
+ * Send message to all monitors that are currently active on the bus. Monitors
  * must still have matches installed in order to let the message pass.
  *
  * The caller must hold the name-registry lock of @bus.
  */
 void kdbus_bus_eavesdrop(struct kdbus_bus *bus,
 			 struct kdbus_conn *conn_src,
-			 struct kdbus_kmsg *kmsg)
+			 struct kdbus_staging *staging)
 {
 	struct kdbus_conn *conn_dst;
 	int ret;
@@ -344,16 +328,8 @@ void kdbus_bus_eavesdrop(struct kdbus_bus *bus,
 
 	down_read(&bus->conn_rwlock);
 	list_for_each_entry(conn_dst, &bus->monitors_list, monitor_entry) {
-		if (conn_src) {
-			ret = kdbus_kmsg_collect_metadata(kmsg, conn_src,
-							  conn_dst);
-			if (ret < 0) {
-				kdbus_conn_lost_message(conn_dst);
-				continue;
-			}
-		}
-
-		ret = kdbus_conn_entry_insert(conn_src, conn_dst, kmsg, NULL);
+		ret = kdbus_conn_entry_insert(conn_src, conn_dst, staging,
+					      NULL, NULL);
 		if (ret < 0)
 			kdbus_conn_lost_message(conn_dst);
 	}
@@ -380,7 +356,6 @@ struct kdbus_bus *kdbus_cmd_bus_make(struct kdbus_domain *domain,
 		{ .type = KDBUS_ITEM_MAKE_NAME, .mandatory = true },
 		{ .type = KDBUS_ITEM_BLOOM_PARAMETER, .mandatory = true },
 		{ .type = KDBUS_ITEM_ATTACH_FLAGS_SEND },
-		{ .type = KDBUS_ITEM_ATTACH_FLAGS_RECV },
 	};
 	struct kdbus_args args = {
 		.allowed_flags = KDBUS_FLAG_NEGOTIATE |
@@ -399,7 +374,6 @@ struct kdbus_bus *kdbus_cmd_bus_make(struct kdbus_domain *domain,
 	bus = kdbus_bus_new(domain,
 			    argv[1].item->str, &argv[2].item->bloom_parameter,
 			    argv[3].item ? argv[3].item->data64 : NULL,
-			    argv[4].item ? argv[4].item->data64 : NULL,
 			    cmd->flags, current_euid(), current_egid());
 	if (IS_ERR(bus)) {
 		ret = PTR_ERR(bus);
@@ -466,13 +440,12 @@ int kdbus_cmd_bus_creator_info(struct kdbus_conn *conn, void __user *argp)
 	struct kdbus_cmd_info *cmd;
 	struct kdbus_bus *bus = conn->ep->bus;
 	struct kdbus_pool_slice *slice = NULL;
+	struct kdbus_item *meta_items = NULL;
 	struct kdbus_item_header item_hdr;
 	struct kdbus_info info = {};
-	size_t meta_size, name_len;
-	struct kvec kvec[5];
-	u64 hdr_size = 0;
-	u64 attach_flags;
-	size_t cnt = 0;
+	size_t meta_size, name_len, cnt = 0;
+	struct kvec kvec[6];
+	u64 attach_flags, size = 0;
 	int ret;
 
 	struct kdbus_arg argv[] = {
@@ -494,8 +467,8 @@ int kdbus_cmd_bus_creator_info(struct kdbus_conn *conn, void __user *argp)
 
 	attach_flags &= bus->attach_flags_owner;
 
-	ret = kdbus_meta_export_prepare(bus->creator_meta, NULL,
-					&attach_flags, &meta_size);
+	ret = kdbus_meta_emit(bus->creator_meta, NULL, NULL, conn,
+			      attach_flags, &meta_items, &meta_size);
 	if (ret < 0)
 		goto exit;
 
@@ -505,26 +478,25 @@ int kdbus_cmd_bus_creator_info(struct kdbus_conn *conn, void __user *argp)
 	item_hdr.type = KDBUS_ITEM_MAKE_NAME;
 	item_hdr.size = KDBUS_ITEM_HEADER_SIZE + name_len;
 
-	kdbus_kvec_set(&kvec[cnt++], &info, sizeof(info), &hdr_size);
-	kdbus_kvec_set(&kvec[cnt++], &item_hdr, sizeof(item_hdr), &hdr_size);
-	kdbus_kvec_set(&kvec[cnt++], bus->node.name, name_len, &hdr_size);
-	cnt += !!kdbus_kvec_pad(&kvec[cnt], &hdr_size);
+	kdbus_kvec_set(&kvec[cnt++], &info, sizeof(info), &size);
+	kdbus_kvec_set(&kvec[cnt++], &item_hdr, sizeof(item_hdr), &size);
+	kdbus_kvec_set(&kvec[cnt++], bus->node.name, name_len, &size);
+	cnt += !!kdbus_kvec_pad(&kvec[cnt], &size);
+	if (meta_size > 0) {
+		kdbus_kvec_set(&kvec[cnt++], meta_items, meta_size, &size);
+		cnt += !!kdbus_kvec_pad(&kvec[cnt], &size);
+	}
 
-	slice = kdbus_pool_slice_alloc(conn->pool, hdr_size + meta_size, false);
+	info.size = size;
+
+	slice = kdbus_pool_slice_alloc(conn->pool, size, false);
 	if (IS_ERR(slice)) {
 		ret = PTR_ERR(slice);
 		slice = NULL;
 		goto exit;
 	}
 
-	ret = kdbus_meta_export(bus->creator_meta, NULL, attach_flags,
-				slice, hdr_size, &meta_size);
-	if (ret < 0)
-		goto exit;
-
-	info.size = hdr_size + meta_size;
-
-	ret = kdbus_pool_slice_copy_kvec(slice, 0, kvec, cnt, hdr_size);
+	ret = kdbus_pool_slice_copy_kvec(slice, 0, kvec, cnt, size);
 	if (ret < 0)
 		goto exit;
 
@@ -537,6 +509,6 @@ int kdbus_cmd_bus_creator_info(struct kdbus_conn *conn, void __user *argp)
 
 exit:
 	kdbus_pool_slice_release(slice);
-
+	kfree(meta_items);
 	return kdbus_args_clear(&args, ret);
 }
