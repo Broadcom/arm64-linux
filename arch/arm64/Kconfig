@@ -162,6 +162,18 @@ source "kernel/Kconfig.freezer"
 
 menu "Platform selection"
 
+config ARCH_BCM_IPROC
+	bool
+	help
+	  This enables support for Broadcom iProc based SoCs
+
+config ARCH_BCM_NS2
+	bool "Broadcom North Start 2 (BCM5871X)"
+	select ARCH_BCM_IPROC
+	help
+	  This enables support for Broadcom NS2 (BCM5871X). NS2 is in
+	  the iProc family of SoCs based on the ARMv8 architecture
+
 config ARCH_EXYNOS
 	bool
 	help
