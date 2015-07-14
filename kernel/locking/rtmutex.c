@@ -70,10 +70,10 @@ static void fixup_rt_mutex_waiters(struct rt_mutex *lock)
 }
 
 /*
- * We can speed up the acquire/release, if the architecture
- * supports cmpxchg and if there's no debugging state to be set up
+ * We can speed up the acquire/release, if there's no debugging state to be
+ * set up.
  */
-#if defined(__HAVE_ARCH_CMPXCHG) && !defined(CONFIG_DEBUG_RT_MUTEXES)
+#ifndef CONFIG_DEBUG_RT_MUTEXES
 # define rt_mutex_cmpxchg(l,c,n)	(cmpxchg(&l->owner, c, n) == c)
 static inline void mark_rt_mutex_waiters(struct rt_mutex *lock)
 {
@@ -265,15 +265,17 @@ struct task_struct *rt_mutex_get_top_task(struct task_struct *task)
 }
 
 /*
- * Called by sched_setscheduler() to check whether the priority change
- * is overruled by a possible priority boosting.
+ * Called by sched_setscheduler() to get the priority which will be
+ * effective after the change.
  */
-int rt_mutex_check_prio(struct task_struct *task, int newprio)
+int rt_mutex_get_effective_prio(struct task_struct *task, int newprio)
 {
 	if (!task_has_pi_waiters(task))
-		return 0;
+		return newprio;
 
-	return task_top_pi_waiter(task)->task->prio <= newprio;
+	if (task_top_pi_waiter(task)->task->prio <= newprio)
+		return task_top_pi_waiter(task)->task->prio;
+	return newprio;
 }
 
 /*
@@ -1180,11 +1182,8 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
 	set_current_state(state);
 
 	/* Setup the timer, when timeout != NULL */
-	if (unlikely(timeout)) {
+	if (unlikely(timeout))
 		hrtimer_start_expires(&timeout->timer, HRTIMER_MODE_ABS);
-		if (!hrtimer_active(&timeout->timer))
-			timeout->task = NULL;
-	}
 
 	ret = task_blocks_on_rt_mutex(lock, &waiter, current, chwalk);
 
@@ -1441,10 +1440,17 @@ EXPORT_SYMBOL_GPL(rt_mutex_timed_lock);
  *
  * @lock:	the rt_mutex to be locked
  *
+ * This function can only be called in thread context. It's safe to
+ * call it from atomic regions, but not from hard interrupt or soft
+ * interrupt context.
+ *
  * Returns 1 on success and 0 on contention
  */
 int __sched rt_mutex_trylock(struct rt_mutex *lock)
 {
+	if (WARN_ON(in_irq() || in_nmi() || in_serving_softirq()))
+		return 0;
+
 	return rt_mutex_fasttrylock(lock, rt_mutex_slowtrylock);
 }
 EXPORT_SYMBOL_GPL(rt_mutex_trylock);

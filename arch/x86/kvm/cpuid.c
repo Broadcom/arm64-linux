@@ -17,7 +17,7 @@
 #include <linux/vmalloc.h>
 #include <linux/uaccess.h>
 #include <asm/user.h>
-#include <asm/xsave.h>
+#include <asm/fpu/xstate.h>
 #include "cpuid.h"
 #include "lapic.h"
 #include "mmu.h"
@@ -94,6 +94,8 @@ int kvm_update_cpuid(struct kvm_vcpu *vcpu)
 	best = kvm_find_cpuid_entry(vcpu, 0xD, 1);
 	if (best && (best->eax & (F(XSAVES) | F(XSAVEC))))
 		best->ebx = xstate_required_size(vcpu->arch.xcr0, true);
+
+	vcpu->arch.eager_fpu = guest_cpuid_has_mpx(vcpu);
 
 	/*
 	 * The existing code assumes virtual address is 48-bit in the canonical

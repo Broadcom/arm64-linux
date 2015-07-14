@@ -683,8 +683,7 @@ bool kvm_irq_delivery_to_apic_fast(struct kvm *kvm, struct kvm_lapic *src,
 	unsigned long bitmap = 1;
 	struct kvm_lapic **dst;
 	int i;
-	bool ret = false;
-	bool x2apic_ipi = src && apic_x2apic_mode(src);
+	bool ret, x2apic_ipi;
 
 	*r = -1;
 
@@ -696,16 +695,18 @@ bool kvm_irq_delivery_to_apic_fast(struct kvm *kvm, struct kvm_lapic *src,
 	if (irq->shorthand)
 		return false;
 
+	x2apic_ipi = src && apic_x2apic_mode(src);
 	if (irq->dest_id == (x2apic_ipi ? X2APIC_BROADCAST : APIC_BROADCAST))
 		return false;
 
+	ret = true;
 	rcu_read_lock();
 	map = rcu_dereference(kvm->arch.apic_map);
 
-	if (!map)
+	if (!map) {
+		ret = false;
 		goto out;
-
-	ret = true;
+	}
 
 	if (irq->dest_mode == APIC_DEST_PHYSICAL) {
 		if (irq->dest_id >= ARRAY_SIZE(map->phys_map))
@@ -1089,6 +1090,17 @@ static void update_divide_count(struct kvm_lapic *apic)
 				   apic->divide_count);
 }
 
+static void apic_update_lvtt(struct kvm_lapic *apic)
+{
+	u32 timer_mode = kvm_apic_get_reg(apic, APIC_LVTT) &
+			apic->lapic_timer.timer_mode_mask;
+
+	if (apic->lapic_timer.timer_mode != timer_mode) {
+		apic->lapic_timer.timer_mode = timer_mode;
+		hrtimer_cancel(&apic->lapic_timer.timer);
+	}
+}
+
 static void apic_timer_expired(struct kvm_lapic *apic)
 {
 	struct kvm_vcpu *vcpu = apic->vcpu;
@@ -1297,6 +1309,7 @@ static int apic_reg_write(struct kvm_lapic *apic, u32 reg, u32 val)
 				apic_set_reg(apic, APIC_LVTT + 0x10 * i,
 					     lvt_val | APIC_LVT_MASKED);
 			}
+			apic_update_lvtt(apic);
 			atomic_set(&apic->lapic_timer.pending, 0);
 
 		}
@@ -1329,20 +1342,13 @@ static int apic_reg_write(struct kvm_lapic *apic, u32 reg, u32 val)
 
 		break;
 
-	case APIC_LVTT: {
-		u32 timer_mode = val & apic->lapic_timer.timer_mode_mask;
-
-		if (apic->lapic_timer.timer_mode != timer_mode) {
-			apic->lapic_timer.timer_mode = timer_mode;
-			hrtimer_cancel(&apic->lapic_timer.timer);
-		}
-
+	case APIC_LVTT:
 		if (!kvm_apic_sw_enabled(apic))
 			val |= APIC_LVT_MASKED;
 		val &= (apic_lvt_mask[0] | apic->lapic_timer.timer_mode_mask);
 		apic_set_reg(apic, APIC_LVTT, val);
+		apic_update_lvtt(apic);
 		break;
-	}
 
 	case APIC_TMICT:
 		if (apic_lvtt_tscdeadline(apic))
@@ -1575,7 +1581,7 @@ void kvm_lapic_reset(struct kvm_vcpu *vcpu)
 
 	for (i = 0; i < APIC_LVT_NUM; i++)
 		apic_set_reg(apic, APIC_LVTT + 0x10 * i, APIC_LVT_MASKED);
-	apic->lapic_timer.timer_mode = 0;
+	apic_update_lvtt(apic);
 	apic_set_reg(apic, APIC_LVT0,
 		     SET_APIC_DELIVERY_MODE(0, APIC_MODE_EXTINT));
 
@@ -1801,6 +1807,7 @@ void kvm_apic_post_state_restore(struct kvm_vcpu *vcpu,
 
 	apic_update_ppr(apic);
 	hrtimer_cancel(&apic->lapic_timer.timer);
+	apic_update_lvtt(apic);
 	update_divide_count(apic);
 	start_apic_timer(apic);
 	apic->irr_pending = true;

@@ -551,7 +551,21 @@ static void print_lockdep_cache(struct lockdep_map *lock)
 
 static void print_lock(struct held_lock *hlock)
 {
-	print_lock_name(hlock_class(hlock));
+	/*
+	 * We can be called locklessly through debug_show_all_locks() so be
+	 * extra careful, the hlock might have been released and cleared.
+	 */
+	unsigned int class_idx = hlock->class_idx;
+
+	/* Don't re-read hlock->class_idx, can't use READ_ONCE() on bitfields: */
+	barrier();
+
+	if (!class_idx || (class_idx - 1) >= MAX_LOCKDEP_KEYS) {
+		printk("<RELEASED>\n");
+		return;
+	}
+
+	print_lock_name(lock_classes + class_idx - 1);
 	printk(", at: ");
 	print_ip_sym(hlock->acquire_ip);
 }
@@ -3886,7 +3900,8 @@ static void zap_class(struct lock_class *class)
 	list_del_rcu(&class->hash_entry);
 	list_del_rcu(&class->lock_entry);
 
-	class->key = NULL;
+	RCU_INIT_POINTER(class->key, NULL);
+	RCU_INIT_POINTER(class->name, NULL);
 }
 
 static inline int within(const void *addr, void *start, unsigned long size)
@@ -4052,8 +4067,7 @@ void __init lockdep_info(void)
 
 #ifdef CONFIG_DEBUG_LOCKDEP
 	if (lockdep_init_error) {
-		printk("WARNING: lockdep init error! lock-%s was acquired"
-			"before lockdep_init\n", lock_init_error);
+		printk("WARNING: lockdep init error: lock '%s' was acquired before lockdep_init().\n", lock_init_error);
 		printk("Call stack leading to lockdep invocation was:\n");
 		print_stack_trace(&lockdep_init_trace, 0);
 	}

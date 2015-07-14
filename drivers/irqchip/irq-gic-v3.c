@@ -567,7 +567,7 @@ static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	 */
 	smp_wmb();
 
-	for_each_cpu_mask(cpu, *mask) {
+	for_each_cpu(cpu, mask) {
 		u64 cluster_id = cpu_logical_map(cpu) & ~0xffUL;
 		u16 tlist;
 
@@ -658,6 +658,7 @@ static struct irq_chip gic_chip = {
 	.irq_set_affinity	= gic_set_affinity,
 	.irq_get_irqchip_state	= gic_irq_get_irqchip_state,
 	.irq_set_irqchip_state	= gic_irq_set_irqchip_state,
+	.flags			= IRQCHIP_SET_TYPE_MASKED,
 };
 
 #define GIC_ID_NR		(1U << gic_data.rdists.id_bits)

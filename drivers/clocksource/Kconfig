@@ -106,6 +106,16 @@ config CLKSRC_EFM32
 	  Support to use the timers of EFM32 SoCs as clock source and clock
 	  event device.
 
+config CLKSRC_LPC32XX
+	bool
+	select CLKSRC_MMIO
+	select CLKSRC_OF
+
+config CLKSRC_STM32
+	bool "Clocksource for STM32 SoCs" if !ARCH_STM32
+	depends on OF && ARM && (ARCH_STM32 || COMPILE_TEST)
+	select CLKSRC_MMIO
+
 config ARM_ARCH_TIMER
 	bool
 	select CLKSRC_OF if OF
@@ -139,9 +149,21 @@ config CLKSRC_ARM_GLOBAL_TIMER_SCHED_CLOCK
 	help
 	 Use ARM global timer clock source as sched_clock
 
+config ARMV7M_SYSTICK
+	bool
+	select CLKSRC_OF if OF
+	select CLKSRC_MMIO
+	help
+	  This options enables support for the ARMv7M system timer unit
+
 config ATMEL_PIT
 	select CLKSRC_OF if OF
 	def_bool SOC_AT91SAM9 || SOC_SAMA5
+
+config ATMEL_ST
+	bool
+	select CLKSRC_OF
+	select MFD_SYSCON
 
 config CLKSRC_METAG_GENERIC
 	def_bool y if METAG
@@ -233,7 +255,7 @@ config CLKSRC_QCOM
 
 config CLKSRC_VERSATILE
 	bool "ARM Versatile (Express) reference platforms clock source"
-	depends on GENERIC_SCHED_CLOCK && !ARCH_USES_GETTIMEOFFSET
+	depends on PLAT_VERSATILE && GENERIC_SCHED_CLOCK && !ARCH_USES_GETTIMEOFFSET
 	select CLKSRC_OF
 	default y if MFD_VEXPRESS_SYSREG
 	help

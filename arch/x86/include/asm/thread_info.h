@@ -46,13 +46,11 @@
  */
 #ifndef __ASSEMBLY__
 struct task_struct;
-struct exec_domain;
 #include <asm/processor.h>
 #include <linux/atomic.h>
 
 struct thread_info {
 	struct task_struct	*task;		/* main task structure */
-	struct exec_domain	*exec_domain;	/* execution domain */
 	__u32			flags;		/* low level flags */
 	__u32			status;		/* thread synchronous flags */
 	__u32			cpu;		/* current CPU */
@@ -66,7 +64,6 @@ struct thread_info {
 #define INIT_THREAD_INFO(tsk)			\
 {						\
 	.task		= &tsk,			\
-	.exec_domain	= &default_exec_domain,	\
 	.flags		= 0,			\
 	.cpu		= 0,			\
 	.saved_preempt_count = INIT_PREEMPT_COUNT,	\
@@ -180,8 +177,6 @@ struct thread_info {
  */
 #ifndef __ASSEMBLY__
 
-DECLARE_PER_CPU(unsigned long, kernel_stack);
-
 static inline struct thread_info *current_thread_info(void)
 {
 	return (struct thread_info *)(current_top_of_stack() - THREAD_SIZE);
@@ -200,9 +195,13 @@ static inline unsigned long current_stack_pointer(void)
 
 #else /* !__ASSEMBLY__ */
 
+#ifdef CONFIG_X86_64
+# define cpu_current_top_of_stack (cpu_tss + TSS_sp0)
+#endif
+
 /* Load thread_info address into "reg" */
 #define GET_THREAD_INFO(reg) \
-	_ASM_MOV PER_CPU_VAR(kernel_stack),reg ; \
+	_ASM_MOV PER_CPU_VAR(cpu_current_top_of_stack),reg ; \
 	_ASM_SUB $(THREAD_SIZE),reg ;
 
 /*

@@ -15,6 +15,7 @@ struct perf_mem {
 	char const		*input_name;
 	bool			hide_unresolved;
 	bool			dump_raw;
+	bool			force;
 	int			operation;
 	const char		*cpu_list;
 	DECLARE_BITMAP(cpu_bitmap, MAX_NR_CPUS);
@@ -73,7 +74,7 @@ dump_raw_samples(struct perf_tool *tool,
 	}
 
 	if (al.filtered || (mem->hide_unresolved && al.sym == NULL))
-		return 0;
+		goto out_put;
 
 	if (al.map != NULL)
 		al.map->dso->hit = 1;
@@ -102,7 +103,8 @@ dump_raw_samples(struct perf_tool *tool,
 		symbol_conf.field_sep,
 		al.map ? (al.map->dso ? al.map->dso->long_name : "???") : "???",
 		al.sym ? al.sym->name : "???");
-
+out_put:
+	addr_location__put(&al);
 	return 0;
 }
 
@@ -120,6 +122,7 @@ static int report_raw_events(struct perf_mem *mem)
 	struct perf_data_file file = {
 		.path = input_name,
 		.mode = PERF_DATA_MODE_READ,
+		.force = mem->force,
 	};
 	int err = -EINVAL;
 	int ret;
@@ -141,7 +144,7 @@ static int report_raw_events(struct perf_mem *mem)
 
 	printf("# PID, TID, IP, ADDR, LOCAL WEIGHT, DSRC, SYMBOL\n");
 
-	err = perf_session__process_events(session, &mem->tool);
+	err = perf_session__process_events(session);
 	if (err)
 		return err;
 
@@ -286,10 +289,11 @@ int cmd_mem(int argc, const char **argv, const char *prefix __maybe_unused)
 		   "input file name"),
 	OPT_STRING('C', "cpu", &mem.cpu_list, "cpu",
 		   "list of cpus to profile"),
-	OPT_STRING('x', "field-separator", &symbol_conf.field_sep,
+	OPT_STRING_NOEMPTY('x', "field-separator", &symbol_conf.field_sep,
 		   "separator",
 		   "separator for columns, no spaces will be added"
 		   " between columns '.' is reserved."),
+	OPT_BOOLEAN('f', "force", &mem.force, "don't complain, do it"),
 	OPT_END()
 	};
 	const char *const mem_subcommands[] = { "record", "report", NULL };

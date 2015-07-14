@@ -130,8 +130,8 @@ enum bounce_type {
 };
 
 struct lock_class_stats {
-	unsigned long			contention_point[4];
-	unsigned long			contending_point[4];
+	unsigned long			contention_point[LOCKSTAT_POINTS];
+	unsigned long			contending_point[LOCKSTAT_POINTS];
 	struct lock_time		read_waittime;
 	struct lock_time		write_waittime;
 	struct lock_time		read_holdtime;
@@ -531,8 +531,13 @@ do {									\
 # define might_lock_read(lock) do { } while (0)
 #endif
 
-#ifdef CONFIG_PROVE_RCU
+#ifdef CONFIG_LOCKDEP
 void lockdep_rcu_suspicious(const char *file, const int line, const char *s);
+#else
+static inline void
+lockdep_rcu_suspicious(const char *file, const int line, const char *s)
+{
+}
 #endif
 
 #endif /* __LINUX_LOCKDEP_H */

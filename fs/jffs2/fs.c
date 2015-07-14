@@ -190,7 +190,7 @@ int jffs2_do_setattr (struct inode *inode, struct iattr *iattr)
 
 int jffs2_setattr(struct dentry *dentry, struct iattr *iattr)
 {
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	int rc;
 
 	rc = inode_change_ok(inode, iattr);
@@ -294,6 +294,7 @@ struct inode *jffs2_iget(struct super_block *sb, unsigned long ino)
 
 	case S_IFLNK:
 		inode->i_op = &jffs2_symlink_inode_operations;
+		inode->i_link = f->target;
 		break;
 
 	case S_IFDIR:

@@ -152,6 +152,7 @@ int inode_init_always(struct super_block *sb, struct inode *inode)
 	inode->i_pipe = NULL;
 	inode->i_bdev = NULL;
 	inode->i_cdev = NULL;
+	inode->i_link = NULL;
 	inode->i_rdev = 0;
 	inode->dirtied_when = 0;
 
@@ -1584,36 +1585,47 @@ static int update_time(struct inode *inode, struct timespec *time, int flags)
  *	This function automatically handles read only file systems and media,
  *	as well as the "noatime" flag and inode specific "noatime" markers.
  */
-void touch_atime(const struct path *path)
+bool atime_needs_update(const struct path *path, struct inode *inode)
 {
 	struct vfsmount *mnt = path->mnt;
-	struct inode *inode = path->dentry->d_inode;
 	struct timespec now;
 
 	if (inode->i_flags & S_NOATIME)
-		return;
+		return false;
 	if (IS_NOATIME(inode))
-		return;
+		return false;
 	if ((inode->i_sb->s_flags & MS_NODIRATIME) && S_ISDIR(inode->i_mode))
-		return;
+		return false;
 
 	if (mnt->mnt_flags & MNT_NOATIME)
-		return;
+		return false;
 	if ((mnt->mnt_flags & MNT_NODIRATIME) && S_ISDIR(inode->i_mode))
-		return;
+		return false;
 
 	now = current_fs_time(inode->i_sb);
 
 	if (!relatime_need_update(mnt, inode, now))
-		return;
+		return false;
 
 	if (timespec_equal(&inode->i_atime, &now))
+		return false;
+
+	return true;
+}
+
+void touch_atime(const struct path *path)
+{
+	struct vfsmount *mnt = path->mnt;
+	struct inode *inode = d_inode(path->dentry);
+	struct timespec now;
+
+	if (!atime_needs_update(path, inode))
 		return;
 
 	if (!sb_start_write_trylock(inode->i_sb))
 		return;
 
-	if (__mnt_want_write(mnt))
+	if (__mnt_want_write(mnt) != 0)
 		goto skip_update;
 	/*
 	 * File systems can error out when updating inodes if they need to
@@ -1624,6 +1636,7 @@ void touch_atime(const struct path *path)
 	 * We may also fail on filesystems that have the ability to make parts
 	 * of the fs read only, e.g. subvolumes in Btrfs.
 	 */
+	now = current_fs_time(inode->i_sb);
 	update_time(inode, &now, S_ATIME);
 	__mnt_drop_write(mnt);
 skip_update:
@@ -1639,7 +1652,7 @@ EXPORT_SYMBOL(touch_atime);
  */
 int should_remove_suid(struct dentry *dentry)
 {
-	umode_t mode = dentry->d_inode->i_mode;
+	umode_t mode = d_inode(dentry)->i_mode;
 	int kill = 0;
 
 	/* suid always must be killed */
@@ -1675,7 +1688,7 @@ static int __remove_suid(struct dentry *dentry, int kill)
 int file_remove_suid(struct file *file)
 {
 	struct dentry *dentry = file->f_path.dentry;
-	struct inode *inode = dentry->d_inode;
+	struct inode *inode = d_inode(dentry);
 	int killsuid;
 	int killpriv;
 	int error = 0;
@@ -1944,20 +1957,6 @@ void inode_dio_wait(struct inode *inode)
 		__inode_dio_wait(inode);
 }
 EXPORT_SYMBOL(inode_dio_wait);
-
-/*
- * inode_dio_done - signal finish of a direct I/O requests
- * @inode: inode the direct I/O happens on
- *
- * This is called once we've finished processing a direct I/O request,
- * and is used to wake up callers waiting for direct I/O to be quiesced.
- */
-void inode_dio_done(struct inode *inode)
-{
-	if (atomic_dec_and_test(&inode->i_dio_count))
-		wake_up_bit(&inode->i_state, __I_DIO_WAKEUP);
-}
-EXPORT_SYMBOL(inode_dio_done);
 
 /*
  * inode_set_flags - atomically set some inode flags

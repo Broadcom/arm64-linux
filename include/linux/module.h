@@ -338,6 +338,8 @@ struct module {
 #ifdef CONFIG_EVENT_TRACING
 	struct ftrace_event_call **trace_events;
 	unsigned int num_trace_events;
+	struct trace_enum_map **trace_enums;
+	unsigned int num_trace_enums;
 #endif
 #ifdef CONFIG_FTRACE_MCOUNT_RECORD
 	unsigned int num_ftrace_callsites;
@@ -652,5 +654,17 @@ static inline void module_bug_finalize(const Elf_Ehdr *hdr,
 }
 static inline void module_bug_cleanup(struct module *mod) {}
 #endif	/* CONFIG_GENERIC_BUG */
+
+#ifdef CONFIG_MODULE_SIG
+static inline bool module_sig_ok(struct module *module)
+{
+	return module->sig_ok;
+}
+#else	/* !CONFIG_MODULE_SIG */
+static inline bool module_sig_ok(struct module *module)
+{
+	return true;
+}
+#endif	/* CONFIG_MODULE_SIG */
 
 #endif /* _LINUX_MODULE_H */
