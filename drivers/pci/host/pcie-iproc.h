@@ -29,7 +29,9 @@
 struct iproc_pcie {
 	struct device *dev;
 	void __iomem *base;
+#ifdef CONFIG_ARM
 	struct pci_sys_data sysdata;
+#endif
 	struct pci_bus *root_bus;
 	struct phy *phy;
 	int irqs[IPROC_PCIE_MAX_NUM_IRQS];
