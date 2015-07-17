@@ -7,6 +7,12 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-pm-domain-for-v4.3
 	clkevt/set-state
 		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux ARM/clkevt/set-state-4.3
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.3-1
+	brcm/soc
+		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/soc
+	ep93xx/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/ep93xx-cleanup
 
 next/soc
 
@@ -24,6 +30,10 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt1
 	lpc18xx/dt
 		https://github.com/manabian/linux-lpc lpc18xx_43xx_dts_4.3
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.3-1
+	brcm/dts
+		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/dts
 
 next/drivers
 
@@ -31,6 +41,10 @@ next/defconfig
 	patch
 		ARM: multi_v7_defconfig: enable Conexant Digicolor watchdog
 		ARM: multi_v7_defconfig: enable UniPhier UART driver
+	mvebu/config
+		git://git.infradead.org/linux-mvebu tags/mvebu-config-4.3-1
+	ep93xx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/ep93xx-defconfig
 
 fixes
 	patch
@@ -46,4 +60,7 @@ fixes
 	<no branch> (9908ac3daa3da2d236b5406b95d0865ddb8b29c4)
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.2/fixes-rc2-v2
 		contains next/drivers
+		contains next/soc
+	<no branch> (8b4769cc535adf9dd4ae5d82725ca1de254f007c)
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts-fixes
 
