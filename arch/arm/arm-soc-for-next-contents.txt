@@ -5,6 +5,8 @@ next/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.3
 	renesas/pm-domain
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-pm-domain-for-v4.3
+	clkevt/set-state
+		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux ARM/clkevt/set-state-4.3
 
 next/soc
 
@@ -20,6 +22,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.3
 	omap/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt1
+	lpc18xx/dt
+		https://github.com/manabian/linux-lpc lpc18xx_43xx_dts_4.3
 
 next/drivers
 
