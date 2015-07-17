@@ -40,6 +40,9 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-dts1
 
 next/drivers
+	patch
+		memory: add ARM PL172 MultiPort Memory Controller driver
+		doc: dt: add documentation for pl172 memory bindings
 
 next/defconfig
 	patch
@@ -63,7 +66,6 @@ fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.2
 	<no branch> (9908ac3daa3da2d236b5406b95d0865ddb8b29c4)
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.2/fixes-rc2-v2
-		contains next/drivers
 	<no branch> (8b4769cc535adf9dd4ae5d82725ca1de254f007c)
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts-fixes
 
