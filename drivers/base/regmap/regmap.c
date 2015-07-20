@@ -93,6 +93,9 @@ bool regmap_writeable(struct regmap *map, unsigned int reg)
 
 bool regmap_readable(struct regmap *map, unsigned int reg)
 {
+	if (!map->reg_read)
+		return false;
+
 	if (map->max_register && reg > map->max_register)
 		return false;
 
@@ -2097,8 +2100,6 @@ static int _regmap_read(struct regmap *map, unsigned int reg,
 	int ret;
 	void *context = _regmap_map_get_context(map);
 
-	WARN_ON(!map->reg_read);
-
 	if (!map->cache_bypass) {
 		ret = regcache_read(map, reg, val);
 		if (ret == 0)
@@ -2178,6 +2179,8 @@ int regmap_raw_read(struct regmap *map, unsigned int reg, void *val,
 	if (val_len % map->format.val_bytes)
 		return -EINVAL;
 	if (reg % map->reg_stride)
+		return -EINVAL;
+	if (val_count == 0)
 		return -EINVAL;
 
 	map->lock(map->lock_arg);
