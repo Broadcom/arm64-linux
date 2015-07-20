@@ -50,6 +50,20 @@ struct reg_default {
 	unsigned int def;
 };
 
+/**
+ * Register/value pairs for sequences of writes with an optional delay in
+ * microseconds to be applied after each write.
+ *
+ * @reg: Register address.
+ * @def: Register value.
+ * @delay_us: Delay to be applied after the register write in microseconds
+ */
+struct reg_sequence {
+	unsigned int reg;
+	unsigned int def;
+	unsigned int delay_us;
+};
+
 #ifdef CONFIG_REGMAP
 
 enum regmap_endian {
@@ -410,10 +424,10 @@ int regmap_raw_write(struct regmap *map, unsigned int reg,
 		     const void *val, size_t val_len);
 int regmap_bulk_write(struct regmap *map, unsigned int reg, const void *val,
 			size_t val_count);
-int regmap_multi_reg_write(struct regmap *map, const struct reg_default *regs,
+int regmap_multi_reg_write(struct regmap *map, const struct reg_sequence *regs,
 			int num_regs);
 int regmap_multi_reg_write_bypassed(struct regmap *map,
-				    const struct reg_default *regs,
+				    const struct reg_sequence *regs,
 				    int num_regs);
 int regmap_raw_write_async(struct regmap *map, unsigned int reg,
 			   const void *val, size_t val_len);
@@ -423,6 +437,8 @@ int regmap_raw_read(struct regmap *map, unsigned int reg,
 int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 		     size_t val_count);
 int regmap_update_bits(struct regmap *map, unsigned int reg,
+		       unsigned int mask, unsigned int val);
+int regmap_write_bits(struct regmap *map, unsigned int reg,
 		       unsigned int mask, unsigned int val);
 int regmap_update_bits_async(struct regmap *map, unsigned int reg,
 			     unsigned int mask, unsigned int val);
@@ -450,7 +466,7 @@ void regcache_mark_dirty(struct regmap *map);
 bool regmap_check_range_table(struct regmap *map, unsigned int reg,
 			      const struct regmap_access_table *table);
 
-int regmap_register_patch(struct regmap *map, const struct reg_default *regs,
+int regmap_register_patch(struct regmap *map, const struct reg_sequence *regs,
 			  int num_regs);
 int regmap_parse_val(struct regmap *map, const void *buf,
 				unsigned int *val);
@@ -502,6 +518,8 @@ int regmap_field_update_bits(struct regmap_field *field,
 			     unsigned int mask, unsigned int val);
 
 int regmap_fields_write(struct regmap_field *field, unsigned int id,
+			unsigned int val);
+int regmap_fields_force_write(struct regmap_field *field, unsigned int id,
 			unsigned int val);
 int regmap_fields_read(struct regmap_field *field, unsigned int id,
 		       unsigned int *val);
@@ -639,6 +657,13 @@ static inline int regmap_bulk_read(struct regmap *map, unsigned int reg,
 }
 
 static inline int regmap_update_bits(struct regmap *map, unsigned int reg,
+				     unsigned int mask, unsigned int val)
+{
+	WARN_ONCE(1, "regmap API is disabled");
+	return -EINVAL;
+}
+
+static inline int regmap_write_bits(struct regmap *map, unsigned int reg,
 				     unsigned int mask, unsigned int val)
 {
 	WARN_ONCE(1, "regmap API is disabled");
