@@ -38,6 +38,8 @@ next/dt
 		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/dts
 	rockchip/dts
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-dts1
+	pxa/dt
+		https://github.com/rjarzmik/linux tags/tags/pxa-dt-4.3
 
 next/drivers
 	patch
@@ -54,20 +56,8 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/ep93xx-defconfig
 
 fixes
-	patch
-		ARM: dts: cros-ec-keyboard: Add support for some Japanese keys
-		ARM: ux500: define serial port aliases
-		ARM: ux500: fix MMC/SD card regression
-	<no branch> (93abc72bc7901cfc61a2871da7a565c9fdb26108)
-		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_fixes_for_v4.2-rc1
-	patch
-		MAINTAINERS: digicolor: add dts files
-	<no branch> (d438462c20a300139c2e5e65b96cadaa21b58d9a)
-		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.2
-	<no branch> (9908ac3daa3da2d236b5406b95d0865ddb8b29c4)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.2/fixes-rc2-v2
-	<no branch> (8b4769cc535adf9dd4ae5d82725ca1de254f007c)
-		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts-fixes
+	foo2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-1
 
 next/arm64
 	patch
@@ -79,4 +69,5 @@ next/arm64
 		Merge branch 'depends/clk-rk3368' into next/arm64
 	patch
 		arm64: dts: add Rockchip rk3368 core dtsi and board dts for the r88 board
+		arm64: fix Kconfig include path
 
