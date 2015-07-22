@@ -45,6 +45,7 @@ next/drivers
 	patch
 		memory: add ARM PL172 MultiPort Memory Controller driver
 		doc: dt: add documentation for pl172 memory bindings
+		memory: pl172: fix modular build
 
 next/defconfig
 	patch
