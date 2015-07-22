@@ -71,6 +71,34 @@ static ssize_t pm_async_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 power_attr(pm_async);
 
+#ifdef CONFIG_SUSPEND
+/* Execute sys_sync() in suspend to RAM path */
+int pm_suspend_do_sync  = CONFIG_PM_SUSPEND_DO_SYNC_DEFAULT;
+
+static ssize_t pm_suspend_do_sync_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", pm_suspend_do_sync);
+}
+
+static ssize_t pm_suspend_do_sync_store(struct kobject *kobj,
+			struct kobj_attribute *attr, const char *buf, size_t n)
+{
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val))
+		return -EINVAL;
+
+	if (val > 1)
+		return -EINVAL;
+
+	pm_suspend_do_sync  = val;
+	return n;
+}
+
+power_attr(pm_suspend_do_sync);
+#endif
+
 #ifdef CONFIG_PM_DEBUG
 int pm_test_level = TEST_NONE;
 
@@ -592,6 +620,9 @@ static struct attribute * g[] = {
 #ifdef CONFIG_PM_SLEEP
 	&pm_async_attr.attr,
 	&wakeup_count_attr.attr,
+#ifdef CONFIG_SUSPEND
+	&pm_suspend_do_sync_attr.attr,
+#endif
 #ifdef CONFIG_PM_AUTOSLEEP
 	&autosleep_attr.attr,
 #endif

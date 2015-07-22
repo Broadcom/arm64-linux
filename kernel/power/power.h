@@ -192,6 +192,7 @@ static inline void suspend_test_finish(const char *label) {}
 #ifdef CONFIG_PM_SLEEP
 /* kernel/power/main.c */
 extern int pm_notifier_call_chain(unsigned long val);
+extern int pm_suspend_do_sync;
 #endif
 
 #ifdef CONFIG_HIGHMEM

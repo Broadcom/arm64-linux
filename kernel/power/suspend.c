@@ -484,11 +484,13 @@ static int enter_state(suspend_state_t state)
 	if (state == PM_SUSPEND_FREEZE)
 		freeze_begin();
 
-	trace_suspend_resume(TPS("sync_filesystems"), 0, true);
-	printk(KERN_INFO "PM: Syncing filesystems ... ");
-	sys_sync();
-	printk("done.\n");
-	trace_suspend_resume(TPS("sync_filesystems"), 0, false);
+	if (pm_suspend_do_sync) {
+		trace_suspend_resume(TPS("sync_filesystems"), 0, true);
+		printk(KERN_INFO "PM: Syncing filesystems ... ");
+		sys_sync();
+		printk("done.\n");
+		trace_suspend_resume(TPS("sync_filesystems"), 0, false);
+	}
 
 	pr_debug("PM: Preparing system for sleep (%s)\n", pm_states[state]);
 	error = suspend_prepare(state);
