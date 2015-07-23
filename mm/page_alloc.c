@@ -461,6 +461,7 @@ void prep_compound_page(struct page *page, unsigned long order)
 	for (i = 1; i < nr_pages; i++) {
 		struct page *p = page + i;
 		set_page_count(p, 0);
+		p->mapping = TAIL_MAPPING;
 		p->first_page = page;
 		/* Make sure p->first_page is always valid for PageTail() */
 		smp_wmb();
@@ -843,6 +844,12 @@ static void free_one_page(struct zone *zone,
 
 static int free_tail_pages_check(struct page *head_page, struct page *page)
 {
+	if (page->mapping != TAIL_MAPPING) {
+		bad_page(page, "corrupted mapping in tail page", 0);
+		page->mapping = NULL;
+		return 1;
+	}
+	page->mapping = NULL;
 	if (!IS_ENABLED(CONFIG_DEBUG_VM))
 		return 0;
 	if (unlikely(!PageTail(page))) {
