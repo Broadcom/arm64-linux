@@ -3894,20 +3894,23 @@ static ssize_t memcg_write_event_control(struct kernfs_open_file *of,
 	struct fd efile;
 	struct fd cfile;
 	const char *name;
-	char *endp;
 	int ret;
 
 	buf = strstrip(buf);
 
-	efd = simple_strtoul(buf, &endp, 10);
-	if (*endp != ' ')
+	ret = parse_integer(buf, 10, &efd);
+	if (ret < 0)
+		return ret;
+	buf += ret;
+	if (*buf++ != ' ')
 		return -EINVAL;
-	buf = endp + 1;
-
-	cfd = simple_strtoul(buf, &endp, 10);
-	if ((*endp != ' ') && (*endp != '\0'))
+	ret = parse_integer(buf, 10, &efd);
+	if (ret < 0)
+		return ret;
+	buf += ret;
+	if (*buf != ' ' && *buf != '\0')
 		return -EINVAL;
-	buf = endp + 1;
+	buf++;
 
 	event = kzalloc(sizeof(*event), GFP_KERNEL);
 	if (!event)
