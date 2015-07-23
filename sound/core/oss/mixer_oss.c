@@ -1200,7 +1200,7 @@ static void snd_mixer_oss_proc_write(struct snd_info_entry *entry,
 			continue;
 		}
 		snd_info_get_str(idxstr, cptr, sizeof(idxstr));
-		idx = simple_strtoul(idxstr, NULL, 10);
+		parse_integer(idxstr, 10, (unsigned int *)&idx);
 		if (idx >= 0x4000) { /* too big */
 			pr_err("ALSA: mixer_oss: invalid index %d\n", idx);
 			continue;

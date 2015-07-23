@@ -2884,8 +2884,12 @@ static int apply_quirk_str(struct snd_ac97 *ac97, const char *typestr)
 			return apply_quirk(ac97, i);
 	}
 	/* for compatibility, accept the numbers, too */
-	if (*typestr >= '0' && *typestr <= '9')
-		return apply_quirk(ac97, (int)simple_strtoul(typestr, NULL, 10));
+	if (*typestr >= '0' && *typestr <= '9') {
+		int type;
+
+		parse_integer(typestr, 10, &type);
+		return apply_quirk(ac97, type);
+	}
 	return -EINVAL;
 }
 

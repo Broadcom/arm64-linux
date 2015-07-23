@@ -2892,9 +2892,9 @@ static void snd_pcm_oss_proc_write(struct snd_info_entry *entry,
 			}
 		}
 		ptr = snd_info_get_str(str, ptr, sizeof(str));
-		template.periods = simple_strtoul(str, NULL, 10);
+		parse_integer(str, 10, &template.periods);
 		ptr = snd_info_get_str(str, ptr, sizeof(str));
-		template.period_size = simple_strtoul(str, NULL, 10);
+		parse_integer(str, 10, &template.period_size);
 		for (idx1 = 31; idx1 >= 0; idx1--)
 			if (template.period_size & (1 << idx1))
 				break;
