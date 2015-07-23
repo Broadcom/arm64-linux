@@ -3904,7 +3904,7 @@ static ssize_t memcg_write_event_control(struct kernfs_open_file *of,
 	buf += ret;
 	if (*buf++ != ' ')
 		return -EINVAL;
-	ret = parse_integer(buf, 10, &efd);
+	ret = parse_integer(buf, 10, &cfd);
 	if (ret < 0)
 		return ret;
 	buf += ret;
