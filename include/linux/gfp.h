@@ -64,8 +64,8 @@ struct vm_area_struct;
  * loop around allocator.
  *
  * __GFP_NORETRY: The VM implementation must not retry indefinitely and will
- * return NULL when direct reclaim and memory compaction has failed to allow the
- * allocation to succeed.  The OOM killer is not called with the current
+ * return NULL when direct reclaim and memory compaction have failed to allow
+ * the allocation to succeed.  The OOM killer is not called with the current
  * implementation.
  *
  * __GFP_MOVABLE: Flag that this page will be movable by the page migration
