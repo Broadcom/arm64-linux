@@ -1316,7 +1316,7 @@ intel_tv_detect(struct drm_connector *connector, bool force)
 	struct drm_display_mode mode;
 	struct intel_tv *intel_tv = intel_attached_tv(connector);
 	enum drm_connector_status status;
-	int type;
+	int type = 0;
 
 	DRM_DEBUG_KMS("[CONNECTOR:%d:%s] force=%d\n",
 		      connector->base.id, connector->name,
