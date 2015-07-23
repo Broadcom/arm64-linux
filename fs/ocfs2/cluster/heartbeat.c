@@ -1453,13 +1453,12 @@ static int o2hb_read_block_input(struct o2hb_region *reg,
 				 unsigned long *ret_bytes,
 				 unsigned int *ret_bits)
 {
-	unsigned long bytes;
-	char *p = (char *)page;
+	unsigned int bytes;
+	int rv;
 
-	bytes = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	rv = kstrtouint(page, 0, &bytes);
+	if (rv < 0)
+		return rv;
 	/* Heartbeat and fs min / max block sizes are the same. */
 	if (bytes > 4096 || bytes < 512)
 		return -ERANGE;
@@ -1512,18 +1511,14 @@ static ssize_t o2hb_region_start_block_write(struct o2hb_region *reg,
 					     const char *page,
 					     size_t count)
 {
-	unsigned long long tmp;
-	char *p = (char *)page;
+	int rv;
 
 	if (reg->hr_bdev)
 		return -EINVAL;
 
-	tmp = simple_strtoull(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
-	reg->hr_start_block = tmp;
-
+	rv = kstrtoull(page, 0, &reg->hr_start_block);
+	if (rv < 0)
+		return rv;
 	return count;
 }
 
@@ -1537,20 +1532,19 @@ static ssize_t o2hb_region_blocks_write(struct o2hb_region *reg,
 					const char *page,
 					size_t count)
 {
-	unsigned long tmp;
-	char *p = (char *)page;
+	unsigned int tmp;
+	int rv;
 
 	if (reg->hr_bdev)
 		return -EINVAL;
 
-	tmp = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	rv = kstrtouint(page, 0, &tmp);
+	if (rv < 0)
+		return rv;
 	if (tmp > O2NM_MAX_NODES || tmp == 0)
 		return -ERANGE;
 
-	reg->hr_blocks = (unsigned int)tmp;
+	reg->hr_blocks = tmp;
 
 	return count;
 }
@@ -1676,9 +1670,8 @@ static ssize_t o2hb_region_dev_write(struct o2hb_region *reg,
 				     size_t count)
 {
 	struct task_struct *hb_task;
-	long fd;
+	int fd;
 	int sectsize;
-	char *p = (char *)page;
 	struct fd f;
 	struct inode *inode;
 	ssize_t ret = -EINVAL;
@@ -1692,10 +1685,9 @@ static ssize_t o2hb_region_dev_write(struct o2hb_region *reg,
 	if (o2nm_this_node() == O2NM_MAX_NODES)
 		goto out;
 
-	fd = simple_strtol(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
+	ret = kstrtoint(page, 0, &fd);
+	if (ret < 0)
 		goto out;
-
 	if (fd < 0 || fd >= INT_MAX)
 		goto out;
 
@@ -2169,12 +2161,12 @@ static ssize_t o2hb_heartbeat_group_threshold_store(struct o2hb_heartbeat_group 
 						    const char *page,
 						    size_t count)
 {
-	unsigned long tmp;
-	char *p = (char *)page;
+	unsigned int tmp;
+	int rv;
 
-	tmp = simple_strtoul(p, &p, 10);
-	if (!p || (*p && (*p != '\n')))
-                return -EINVAL;
+	rv = kstrtouint(page, 10, &tmp);
+	if (rv < 0)
+		return rv;
 
 	/* this will validate ranges for us. */
 	o2hb_dead_threshold_set((unsigned int) tmp);
