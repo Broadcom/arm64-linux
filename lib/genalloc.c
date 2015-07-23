@@ -253,7 +253,7 @@ void gen_pool_destroy(struct gen_pool *pool)
 
 		kfree(chunk);
 	}
-	kfree(pool->name);
+	kfree_const(pool->name);
 	kfree(pool);
 }
 EXPORT_SYMBOL(gen_pool_destroy);
@@ -632,23 +632,25 @@ struct gen_pool *devm_gen_pool_create(struct device *dev, int min_alloc_order,
 	}
 
 	ptr = devres_alloc(devm_gen_pool_release, sizeof(*ptr), GFP_KERNEL);
-	if (!ptr) {
-		kfree(pool_name);
-		return ERR_PTR(-ENOMEM);
-	}
+	if (!ptr)
+		goto free_pool_name;
 
 	pool = gen_pool_create(min_alloc_order, nid);
-	if (pool) {
-		*ptr = pool;
-		pool->name = pool_name;
-		devres_add(dev, ptr);
-	} else {
-		devres_free(ptr);
-		kfree(pool_name);
-		return ERR_PTR(-ENOMEM);
-	}
+	if (!pool)
+		goto free_devres;
+
+	*ptr = pool;
+	pool->name = pool_name;
+	devres_add(dev, ptr);
 
 	return pool;
+
+free_devres:
+	devres_free(ptr);
+free_pool_name:
+	kfree_const(pool_name);
+
+	return ERR_PTR(-ENOMEM);
 }
 EXPORT_SYMBOL(devm_gen_pool_create);
 
