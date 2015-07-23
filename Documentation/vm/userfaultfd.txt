@@ -3,8 +3,8 @@
 == Objective ==
 
 Userfaults allow the implementation of on-demand paging from userland
-and more generally they allow userland to take control various memory
-page faults, something otherwise only the kernel code could do.
+and more generally they allow userland to take control of various
+memory page faults, something otherwise only the kernel code could do.
 
 For example userfaults allows a proper and more optimal implementation
 of the PROT_NONE+SIGSEGV trick.
@@ -75,7 +75,9 @@ The primary ioctl to resolve userfaults is UFFDIO_COPY. That
 atomically copies a page into the userfault registered range and wakes
 up the blocked userfaults (unless uffdio_copy.mode &
 UFFDIO_COPY_MODE_DONTWAKE is set). Other ioctl works similarly to
-UFFDIO_COPY.
+UFFDIO_COPY. They're atomic as in guaranteeing that nothing can see an
+half copied page since it'll keep userfaulting until the copy has
+finished.
 
 == QEMU/KVM ==
 
