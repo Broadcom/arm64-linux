@@ -424,7 +424,6 @@ struct ocfs2_super
 	 */
 	struct list_head blocked_lock_list;
 	unsigned long blocked_lock_count;
-	unsigned long blocked_lock_processed;
 
 	/* List of dquot structures to drop last reference to */
 	struct llist_head dquot_drop_list;
