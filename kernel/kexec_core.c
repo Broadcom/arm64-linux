@@ -30,6 +30,8 @@
 #include <linux/freezer.h>
 #include <linux/pm.h>
 #include <linux/cpu.h>
+#include <linux/uaccess.h>
+#include <linux/io.h>
 #include <linux/console.h>
 #include <linux/vmalloc.h>
 #include <linux/swap.h>
@@ -38,8 +40,6 @@
 #include <linux/hugetlb.h>
 
 #include <asm/page.h>
-#include <asm/uaccess.h>
-#include <asm/io.h>
 #include <asm/sections.h>
 
 #include <crypto/hash.h>
@@ -187,6 +187,7 @@ int sanity_check_segment_list(struct kimage *image)
 		mend   = mstart + image->segment[i].memsz;
 		for (j = 0; j < i; j++) {
 			unsigned long pstart, pend;
+
 			pstart = image->segment[j].mem;
 			pend   = pstart + image->segment[j].memsz;
 			/* Do the segments overlap ? */
@@ -285,6 +286,7 @@ static struct page *kimage_alloc_pages(gfp_t gfp_mask, unsigned int order)
 	pages = alloc_pages(gfp_mask, order);
 	if (pages) {
 		unsigned int count, i;
+
 		pages->mapping = NULL;
 		set_page_private(pages, order);
 		count = 1 << order;
@@ -692,12 +694,9 @@ static struct page *kimage_alloc_page(struct kimage *image,
 			addr = old_addr;
 			page = old_page;
 			break;
-		} else {
-			/* Place the page on the destination list I
-			 * will use it later.
-			 */
-			list_add(&page->lru, &image->dest_pages);
 		}
+		/* Place the page on the destination list, to be used later */
+		list_add(&page->lru, &image->dest_pages);
 	}
 
 	return page;
@@ -881,6 +880,7 @@ void crash_kexec(struct pt_regs *regs)
 size_t crash_get_memory_size(void)
 {
 	size_t size = 0;
+
 	mutex_lock(&kexec_mutex);
 	if (crashk_res.end != crashk_res.start)
 		size = resource_size(&crashk_res);
