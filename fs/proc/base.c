@@ -1955,8 +1955,8 @@ struct map_files_info {
  * symlinks may be used to bypass permissions on ancestor directories in the
  * path to the file in question.
  */
-static void *
-proc_map_files_follow_link(struct dentry *dentry, struct nameidata *nd)
+static const char *
+proc_map_files_follow_link(struct dentry *dentry, void **cookie)
 {
 	if (!capable(CAP_SYS_ADMIN))
 		return ERR_PTR(-EPERM);
