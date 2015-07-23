@@ -754,7 +754,7 @@ static int shmem_writepage(struct page *page, struct writeback_control *wbc)
 	index = page->index;
 	inode = mapping->host;
 	info = SHMEM_I(inode);
-	if (info->flags & VM_LOCKED)
+	if (info->flags & (VM_LOCKED | VM_LOCKONFAULT))
 		goto redirty;
 	if (!total_swap_pages)
 		goto redirty;

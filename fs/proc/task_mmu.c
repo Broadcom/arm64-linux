@@ -657,7 +657,7 @@ static int show_smap(struct seq_file *m, void *v, int is_pid)
 		   mss.swap >> 10,
 		   vma_kernel_pagesize(vma) >> 10,
 		   vma_mmu_pagesize(vma) >> 10,
-		   (vma->vm_flags & VM_LOCKED) ?
+		   (vma->vm_flags & (VM_LOCKED | VM_LOCKONFAULT)) ?
 			(unsigned long)(mss.pss >> (10 + PSS_SHIFT)) : 0);
 
 	show_smap_vma_flags(m, vma);

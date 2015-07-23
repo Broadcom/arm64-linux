@@ -1058,7 +1058,7 @@ static int try_to_merge_one_page(struct vm_area_struct *vma,
 			err = replace_page(vma, page, kpage, orig_pte);
 	}
 
-	if ((vma->vm_flags & VM_LOCKED) && kpage && !err) {
+	if ((vma->vm_flags & (VM_LOCKED | VM_LOCKONFAULT)) && kpage && !err) {
 		munlock_vma_page(page);
 		if (!PageMlocked(kpage)) {
 			unlock_page(page);
