@@ -579,9 +579,9 @@ static void devm_gen_pool_release(struct device *dev, void *res)
  */
 struct gen_pool *gen_pool_get(struct device *dev, const char *name)
 {
-	struct gen_pool **p = devres_find(dev, devm_gen_pool_release,
-					  NULL, NULL);
+	struct gen_pool **p;
 
+	p = devres_find(dev, devm_gen_pool_release, NULL, NULL);
 	if (!p)
 		return NULL;
 	return *p;
