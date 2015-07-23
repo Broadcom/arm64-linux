@@ -387,5 +387,8 @@
 #define __NR_execveat		362
 #define __NR_switch_endian	363
 #define __NR_userfaultfd	364
+#define __NR_mlock2		365
+#define __NR_munlock2		366
+#define __NR_munlockall2	367
 
 #endif /* _UAPI_ASM_POWERPC_UNISTD_H_ */

@@ -361,5 +361,8 @@
 #define __NR_memfd_create	353
 #define __NR_bpf		354
 #define __NR_execveat		355
+#define __NR_mlock2		356
+#define __NR_munlock2		357
+#define __NR_munlockall2	358
 
 #endif /* _UAPI_ASM_M68K_UNISTD_H_ */

@@ -290,7 +290,10 @@
 #define __NR_s390_pci_mmio_write	352
 #define __NR_s390_pci_mmio_read		353
 #define __NR_execveat		354
-#define NR_syscalls 355
+#define __NR_mlock2		355
+#define __NR_munlock2		356
+#define __NR_munlockall2	357
+#define NR_syscalls 358
 
 /* 
  * There are some system calls that are not present on 64 bit, some

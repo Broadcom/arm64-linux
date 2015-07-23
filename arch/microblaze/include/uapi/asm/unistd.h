@@ -404,5 +404,8 @@
 #define __NR_memfd_create	386
 #define __NR_bpf		387
 #define __NR_execveat		388
+#define __NR_mlock2		389 /* ok - nommu or mmu */
+#define __NR_munlock2		390 /* ok - nommu or mmu */
+#define __NR_munlockall2	391 /* ok - nommu or mmu */
 
 #endif /* _UAPI_ASM_MICROBLAZE_UNISTD_H */

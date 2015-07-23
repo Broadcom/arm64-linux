@@ -756,9 +756,9 @@ __SYSCALL(341, sys_execveat, 5)
 #define __NR_mlock2				342
 __SYSCALL(342, sys_mlock2, 3)
 #define __NR_munlock2				343
-__SYSCALL(342, sys_munlock2, 3)
+__SYSCALL(343, sys_munlock2, 3)
 #define __NR_munlockall2			344
-__SYSCALL(342, sys_munlock2, 1)
+__SYSCALL(344, sys_munlock2, 1)
 
 #define __NR_syscall_count			345
 

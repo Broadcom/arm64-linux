@@ -475,5 +475,8 @@
 #define __NR_getrandom			511
 #define __NR_memfd_create		512
 #define __NR_execveat			513
+#define __NR_mlock2			514
+#define __NR_munlock2			515
+#define __NR_munlockall2		516
 
 #endif /* _UAPI_ALPHA_UNISTD_H */

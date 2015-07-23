@@ -399,7 +399,7 @@
 		CALL(sys_execveat)
 		CALL(sys_mlock2)
 		CALL(sys_munlock2)
-/* 400 */	CALL(sys_munlockall2)
+/* 390 */	CALL(sys_munlockall2)
 #ifndef syscalls_counted
 .equ syscalls_padding, ((NR_syscalls + 3) & ~3) - NR_syscalls
 #define syscalls_counted

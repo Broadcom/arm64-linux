@@ -220,3 +220,6 @@ COMPAT_SYSCALL_WRAP2(memfd_create, const char __user *, uname, unsigned int, fla
 COMPAT_SYSCALL_WRAP3(bpf, int, cmd, union bpf_attr *, attr, unsigned int, size);
 COMPAT_SYSCALL_WRAP3(s390_pci_mmio_write, const unsigned long, mmio_addr, const void __user *, user_buffer, const size_t, length);
 COMPAT_SYSCALL_WRAP3(s390_pci_mmio_read, const unsigned long, mmio_addr, void __user *, user_buffer, const size_t, length);
+COMPAT_SYSCALL_WRAP3(mlock2, unsigned long, start, size_t, len, int, flags);
+COMPAT_SYSCALL_WRAP3(munlock2, unsigned long, start, size_t, len, int, flags);
+COMPAT_SYSCALL_WRAP1(munlockall2, int, flags);

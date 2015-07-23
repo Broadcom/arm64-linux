@@ -334,6 +334,7 @@
 325	common	munlock2		sys_munlock2
 326	common	munlockall2		sys_munlockall2
 
+
 #
 # x32-specific system call numbers start at 512 to avoid cache impact
 # for native 64-bit operation.
