@@ -81,7 +81,20 @@ static int userfaultfd_wake_function(wait_queue_t *wq, unsigned mode,
 		goto out;
 	ret = wake_up_state(wq->private, mode);
 	if (ret)
-		/* wake only once, autoremove behavior */
+		/*
+		 * Wake only once, autoremove behavior.
+		 *
+		 * After the effect of list_del_init is visible to the
+		 * other CPUs, the waitqueue may disappear from under
+		 * us, see the !list_empty_careful() in
+		 * handle_userfault(). try_to_wake_up() has an
+		 * implicit smp_mb__before_spinlock, and the
+		 * wq->private is read before calling the extern
+		 * function "wake_up_state" (which in turns calls
+		 * try_to_wake_up). While the spin_lock;spin_unlock;
+		 * wouldn't be enough, the smp_mb__before_spinlock is
+		 * enough to avoid an explicit smp_mb() here.
+		 */
 		list_del_init(&wq->task_list);
 out:
 	return ret;
