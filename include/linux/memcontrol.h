@@ -25,6 +25,7 @@
 #include <linux/jump_label.h>
 #include <linux/page_counter.h>
 #include <linux/vmpressure.h>
+#include <linux/eventfd.h>
 #include <linux/mmzone.h>
 #include <linux/writeback.h>
 
