@@ -667,6 +667,13 @@ static inline unsigned long pmd_young(pmd_t pmd)
 	return pte_young(pte);
 }
 
+static inline int pmd_dirty(pmd_t pmd)
+{
+	pte_t pte = __pte(pmd_val(pmd));
+
+	return pte_dirty(pte);
+}
+
 static inline unsigned long pmd_write(pmd_t pmd)
 {
 	pte_t pte = __pte(pmd_val(pmd));
@@ -713,6 +720,15 @@ static inline pmd_t pmd_mkdirty(pmd_t pmd)
 	pte_t pte = __pte(pmd_val(pmd));
 
 	pte = pte_mkdirty(pte);
+
+	return __pmd(pte_val(pte));
+}
+
+static inline pmd_t pmd_mkclean(pmd_t pmd)
+{
+	pte_t pte = __pte(pmd_val(pmd));
+
+	pte = pte_mkclean(pte);
 
 	return __pmd(pte_val(pte));
 }
