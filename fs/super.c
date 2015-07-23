@@ -49,8 +49,8 @@ static char *sb_writers_name[SB_FREEZE_LEVELS] = {
  * One thing we have to be careful of with a per-sb shrinker is that we don't
  * drop the last active reference to the superblock from within the shrinker.
  * If that happens we could trigger unregistering the shrinker from within the
- * shrinker path and that leads to deadlock on the shrinker_rwsem. Hence we
- * take a passive reference to the superblock to avoid this from occurring.
+ * shrinker path. Hence we take a passive reference to the superblock to avoid
+ * this from occurring.
  */
 static unsigned long super_cache_scan(struct shrinker *shrink,
 				      struct shrink_control *sc)
@@ -121,8 +121,8 @@ static unsigned long super_cache_count(struct shrinker *shrink,
 	 * Don't call trylock_super as it is a potential
 	 * scalability bottleneck. The counts could get updated
 	 * between super_cache_count and super_cache_scan anyway.
-	 * Call to super_cache_count with shrinker_rwsem held
-	 * ensures the safety of call to list_lru_shrink_count() and
+	 * SRCU guarantees object validity across this call -- thus
+	 * it is safe to call list_lru_shrink_count() and
 	 * s_op->nr_cached_objects().
 	 */
 	if (sb->s_op && sb->s_op->nr_cached_objects)
