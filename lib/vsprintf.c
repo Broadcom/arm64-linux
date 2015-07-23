@@ -2488,8 +2488,6 @@ EXPORT_SYMBOL_GPL(bprintf);
 int vsscanf(const char *buf, const char *fmt, va_list args)
 {
 	const char *str = buf;
-	char *next;
-	char digit;
 	int num = 0;
 	u8 qualifier;
 	unsigned int base;
@@ -2501,6 +2499,8 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 	bool is_sign;
 
 	while (*fmt) {
+		int len;
+
 		/* skip any white space in format */
 		/* white space in format matchs any amount of
 		 * white space, including none, in the input.
@@ -2629,35 +2629,22 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 		 */
 		str = skip_spaces(str);
 
-		digit = *str;
-		if (is_sign && digit == '-')
-			digit = *(str + 1);
-
-		if (!digit
-		    || (base == 16 && !isxdigit(digit))
-		    || (base == 10 && !isdigit(digit))
-		    || (base == 8 && (!isdigit(digit) || digit > '7'))
-		    || (base == 0 && !isdigit(digit)))
+		if (is_sign)
+			len = parse_integer(str, base, &val.s);
+		else
+			len = parse_integer(str, base, &val.u);
+		if (len < 0)
 			break;
 
-		if (is_sign)
-			val.s = qualifier != 'L' ?
-				simple_strtol(str, &next, base) :
-				simple_strtoll(str, &next, base);
-		else
-			val.u = qualifier != 'L' ?
-				simple_strtoul(str, &next, base) :
-				simple_strtoull(str, &next, base);
-
-		if (field_width > 0 && next - str > field_width) {
+		if (field_width > 0) {
 			if (base == 0)
 				_parse_integer_fixup_radix(str, &base);
-			while (next - str > field_width) {
+			while (len > field_width) {
 				if (is_sign)
 					val.s = div_s64(val.s, base);
 				else
 					val.u = div_u64(val.u, base);
-				--next;
+				len--;
 			}
 		}
 
@@ -2698,10 +2685,7 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 			break;
 		}
 		num++;
-
-		if (!next)
-			break;
-		str = next;
+		str += len;
 	}
 
 	return num;
