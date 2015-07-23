@@ -271,13 +271,14 @@ static inline struct page *compound_head_fast(struct page *page)
 
 __PAGEFLAG(Locked, locked, NO_TAIL)
 PAGEFLAG(Error, error, NO_COMPOUND) TESTCLEARFLAG(Error, error, NO_COMPOUND)
-PAGEFLAG(Referenced, referenced, ANY) TESTCLEARFLAG(Referenced, referenced, ANY)
-	__SETPAGEFLAG(Referenced, referenced, ANY)
+PAGEFLAG(Referenced, referenced, HEAD)
+	TESTCLEARFLAG(Referenced, referenced, HEAD)
+	__SETPAGEFLAG(Referenced, referenced, HEAD)
 PAGEFLAG(Dirty, dirty, HEAD) TESTSCFLAG(Dirty, dirty, HEAD)
 	__CLEARPAGEFLAG(Dirty, dirty, HEAD)
-PAGEFLAG(LRU, lru, ANY) __CLEARPAGEFLAG(LRU, lru, ANY)
-PAGEFLAG(Active, active, ANY) __CLEARPAGEFLAG(Active, active, ANY)
-	TESTCLEARFLAG(Active, active, ANY)
+PAGEFLAG(LRU, lru, HEAD) __CLEARPAGEFLAG(LRU, lru, HEAD)
+PAGEFLAG(Active, active, HEAD) __CLEARPAGEFLAG(Active, active, HEAD)
+	TESTCLEARFLAG(Active, active, HEAD)
 __PAGEFLAG(Slab, slab, ANY)
 PAGEFLAG(Checked, checked, NO_COMPOUND) /* Used by some filesystems */
 PAGEFLAG(Pinned, pinned, ANY) TESTSCFLAG(Pinned, pinned, ANY)	/* Xen */
@@ -331,9 +332,9 @@ PAGEFLAG(SwapCache, swapcache, ANY)
 PAGEFLAG_FALSE(SwapCache)
 #endif
 
-PAGEFLAG(Unevictable, unevictable, ANY)
-	__CLEARPAGEFLAG(Unevictable, unevictable, ANY)
-	TESTCLEARFLAG(Unevictable, unevictable, ANY)
+PAGEFLAG(Unevictable, unevictable, HEAD)
+	__CLEARPAGEFLAG(Unevictable, unevictable, HEAD)
+	TESTCLEARFLAG(Unevictable, unevictable, HEAD)
 
 #ifdef CONFIG_MMU
 PAGEFLAG(Mlocked, mlocked, ANY) __CLEARPAGEFLAG(Mlocked, mlocked, ANY)
