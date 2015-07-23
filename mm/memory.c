@@ -2166,7 +2166,8 @@ static int wp_page_copy(struct mm_struct *mm, struct vm_area_struct *vma,
 		 * Don't let another task, with possibly unlocked vma,
 		 * keep the mlocked page.
 		 */
-		if (page_copied && (vma->vm_flags & (VM_LOCKED | VM_LOCKONFAULT))) {
+		if (page_copied && (vma->vm_flags &
+				    (VM_LOCKED | VM_LOCKONFAULT))) {
 			lock_page(old_page);	/* LRU manipulation */
 			munlock_vma_page(old_page);
 			unlock_page(old_page);
