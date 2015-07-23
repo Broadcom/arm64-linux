@@ -747,7 +747,7 @@ intel_check_sprite_plane(struct drm_plane *plane,
 	struct drm_framebuffer *fb = state->base.fb;
 	int crtc_x, crtc_y;
 	unsigned int crtc_w, crtc_h;
-	uint32_t src_x, src_y, src_w, src_h;
+	uint32_t src_x = 0, src_y = 0, src_w = 0, src_h = 0;
 	struct drm_rect *src = &state->src;
 	struct drm_rect *dst = &state->dst;
 	const struct drm_rect *clip = &state->clip;
