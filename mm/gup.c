@@ -924,6 +924,7 @@ static long pin_user_pages(struct vm_area_struct *vma, unsigned long start,
 			vma = find_extend_vma(mm, start);
 			if (!vma && in_gate_area(mm, start)) {
 				int ret;
+
 				ret = get_gate_page(mm, start & PAGE_MASK,
 						gup_flags, &vma, NULL);
 				if (ret)
