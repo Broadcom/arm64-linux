@@ -270,16 +270,16 @@ static inline struct page *compound_head_fast(struct page *page)
 }
 
 __PAGEFLAG(Locked, locked, NO_TAIL)
-PAGEFLAG(Error, error, ANY) TESTCLEARFLAG(Error, error, ANY)
+PAGEFLAG(Error, error, NO_COMPOUND) TESTCLEARFLAG(Error, error, NO_COMPOUND)
 PAGEFLAG(Referenced, referenced, ANY) TESTCLEARFLAG(Referenced, referenced, ANY)
 	__SETPAGEFLAG(Referenced, referenced, ANY)
-PAGEFLAG(Dirty, dirty, ANY) TESTSCFLAG(Dirty, dirty, ANY)
-	__CLEARPAGEFLAG(Dirty, dirty, ANY)
+PAGEFLAG(Dirty, dirty, HEAD) TESTSCFLAG(Dirty, dirty, HEAD)
+	__CLEARPAGEFLAG(Dirty, dirty, HEAD)
 PAGEFLAG(LRU, lru, ANY) __CLEARPAGEFLAG(LRU, lru, ANY)
 PAGEFLAG(Active, active, ANY) __CLEARPAGEFLAG(Active, active, ANY)
 	TESTCLEARFLAG(Active, active, ANY)
 __PAGEFLAG(Slab, slab, ANY)
-PAGEFLAG(Checked, checked, ANY)		/* Used by some filesystems */
+PAGEFLAG(Checked, checked, NO_COMPOUND) /* Used by some filesystems */
 PAGEFLAG(Pinned, pinned, ANY) TESTSCFLAG(Pinned, pinned, ANY)	/* Xen */
 PAGEFLAG(SavePinned, savepinned, ANY);			/* Xen */
 PAGEFLAG(Foreign, foreign, ANY);				/* Xen */
@@ -305,12 +305,15 @@ PAGEFLAG(OwnerPriv1, owner_priv_1, ANY)
  * Only test-and-set exist for PG_writeback.  The unconditional operators are
  * risky: they bypass page accounting.
  */
-TESTPAGEFLAG(Writeback, writeback, ANY) TESTSCFLAG(Writeback, writeback, ANY)
-PAGEFLAG(MappedToDisk, mappedtodisk, ANY)
+TESTPAGEFLAG(Writeback, writeback, NO_COMPOUND)
+	TESTSCFLAG(Writeback, writeback, NO_COMPOUND)
+PAGEFLAG(MappedToDisk, mappedtodisk, NO_COMPOUND)
 
 /* PG_readahead is only used for reads; PG_reclaim is only for writes */
-PAGEFLAG(Reclaim, reclaim, ANY) TESTCLEARFLAG(Reclaim, reclaim, ANY)
-PAGEFLAG(Readahead, reclaim, ANY) TESTCLEARFLAG(Readahead, reclaim, ANY)
+PAGEFLAG(Reclaim, reclaim, NO_COMPOUND)
+	TESTCLEARFLAG(Reclaim, reclaim, NO_COMPOUND)
+PAGEFLAG(Readahead, reclaim, NO_COMPOUND)
+	TESTCLEARFLAG(Readahead, reclaim, NO_COMPOUND)
 
 #ifdef CONFIG_HIGHMEM
 /*
@@ -419,7 +422,7 @@ static inline int PageUptodate(struct page *page)
 static inline void __SetPageUptodate(struct page *page)
 {
 	smp_wmb();
-	__set_bit(PG_uptodate, &(page)->flags);
+	__set_bit(PG_uptodate, &page->flags);
 }
 
 static inline void SetPageUptodate(struct page *page)
@@ -430,7 +433,7 @@ static inline void SetPageUptodate(struct page *page)
 	 * uptodate are actually visible before PageUptodate becomes true.
 	 */
 	smp_wmb();
-	set_bit(PG_uptodate, &(page)->flags);
+	set_bit(PG_uptodate, &page->flags);
 }
 
 CLEARPAGEFLAG(Uptodate, uptodate, ANY)
