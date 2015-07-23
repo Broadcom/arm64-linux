@@ -58,6 +58,8 @@ static ssize_t kpagecount_read(struct file *file, char __user *buf,
 		pfn++;
 		out++;
 		count -= KPMSIZE;
+
+		cond_resched();
 	}
 
 	*ppos += (char __user *)out - buf;
@@ -219,6 +221,8 @@ static ssize_t kpageflags_read(struct file *file, char __user *buf,
 		pfn++;
 		out++;
 		count -= KPMSIZE;
+
+		cond_resched();
 	}
 
 	*ppos += (char __user *)out - buf;
@@ -267,6 +271,8 @@ static ssize_t kpagecgroup_read(struct file *file, char __user *buf,
 		pfn++;
 		out++;
 		count -= KPMSIZE;
+
+		cond_resched();
 	}
 
 	*ppos += (char __user *)out - buf;
@@ -425,6 +431,7 @@ static ssize_t kpageidle_read(struct file *file, char __user *buf,
 			idle_bitmap = 0;
 			out++;
 		}
+		cond_resched();
 	}
 
 	*ppos += (char __user *)out - buf;
@@ -471,6 +478,7 @@ static ssize_t kpageidle_write(struct file *file, const char __user *buf,
 				put_page(page);
 			}
 		}
+		cond_resched();
 	}
 
 	*ppos += (const char __user *)in - buf;
