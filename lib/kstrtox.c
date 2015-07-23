@@ -20,22 +20,6 @@
 #include <asm/uaccess.h>
 #include "kstrtox.h"
 
-const char *_parse_integer_fixup_radix(const char *s, unsigned int *base)
-{
-	if (*base == 0) {
-		if (s[0] == '0') {
-			if (_tolower(s[1]) == 'x' && isxdigit(s[2]))
-				*base = 16;
-			else
-				*base = 8;
-		} else
-			*base = 10;
-	}
-	if (*base == 16 && s[0] == '0' && _tolower(s[1]) == 'x')
-		s += 2;
-	return s;
-}
-
 /*
  * Convert non-negative integer string representation in explicitly given radix
  * to an integer.
@@ -83,26 +67,6 @@ unsigned int _parse_integer(const char *s, unsigned int base, unsigned long long
 	return rv;
 }
 
-static int _kstrtoull(const char *s, unsigned int base, unsigned long long *res)
-{
-	unsigned long long _res;
-	unsigned int rv;
-
-	s = _parse_integer_fixup_radix(s, &base);
-	rv = _parse_integer(s, base, &_res);
-	if (rv & KSTRTOX_OVERFLOW)
-		return -ERANGE;
-	if (rv == 0)
-		return -EINVAL;
-	s += rv;
-	if (*s == '\n')
-		s++;
-	if (*s)
-		return -EINVAL;
-	*res = _res;
-	return 0;
-}
-
 /**
  * kstrtoull - convert a string to an unsigned long long
  * @s: The start of the string. The string must be null-terminated, and may also
@@ -121,9 +85,19 @@ static int _kstrtoull(const char *s, unsigned int base, unsigned long long *res)
  */
 int kstrtoull(const char *s, unsigned int base, unsigned long long *res)
 {
-	if (s[0] == '+')
+	unsigned long long _res;
+	int rv;
+
+	rv = parse_integer(s, base, &_res);
+	if (rv < 0)
+		return rv;
+	s += rv;
+	if (*s == '\n')
 		s++;
-	return _kstrtoull(s, base, res);
+	if (*s)
+		return -EINVAL;
+	*res = _res;
+	return 0;
 }
 EXPORT_SYMBOL(kstrtoull);
 
@@ -145,24 +119,18 @@ EXPORT_SYMBOL(kstrtoull);
  */
 int kstrtoll(const char *s, unsigned int base, long long *res)
 {
-	unsigned long long tmp;
+	long long _res;
 	int rv;
 
-	if (s[0] == '-') {
-		rv = _kstrtoull(s + 1, base, &tmp);
-		if (rv < 0)
-			return rv;
-		if ((long long)-tmp > 0)
-			return -ERANGE;
-		*res = -tmp;
-	} else {
-		rv = kstrtoull(s, base, &tmp);
-		if (rv < 0)
-			return rv;
-		if ((long long)tmp < 0)
-			return -ERANGE;
-		*res = tmp;
-	}
+	rv = parse_integer(s, base, &_res);
+	if (rv < 0)
+		return rv;
+	s += rv;
+	if (*s == '\n')
+		s++;
+	if (*s)
+		return -EINVAL;
+	*res = _res;
 	return 0;
 }
 EXPORT_SYMBOL(kstrtoll);
