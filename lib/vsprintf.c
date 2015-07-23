@@ -2650,44 +2650,67 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 
 		switch (qualifier) {
 		case 'H':	/* that's 'hh' in format */
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (signed char)val.s)
+					goto out;
 				*va_arg(args, signed char *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned char)val.u)
+					goto out;
 				*va_arg(args, unsigned char *) = val.u;
+			}
 			break;
 		case 'h':
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (short)val.s)
+					goto out;
 				*va_arg(args, short *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned short)val.u)
+					goto out;
 				*va_arg(args, unsigned short *) = val.u;
+			}
 			break;
 		case 'l':
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (long)val.s)
+					goto out;
 				*va_arg(args, long *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned long)val.u)
+					goto out;
 				*va_arg(args, unsigned long *) = val.u;
+			}
 			break;
 		case 'L':
-			if (is_sign)
+			if (is_sign) {
 				*va_arg(args, long long *) = val.s;
-			else
+			} else {
 				*va_arg(args, unsigned long long *) = val.u;
+			}
 			break;
 		case 'Z':
 		case 'z':
+			if (val.u != (size_t)val.u)
+				goto out;
 			*va_arg(args, size_t *) = val.u;
 			break;
 		default:
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (int)val.s)
+					goto out;
 				*va_arg(args, int *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned int)val.u)
+					goto out;
 				*va_arg(args, unsigned int *) = val.u;
+			}
 			break;
 		}
 		num++;
 		str += len;
 	}
-
+out:
 	return num;
 }
 EXPORT_SYMBOL(vsscanf);
