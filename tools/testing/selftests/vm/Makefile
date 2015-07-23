@@ -7,6 +7,7 @@ BINARIES += hugepage-shm
 BINARIES += hugetlbfstest
 BINARIES += lock-on-fault
 BINARIES += map_hugetlb
+BINARIES += mlock2-tests
 BINARIES += on-fault-limit
 BINARIES += thuge-gen
 BINARIES += transhuge-stress
