@@ -1465,7 +1465,7 @@ int madvise_free_huge_pmd(struct mmu_gather *tlb, struct vm_area_struct *vma,
 		struct page *page;
 		pmd_t orig_pmd;
 
-		orig_pmd = pmdp_get_and_clear(mm, addr, pmd);
+		orig_pmd = pmdp_huge_get_and_clear(mm, addr, pmd);
 
 		/* No hugepage in swapcache */
 		page = pmd_page(orig_pmd);
