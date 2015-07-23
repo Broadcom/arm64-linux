@@ -353,7 +353,11 @@ static int kpageidle_clear_pte_refs_one(struct page *page,
 
 static void kpageidle_clear_pte_refs(struct page *page)
 {
-	struct rmap_walk_control rwc = {
+	/*
+	 * Since rwc.arg is unused, rwc is effectively immutable, so we
+	 * can make it static const to save some cycles and stack.
+	 */
+	static const struct rmap_walk_control rwc = {
 		.rmap_one = kpageidle_clear_pte_refs_one,
 		.anon_lock = page_lock_anon_vma_read,
 	};
@@ -367,7 +371,7 @@ static void kpageidle_clear_pte_refs(struct page *page)
 	if (need_lock && !trylock_page(page))
 		return;
 
-	rmap_walk(page, &rwc);
+	rmap_walk(page, (struct rmap_walk_control *)&rwc);
 
 	if (need_lock)
 		unlock_page(page);
@@ -456,7 +460,7 @@ static ssize_t kpageidle_write(struct file *file, const char __user *buf,
 			}
 			in++;
 		}
-		if (idle_bitmap >> bit & 1) {
+		if ((idle_bitmap >> bit) & 1) {
 			page = kpageidle_get_page(pfn);
 			if (page) {
 				kpageidle_clear_pte_refs(page);
