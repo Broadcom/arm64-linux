@@ -613,9 +613,10 @@ void try_to_unmap_flush(void)
 	if (!tlb_ubc->flush_required)
 		return;
 
+	cpu = get_cpu();
+
 	trace_tlb_flush(TLB_REMOTE_SHOOTDOWN, -1UL);
 
-	cpu = get_cpu();
 	if (cpumask_test_cpu(cpu, &tlb_ubc->cpumask))
 		percpu_flush_tlb_batch_pages(&tlb_ubc->cpumask);
 
