@@ -12,7 +12,9 @@
 #include <linux/sched.h>
 #include <linux/rwsem.h>
 #include <linux/hugetlb.h>
+
 #include <asm/pgtable.h>
+#include <asm/tlbflush.h>
 
 #include "internal.h"
 
