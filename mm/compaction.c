@@ -733,9 +733,12 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 		 * if PageLRU is set) but the lock is not necessarily taken
 		 * here and it is wasteful to take it just to check transhuge.
 		 * Check PageCompound without lock and skip the whole pageblock
-		 * if it's either a transhuge or hugetlbfs page, as calling
-		 * compound_order() without preventing THP from splitting the
-		 * page underneath us may return surprising results.
+		 * if it's a transhuge page, as calling compound_order()
+		 * without preventing THP from splitting the page underneath us
+		 * may return surprising results.
+		 * If we happen to check a THP tail page, compound_order()
+		 * returns 0. It should be rare enough to not bother with
+		 * using compound_head() in that case.
 		 */
 		if (PageCompound(page)) {
 			int nr;
@@ -743,7 +746,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 				nr = 1 << compound_order(page);
 			else
 				nr = pageblock_nr_pages;
-			low_pfn = ALIGN(low_pfn + 1, nr) - 1;
+			low_pfn += nr - 1;
 			continue;
 		}
 
@@ -768,7 +771,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 				continue;
 			if (PageCompound(page)) {
 				int nr = 1 << compound_order(page);
-				low_pfn = ALIGN(low_pfn + 1, nr) - 1;
+				low_pfn += nr - 1;
 				continue;
 			}
 		}
