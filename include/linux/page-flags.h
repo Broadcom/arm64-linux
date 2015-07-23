@@ -279,7 +279,8 @@ PAGEFLAG(Dirty, dirty, HEAD) TESTSCFLAG(Dirty, dirty, HEAD)
 PAGEFLAG(LRU, lru, HEAD) __CLEARPAGEFLAG(LRU, lru, HEAD)
 PAGEFLAG(Active, active, HEAD) __CLEARPAGEFLAG(Active, active, HEAD)
 	TESTCLEARFLAG(Active, active, HEAD)
-__PAGEFLAG(Slab, slab, ANY)
+__PAGEFLAG(Slab, slab, NO_TAIL)
+__PAGEFLAG(SlobFree, slob_free, NO_TAIL)
 PAGEFLAG(Checked, checked, NO_COMPOUND) /* Used by some filesystems */
 PAGEFLAG(Pinned, pinned, ANY) TESTSCFLAG(Pinned, pinned, ANY)	/* Xen */
 PAGEFLAG(SavePinned, savepinned, ANY);			/* Xen */
@@ -288,8 +289,6 @@ PAGEFLAG(Reserved, reserved, ANY) __CLEARPAGEFLAG(Reserved, reserved, ANY)
 PAGEFLAG(SwapBacked, swapbacked, ANY)
 	__CLEARPAGEFLAG(SwapBacked, swapbacked, ANY)
 	__SETPAGEFLAG(SwapBacked, swapbacked, ANY)
-
-__PAGEFLAG(SlobFree, slob_free, ANY)
 
 /*
  * Private page markings that may be used by the filesystem that owns the page
