@@ -491,7 +491,7 @@ static int zswap_get_swap_cache_page(swp_entry_t entry,
 		}
 
 		/* May fail (-ENOMEM) if radix-tree node allocation failed. */
-		__set_page_locked(new_page);
+		__SetPageLocked(new_page);
 		SetPageSwapBacked(new_page);
 		err = __add_to_swap_cache(new_page, entry);
 		if (likely(!err)) {
@@ -502,7 +502,7 @@ static int zswap_get_swap_cache_page(swp_entry_t entry,
 		}
 		radix_tree_preload_end();
 		ClearPageSwapBacked(new_page);
-		__clear_page_locked(new_page);
+		__ClearPageLocked(new_page);
 		/*
 		 * add_to_swap_cache() doesn't return -EEXIST, so we can safely
 		 * clear SWAP_HAS_CACHE flag.
