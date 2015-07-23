@@ -110,11 +110,6 @@ static inline int pmd_young(pmd_t pmd)
 	return pmd_flags(pmd) & _PAGE_ACCESSED;
 }
 
-static inline int pmd_dirty(pmd_t pmd)
-{
-	return pmd_flags(pmd) & _PAGE_DIRTY;
-}
-
 static inline int pte_write(pte_t pte)
 {
 	return pte_flags(pte) & _PAGE_RW;
