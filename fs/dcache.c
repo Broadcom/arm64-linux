@@ -3369,7 +3369,7 @@ static int __init set_dhash_entries(char *str)
 {
 	if (!str)
 		return 0;
-	dhash_entries = simple_strtoul(str, &str, 0);
+	parse_integer(str, 0, &dhash_entries);
 	return 1;
 }
 __setup("dhash_entries=", set_dhash_entries);
