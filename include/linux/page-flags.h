@@ -135,15 +135,15 @@ enum pageflags {
 #ifndef __GENERATING_BOUNDS_H
 
 /* Page flags policies wrt compound pages */
-#define ANY(page, enforce)	page
-#define HEAD(page, enforce)	compound_head(page)
-#define NO_TAIL(page, enforce) ({					\
+#define PF_ANY(page, enforce)	page
+#define PF_HEAD(page, enforce)	compound_head(page)
+#define PF_NO_TAIL(page, enforce) ({					\
 		if (enforce)						\
 			VM_BUG_ON_PAGE(PageTail(page), page);		\
 		else							\
 			page = compound_head(page);			\
 		page;})
-#define NO_COMPOUND(page, enforce) ({					\
+#define PF_NO_COMPOUND(page, enforce) ({					\
 		if (enforce)						\
 			VM_BUG_ON_PAGE(PageCompound(page), page);	\
 		page;})
@@ -269,55 +269,55 @@ static inline struct page *compound_head_fast(struct page *page)
 	return page;
 }
 
-__PAGEFLAG(Locked, locked, NO_TAIL)
-PAGEFLAG(Error, error, NO_COMPOUND) TESTCLEARFLAG(Error, error, NO_COMPOUND)
-PAGEFLAG(Referenced, referenced, HEAD)
-	TESTCLEARFLAG(Referenced, referenced, HEAD)
-	__SETPAGEFLAG(Referenced, referenced, HEAD)
-PAGEFLAG(Dirty, dirty, HEAD) TESTSCFLAG(Dirty, dirty, HEAD)
-	__CLEARPAGEFLAG(Dirty, dirty, HEAD)
-PAGEFLAG(LRU, lru, HEAD) __CLEARPAGEFLAG(LRU, lru, HEAD)
-PAGEFLAG(Active, active, HEAD) __CLEARPAGEFLAG(Active, active, HEAD)
-	TESTCLEARFLAG(Active, active, HEAD)
-__PAGEFLAG(Slab, slab, NO_TAIL)
-__PAGEFLAG(SlobFree, slob_free, NO_TAIL)
-PAGEFLAG(Checked, checked, NO_COMPOUND) /* Used by some filesystems */
+__PAGEFLAG(Locked, locked, PF_NO_TAIL)
+PAGEFLAG(Error, error, PF_NO_COMPOUND) TESTCLEARFLAG(Error, error, PF_NO_COMPOUND)
+PAGEFLAG(Referenced, referenced, PF_HEAD)
+	TESTCLEARFLAG(Referenced, referenced, PF_HEAD)
+	__SETPAGEFLAG(Referenced, referenced, PF_HEAD)
+PAGEFLAG(Dirty, dirty, PF_HEAD) TESTSCFLAG(Dirty, dirty, PF_HEAD)
+	__CLEARPAGEFLAG(Dirty, dirty, PF_HEAD)
+PAGEFLAG(LRU, lru, PF_HEAD) __CLEARPAGEFLAG(LRU, lru, PF_HEAD)
+PAGEFLAG(Active, active, PF_HEAD) __CLEARPAGEFLAG(Active, active, PF_HEAD)
+	TESTCLEARFLAG(Active, active, PF_HEAD)
+__PAGEFLAG(Slab, slab, PF_NO_TAIL)
+__PAGEFLAG(SlobFree, slob_free, PF_NO_TAIL)
+PAGEFLAG(Checked, checked, PF_NO_COMPOUND) /* Used by some filesystems */
 
 /* Xen */
-PAGEFLAG(Pinned, pinned, NO_COMPOUND) TESTSCFLAG(Pinned, pinned, NO_COMPOUND)
-PAGEFLAG(SavePinned, savepinned, NO_COMPOUND)
-PAGEFLAG(Foreign, foreign, NO_COMPOUND)
+PAGEFLAG(Pinned, pinned, PF_NO_COMPOUND) TESTSCFLAG(Pinned, pinned, PF_NO_COMPOUND)
+PAGEFLAG(SavePinned, savepinned, PF_NO_COMPOUND)
+PAGEFLAG(Foreign, foreign, PF_NO_COMPOUND)
 
-PAGEFLAG(Reserved, reserved, NO_COMPOUND)
-	__CLEARPAGEFLAG(Reserved, reserved, NO_COMPOUND)
-PAGEFLAG(SwapBacked, swapbacked, NO_TAIL)
-	__CLEARPAGEFLAG(SwapBacked, swapbacked, NO_TAIL)
-	__SETPAGEFLAG(SwapBacked, swapbacked, NO_TAIL)
+PAGEFLAG(Reserved, reserved, PF_NO_COMPOUND)
+	__CLEARPAGEFLAG(Reserved, reserved, PF_NO_COMPOUND)
+PAGEFLAG(SwapBacked, swapbacked, PF_NO_TAIL)
+	__CLEARPAGEFLAG(SwapBacked, swapbacked, PF_NO_TAIL)
+	__SETPAGEFLAG(SwapBacked, swapbacked, PF_NO_TAIL)
 
 /*
  * Private page markings that may be used by the filesystem that owns the page
  * for its own purposes.
  * - PG_private and PG_private_2 cause releasepage() and co to be invoked
  */
-PAGEFLAG(Private, private, ANY) __SETPAGEFLAG(Private, private, ANY)
-	__CLEARPAGEFLAG(Private, private, ANY)
-PAGEFLAG(Private2, private_2, ANY) TESTSCFLAG(Private2, private_2, ANY)
-PAGEFLAG(OwnerPriv1, owner_priv_1, ANY)
-	TESTCLEARFLAG(OwnerPriv1, owner_priv_1, ANY)
+PAGEFLAG(Private, private, PF_ANY) __SETPAGEFLAG(Private, private, PF_ANY)
+	__CLEARPAGEFLAG(Private, private, PF_ANY)
+PAGEFLAG(Private2, private_2, PF_ANY) TESTSCFLAG(Private2, private_2, PF_ANY)
+PAGEFLAG(OwnerPriv1, owner_priv_1, PF_ANY)
+	TESTCLEARFLAG(OwnerPriv1, owner_priv_1, PF_ANY)
 
 /*
  * Only test-and-set exist for PG_writeback.  The unconditional operators are
  * risky: they bypass page accounting.
  */
-TESTPAGEFLAG(Writeback, writeback, NO_COMPOUND)
-	TESTSCFLAG(Writeback, writeback, NO_COMPOUND)
-PAGEFLAG(MappedToDisk, mappedtodisk, NO_COMPOUND)
+TESTPAGEFLAG(Writeback, writeback, PF_NO_COMPOUND)
+	TESTSCFLAG(Writeback, writeback, PF_NO_COMPOUND)
+PAGEFLAG(MappedToDisk, mappedtodisk, PF_NO_COMPOUND)
 
 /* PG_readahead is only used for reads; PG_reclaim is only for writes */
-PAGEFLAG(Reclaim, reclaim, NO_COMPOUND)
-	TESTCLEARFLAG(Reclaim, reclaim, NO_COMPOUND)
-PAGEFLAG(Readahead, reclaim, NO_COMPOUND)
-	TESTCLEARFLAG(Readahead, reclaim, NO_COMPOUND)
+PAGEFLAG(Reclaim, reclaim, PF_NO_COMPOUND)
+	TESTCLEARFLAG(Reclaim, reclaim, PF_NO_COMPOUND)
+PAGEFLAG(Readahead, reclaim, PF_NO_COMPOUND)
+	TESTCLEARFLAG(Readahead, reclaim, PF_NO_COMPOUND)
 
 #ifdef CONFIG_HIGHMEM
 /*
@@ -330,33 +330,33 @@ PAGEFLAG_FALSE(HighMem)
 #endif
 
 #ifdef CONFIG_SWAP
-PAGEFLAG(SwapCache, swapcache, NO_COMPOUND)
+PAGEFLAG(SwapCache, swapcache, PF_NO_COMPOUND)
 #else
 PAGEFLAG_FALSE(SwapCache)
 #endif
 
-PAGEFLAG(Unevictable, unevictable, HEAD)
-	__CLEARPAGEFLAG(Unevictable, unevictable, HEAD)
-	TESTCLEARFLAG(Unevictable, unevictable, HEAD)
+PAGEFLAG(Unevictable, unevictable, PF_HEAD)
+	__CLEARPAGEFLAG(Unevictable, unevictable, PF_HEAD)
+	TESTCLEARFLAG(Unevictable, unevictable, PF_HEAD)
 
 #ifdef CONFIG_MMU
-PAGEFLAG(Mlocked, mlocked, NO_TAIL) __CLEARPAGEFLAG(Mlocked, mlocked, NO_TAIL)
-	TESTSCFLAG(Mlocked, mlocked, NO_TAIL)
-	__TESTCLEARFLAG(Mlocked, mlocked, NO_TAIL)
+PAGEFLAG(Mlocked, mlocked, PF_NO_TAIL) __CLEARPAGEFLAG(Mlocked, mlocked, PF_NO_TAIL)
+	TESTSCFLAG(Mlocked, mlocked, PF_NO_TAIL)
+	__TESTCLEARFLAG(Mlocked, mlocked, PF_NO_TAIL)
 #else
 PAGEFLAG_FALSE(Mlocked) __CLEARPAGEFLAG_NOOP(Mlocked)
 	TESTSCFLAG_FALSE(Mlocked) __TESTCLEARFLAG_FALSE(Mlocked)
 #endif
 
 #ifdef CONFIG_ARCH_USES_PG_UNCACHED
-PAGEFLAG(Uncached, uncached, NO_COMPOUND)
+PAGEFLAG(Uncached, uncached, PF_NO_COMPOUND)
 #else
 PAGEFLAG_FALSE(Uncached)
 #endif
 
 #ifdef CONFIG_MEMORY_FAILURE
-PAGEFLAG(HWPoison, hwpoison, ANY)
-TESTSCFLAG(HWPoison, hwpoison, ANY)
+PAGEFLAG(HWPoison, hwpoison, PF_ANY)
+TESTSCFLAG(HWPoison, hwpoison, PF_ANY)
 #define __PG_HWPOISON (1UL << PG_hwpoison)
 #else
 PAGEFLAG_FALSE(HWPoison)
@@ -446,7 +446,7 @@ static inline void SetPageUptodate(struct page *page)
 	set_bit(PG_uptodate, &page->flags);
 }
 
-CLEARPAGEFLAG(Uptodate, uptodate, NO_TAIL)
+CLEARPAGEFLAG(Uptodate, uptodate, PF_NO_TAIL)
 
 int test_clear_page_writeback(struct page *page);
 int __test_set_page_writeback(struct page *page, bool keep_write);
@@ -475,8 +475,8 @@ static inline void set_page_writeback_keepwrite(struct page *page)
  * and arch/powerpc/kvm/book3s_64_vio_hv.c which use it to detect huge pages
  * and avoid handling those in real mode.
  */
-__PAGEFLAG(Head, head, ANY) CLEARPAGEFLAG(Head, head, ANY)
-__PAGEFLAG(Tail, tail, ANY)
+__PAGEFLAG(Head, head, PF_ANY) CLEARPAGEFLAG(Head, head, PF_ANY)
+__PAGEFLAG(Tail, tail, PF_ANY)
 
 static inline int PageCompound(struct page *page)
 {
@@ -500,8 +500,8 @@ static inline void ClearPageCompound(struct page *page)
  * because PageCompound is always set for compound pages and not for
  * pages on the LRU and/or pagecache.
  */
-TESTPAGEFLAG(Compound, compound, ANY)
-__SETPAGEFLAG(Head, compound, ANY)  __CLEARPAGEFLAG(Head, compound, ANY)
+TESTPAGEFLAG(Compound, compound, PF_ANY)
+__SETPAGEFLAG(Head, compound, PF_ANY)  __CLEARPAGEFLAG(Head, compound, PF_ANY)
 
 /*
  * PG_reclaim is used in combination with PG_compound to mark the
@@ -726,10 +726,10 @@ static inline int page_has_private(struct page *page)
 	return !!(page->flags & PAGE_FLAGS_PRIVATE);
 }
 
-#undef ANY
-#undef HEAD
-#undef NO_TAIL
-#undef NO_COMPOUND
+#undef PF_ANY
+#undef PF_HEAD
+#undef PF_NO_TAIL
+#undef PF_NO_COMPOUND
 #endif /* !__GENERATING_BOUNDS_H */
 
 #endif	/* PAGE_FLAGS_H */
