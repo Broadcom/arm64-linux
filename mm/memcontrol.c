@@ -448,8 +448,13 @@ struct cgroup_subsys_state *mem_cgroup_css_from_page(struct page *page)
  * Look up the closest online ancestor of the memory cgroup @page is charged to
  * and return its inode number or 0 if @page is not charged to any cgroup. It
  * is safe to call this function without holding a reference to @page.
+ *
+ * Note, this function is inherently racy, because there is nothing to prevent
+ * the cgroup inode from getting torn down and potentially reallocated a moment
+ * after page_cgroup_ino() returns, so it only should be used by callers that
+ * do not care (such as procfs interfaces).
  */
-unsigned long page_cgroup_ino(struct page *page)
+ino_t page_cgroup_ino(struct page *page)
 {
 	struct mem_cgroup *memcg;
 	unsigned long ino = 0;
