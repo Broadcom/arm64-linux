@@ -326,14 +326,15 @@ static int cachefiles_daemon_range_error(struct cachefiles_cache *cache,
  */
 static int cachefiles_daemon_frun(struct cachefiles_cache *cache, char *args)
 {
-	unsigned long frun;
+	unsigned int frun;
+	int rv;
 
 	_enter(",%s", args);
 
-	if (!*args)
-		return -EINVAL;
-
-	frun = simple_strtoul(args, &args, 10);
+	rv = parse_integer(args, 10, &frun);
+	if (rv < 0)
+		return rv;
+	args += rv;
 	if (args[0] != '%' || args[1] != '\0')
 		return -EINVAL;
 
@@ -350,14 +351,15 @@ static int cachefiles_daemon_frun(struct cachefiles_cache *cache, char *args)
  */
 static int cachefiles_daemon_fcull(struct cachefiles_cache *cache, char *args)
 {
-	unsigned long fcull;
+	unsigned int fcull;
+	int rv;
 
 	_enter(",%s", args);
 
-	if (!*args)
-		return -EINVAL;
-
-	fcull = simple_strtoul(args, &args, 10);
+	rv = parse_integer(args, 10, &fcull);
+	if (rv < 0)
+		return rv;
+	args += rv;
 	if (args[0] != '%' || args[1] != '\0')
 		return -EINVAL;
 
@@ -374,14 +376,15 @@ static int cachefiles_daemon_fcull(struct cachefiles_cache *cache, char *args)
  */
 static int cachefiles_daemon_fstop(struct cachefiles_cache *cache, char *args)
 {
-	unsigned long fstop;
+	unsigned int fstop;
+	int rv;
 
 	_enter(",%s", args);
 
-	if (!*args)
-		return -EINVAL;
-
-	fstop = simple_strtoul(args, &args, 10);
+	rv = parse_integer(args, 10, &fstop);
+	if (rv < 0)
+		return rv;
+	args += rv;
 	if (args[0] != '%' || args[1] != '\0')
 		return -EINVAL;
 
@@ -398,14 +401,15 @@ static int cachefiles_daemon_fstop(struct cachefiles_cache *cache, char *args)
  */
 static int cachefiles_daemon_brun(struct cachefiles_cache *cache, char *args)
 {
-	unsigned long brun;
+	unsigned int brun;
+	int rv;
 
 	_enter(",%s", args);
 
-	if (!*args)
-		return -EINVAL;
-
-	brun = simple_strtoul(args, &args, 10);
+	rv = parse_integer(args, 10, &brun);
+	if (rv < 0)
+		return rv;
+	args += rv;
 	if (args[0] != '%' || args[1] != '\0')
 		return -EINVAL;
 
@@ -422,14 +426,15 @@ static int cachefiles_daemon_brun(struct cachefiles_cache *cache, char *args)
  */
 static int cachefiles_daemon_bcull(struct cachefiles_cache *cache, char *args)
 {
-	unsigned long bcull;
+	unsigned int bcull;
+	int rv;
 
 	_enter(",%s", args);
 
-	if (!*args)
-		return -EINVAL;
-
-	bcull = simple_strtoul(args, &args, 10);
+	rv = parse_integer(args, 10, &bcull);
+	if (rv < 0)
+		return rv;
+	args += rv;
 	if (args[0] != '%' || args[1] != '\0')
 		return -EINVAL;
 
@@ -446,14 +451,15 @@ static int cachefiles_daemon_bcull(struct cachefiles_cache *cache, char *args)
  */
 static int cachefiles_daemon_bstop(struct cachefiles_cache *cache, char *args)
 {
-	unsigned long bstop;
+	unsigned int bstop;
+	int rv;
 
 	_enter(",%s", args);
 
-	if (!*args)
-		return -EINVAL;
-
-	bstop = simple_strtoul(args, &args, 10);
+	rv = parse_integer(args, 10, &bstop);
+	if (rv < 0)
+		return rv;
+	args += rv;
 	if (args[0] != '%' || args[1] != '\0')
 		return -EINVAL;
 
@@ -601,21 +607,21 @@ inval:
  */
 static int cachefiles_daemon_debug(struct cachefiles_cache *cache, char *args)
 {
-	unsigned long mask;
+	unsigned int mask;
+	int rv;
 
 	_enter(",%s", args);
 
-	mask = simple_strtoul(args, &args, 0);
-	if (args[0] != '\0')
-		goto inval;
-
+	rv = parse_integer(args, 0, &mask);
+	if (rv < 0)
+		return rv;
+	if (args[rv] != '\0') {
+		pr_err("debug command requires mask\n");
+		return -EINVAL;
+	}
 	cachefiles_debug = mask;
 	_leave(" = 0");
 	return 0;
-
-inval:
-	pr_err("debug command requires mask\n");
-	return -EINVAL;
 }
 
 /*
