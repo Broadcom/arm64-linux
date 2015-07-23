@@ -295,7 +295,7 @@ ocfs2_filecheck_adjust_max(struct ocfs2_filecheck_sysfs_entry *ent,
 	if (len < (ent->fs_fcheck->fc_size - ent->fs_fcheck->fc_done)) {
 		mlog(ML_ERROR,
 		"Cannot set online file check maximum entry number "
-		"to %u due to too much pending entries(%u)\n",
+		"to %u due to too many pending entries(%u)\n",
 		len, ent->fs_fcheck->fc_size - ent->fs_fcheck->fc_done);
 		ret = -EBUSY;
 	} else {
