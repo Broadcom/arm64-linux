@@ -53,9 +53,13 @@
 struct uffd_msg {
 	__u8	event;
 
+	__u8	reserved1;
+	__u16	reserved2;
+	__u32	reserved3;
+
 	union {
 		struct {
-			__u32	flags;
+			__u64	flags;
 			__u64	address;
 		} pagefault;
 
@@ -66,7 +70,7 @@ struct uffd_msg {
 			__u64	reserved3;
 		} reserved;
 	} arg;
-};
+} __attribute__((packed));
 
 /*
  * Start at 0x12 and not at 0 to be more strict against bugs.
