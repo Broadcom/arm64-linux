@@ -31,7 +31,7 @@ const char *_parse_integer_fixup_radix(const char *s, unsigned int *base)
 	return s;
 }
 
-static int __parse_integer(const char *s, unsigned int base, unsigned long long *val)
+static int ___parse_integer(const char *s, unsigned int base, unsigned long long *val)
 {
 	const char *s0 = s, *sd;
 	unsigned long long acc;
@@ -63,6 +63,26 @@ static int __parse_integer(const char *s, unsigned int base, unsigned long long 
 	return s - s0;
 }
 
+static int __parse_integer(const char *s, unsigned int base, unsigned long long *val)
+{
+	unsigned long long tmp;
+	int rv;
+
+	rv = ___parse_integer(s, base & ~PARSE_INTEGER_NEWLINE, &tmp);
+	if (rv < 0)
+		return rv;
+	if (base & PARSE_INTEGER_NEWLINE) {
+		/* Accept "integer\0" or "integer\n\0" */
+		s += rv;
+		if (*s == '\n')
+			s++;
+		if (*s)
+			return -EINVAL;
+	}
+	*val = tmp;
+	return rv;
+}
+
 int _parse_integer_ull(const char *s, unsigned int base, unsigned long long *val)
 {
 	char sign;
@@ -77,6 +97,8 @@ int _parse_integer_ull(const char *s, unsigned int base, unsigned long long *val
 	rv = __parse_integer(s, base, val);
 	if (rv < 0)
 		return rv;
+	if (base & PARSE_INTEGER_NEWLINE)
+		return 0;
 	return rv + !!sign;
 }
 EXPORT_SYMBOL(_parse_integer_ull);
@@ -103,6 +125,8 @@ int _parse_integer_ll(const char *s, unsigned int base, long long *val)
 			return -ERANGE;
 		*val = tmp;
 	}
+	if (base & PARSE_INTEGER_NEWLINE)
+		return 0;
 	return rv + !!sign;
 }
 EXPORT_SYMBOL(_parse_integer_ll);

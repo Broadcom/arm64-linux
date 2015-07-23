@@ -76,4 +76,113 @@ int _parse_integer_ll(const char *s, unsigned int base, long long *val);
 int _parse_integer_ull(const char *s, unsigned int base, unsigned long long *val);
 void _parse_integer_link_time_error(void);
 const char *_parse_integer_fixup_radix(const char *s, unsigned int *base);
+#define PARSE_INTEGER_NEWLINE 0x80000000u
+
+/*
+ * Convert integer string representation terminated by \n\0 or \0 to an integer.
+ *
+ * Return 0 on success or -E.
+ *
+ * See parse_integer().
+ */
+static inline int __must_check kstrtoull(const char *s, unsigned int base, unsigned long long *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtoll(const char *s, unsigned int base, long long *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtoul(const char *s, unsigned int base, unsigned long *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtol(const char *s, unsigned int base, long *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtouint(const char *s, unsigned int base, unsigned int *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtoint(const char *s, unsigned int base, int *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtou64(const char *s, unsigned int base, u64 *res)
+{
+	return kstrtoull(s, base, res);
+}
+
+static inline int __must_check kstrtos64(const char *s, unsigned int base, s64 *res)
+{
+	return kstrtoll(s, base, res);
+}
+
+static inline int __must_check kstrtou32(const char *s, unsigned int base, u32 *res)
+{
+	return kstrtouint(s, base, res);
+}
+
+static inline int __must_check kstrtos32(const char *s, unsigned int base, s32 *res)
+{
+	return kstrtoint(s, base, res);
+}
+
+static inline int __must_check kstrtou16(const char *s, unsigned int base, u16 *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtos16(const char *s, unsigned int base, s16 *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtou8(const char *s, unsigned int base, u8 *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+static inline int __must_check kstrtos8(const char *s, unsigned int base, s8 *res)
+{
+	return parse_integer(s, base | PARSE_INTEGER_NEWLINE, res);
+}
+
+int __must_check kstrtoull_from_user(const char __user *s, size_t count, unsigned int base, unsigned long long *res);
+int __must_check kstrtoll_from_user(const char __user *s, size_t count, unsigned int base, long long *res);
+int __must_check kstrtoul_from_user(const char __user *s, size_t count, unsigned int base, unsigned long *res);
+int __must_check kstrtol_from_user(const char __user *s, size_t count, unsigned int base, long *res);
+int __must_check kstrtouint_from_user(const char __user *s, size_t count, unsigned int base, unsigned int *res);
+int __must_check kstrtoint_from_user(const char __user *s, size_t count, unsigned int base, int *res);
+int __must_check kstrtou16_from_user(const char __user *s, size_t count, unsigned int base, u16 *res);
+int __must_check kstrtos16_from_user(const char __user *s, size_t count, unsigned int base, s16 *res);
+int __must_check kstrtou8_from_user(const char __user *s, size_t count, unsigned int base, u8 *res);
+int __must_check kstrtos8_from_user(const char __user *s, size_t count, unsigned int base, s8 *res);
+
+static inline int __must_check kstrtou64_from_user(const char __user *s, size_t count, unsigned int base, u64 *res)
+{
+	return kstrtoull_from_user(s, count, base, res);
+}
+
+static inline int __must_check kstrtos64_from_user(const char __user *s, size_t count, unsigned int base, s64 *res)
+{
+	return kstrtoll_from_user(s, count, base, res);
+}
+
+static inline int __must_check kstrtou32_from_user(const char __user *s, size_t count, unsigned int base, u32 *res)
+{
+	return kstrtouint_from_user(s, count, base, res);
+}
+
+static inline int __must_check kstrtos32_from_user(const char __user *s, size_t count, unsigned int base, s32 *res)
+{
+	return kstrtoint_from_user(s, count, base, res);
+}
 #endif
