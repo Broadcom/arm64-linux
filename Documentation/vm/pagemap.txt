@@ -22,9 +22,9 @@ There are three components to pagemap:
     * Bit  62    page swapped
     * Bit  63    page present
 
-   Since Linux 4.0 only users with the CAP_SYS_ADMIN capability can get PFNs:
-   for unprivileged users from 4.0 till 4.2 open fails with -EPERM, starting
-   from from 4.2 PFN field is zeroed if user has no CAP_SYS_ADMIN capability.
+   Since Linux 4.0 only users with the CAP_SYS_ADMIN capability can get PFNs.
+   In 4.0 and 4.1 opens by unprivileged fail with -EPERM.  Starting from
+   4.2 the PFN field is zeroed if the user does not have CAP_SYS_ADMIN.
    Reason: information about PFNs helps in exploiting Rowhammer vulnerability.
 
    If the page is not present but in swap, then the PFN contains an
