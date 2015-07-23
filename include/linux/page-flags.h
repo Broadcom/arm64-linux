@@ -290,9 +290,9 @@ PAGEFLAG(Foreign, foreign, NO_COMPOUND)
 
 PAGEFLAG(Reserved, reserved, NO_COMPOUND)
 	__CLEARPAGEFLAG(Reserved, reserved, NO_COMPOUND)
-PAGEFLAG(SwapBacked, swapbacked, ANY)
-	__CLEARPAGEFLAG(SwapBacked, swapbacked, ANY)
-	__SETPAGEFLAG(SwapBacked, swapbacked, ANY)
+PAGEFLAG(SwapBacked, swapbacked, NO_TAIL)
+	__CLEARPAGEFLAG(SwapBacked, swapbacked, NO_TAIL)
+	__SETPAGEFLAG(SwapBacked, swapbacked, NO_TAIL)
 
 /*
  * Private page markings that may be used by the filesystem that owns the page
