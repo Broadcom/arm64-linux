@@ -76,6 +76,9 @@
 #define sys_munlock		sys_ni_syscall
 #define sys_mlockall		sys_ni_syscall
 #define sys_munlockall		sys_ni_syscall
+#define sys_mlock2		sys_ni_syscall
+#define sys_munlock2		sys_ni_syscall
+#define sys_munlockall2		sys_ni_syscall
 #define sys_mremap		sys_ni_syscall
 #define sys_mincore		sys_ni_syscall
 #define sys_remap_file_pages	sys_ni_syscall

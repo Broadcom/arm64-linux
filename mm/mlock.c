@@ -649,6 +649,14 @@ SYSCALL_DEFINE2(mlock, unsigned long, start, size_t, len)
 	return do_mlock(start, len, VM_LOCKED);
 }
 
+SYSCALL_DEFINE3(mlock2, unsigned long, start, size_t, len, int, flags)
+{
+	if (!flags || flags & ~MLOCK_LOCKED)
+		return -EINVAL;
+
+	return do_mlock(start, len, VM_LOCKED);
+}
+
 static int do_munlock(unsigned long start, size_t len, vm_flags_t flags)
 {
 	int ret;
@@ -665,6 +673,13 @@ static int do_munlock(unsigned long start, size_t len, vm_flags_t flags)
 
 SYSCALL_DEFINE2(munlock, unsigned long, start, size_t, len)
 {
+	return do_munlock(start, len, VM_LOCKED);
+}
+
+SYSCALL_DEFINE3(munlock2, unsigned long, start, size_t, len, int, flags)
+{
+	if (!flags || flags & ~MLOCK_LOCKED)
+		return -EINVAL;
 	return do_munlock(start, len, VM_LOCKED);
 }
 
@@ -753,6 +768,19 @@ SYSCALL_DEFINE0(munlockall)
 
 	down_write(&current->mm->mmap_sem);
 	ret = do_munlockall(MCL_CURRENT | MCL_FUTURE);
+	up_write(&current->mm->mmap_sem);
+	return ret;
+}
+
+SYSCALL_DEFINE1(munlockall2, int, flags)
+{
+	int ret = -EINVAL;
+
+	if (!flags || flags & ~(MCL_CURRENT | MCL_FUTURE))
+		return ret;
+
+	down_write(&current->mm->mmap_sem);
+	ret = do_munlockall(flags);
 	up_write(&current->mm->mmap_sem);
 	return ret;
 }

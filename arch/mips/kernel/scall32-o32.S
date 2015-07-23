@@ -599,3 +599,6 @@ EXPORT(sys_call_table)
 	PTR	sys_memfd_create
 	PTR	sys_bpf				/* 4355 */
 	PTR	sys_execveat
+	PTR	sys_mlock2
+	PTR	sys_munlock2
+	PTR	sys_munlockall2

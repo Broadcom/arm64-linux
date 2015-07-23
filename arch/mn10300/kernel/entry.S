@@ -767,6 +767,9 @@ ENTRY(sys_call_table)
 	.long sys_perf_event_open
 	.long sys_recvmmsg
 	.long sys_setns
+	.long sys_mlock2		/* 340 */
+	.long sys_munlock2
+	.long sys_munlockall2
 
 
 nr_syscalls=(.-sys_call_table)/4

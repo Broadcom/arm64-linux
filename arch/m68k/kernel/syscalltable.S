@@ -376,4 +376,7 @@ ENTRY(sys_call_table)
 	.long sys_memfd_create
 	.long sys_bpf
 	.long sys_execveat		/* 355 */
+	.long sys_mlock2
+	.long sys_munlock2
+	.long sys_munlockall2
 

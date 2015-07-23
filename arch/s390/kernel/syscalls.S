@@ -363,3 +363,6 @@ SYSCALL(sys_bpf,compat_sys_bpf)
 SYSCALL(sys_s390_pci_mmio_write,compat_sys_s390_pci_mmio_write)
 SYSCALL(sys_s390_pci_mmio_read,compat_sys_s390_pci_mmio_read)
 SYSCALL(sys_execveat,compat_sys_execveat)
+SYSCALL(sys_mlock2,compat_sys_mlock2)			/* 355 */
+SYSCALL(sys_munlock2,compat_sys_munlock2)
+SYSCALL(sys_munlockall2,compat_sys_munlockall2)

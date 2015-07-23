@@ -797,3 +797,9 @@ __SYSCALL(__NR_memfd_create, sys_memfd_create)
 __SYSCALL(__NR_bpf, sys_bpf)
 #define __NR_execveat 387
 __SYSCALL(__NR_execveat, compat_sys_execveat)
+#define __NR_mlock2 388
+__SYSCALL(__NR_mlock2, sys_mlock2)
+#define __NR_munlock2 389
+__SYSCALL(__NR_munlock2, sys_munlock2)
+#define __NR_munlockall2 390
+__SYSCALL(__NR_munlockall2, sys_munlockall2)

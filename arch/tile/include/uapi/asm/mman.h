@@ -37,5 +37,10 @@
 #define MCL_CURRENT	1		/* lock all current mappings */
 #define MCL_FUTURE	2		/* lock all future mappings */
 
+/*
+ * Flags for mlock
+ */
+#define MLOCK_LOCKED	0x01		/* Lock and populate the specified range */
+
 
 #endif /* _ASM_TILE_MMAN_H */

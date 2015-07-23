@@ -386,3 +386,6 @@ ENTRY(sys_call_table)
 	.long sys_process_vm_writev
 	.long sys_kcmp
 	.long sys_finit_module
+	.long sys_mlock2
+	.long sys_munlock2		/* 370 */
+	.long sys_munlockall2

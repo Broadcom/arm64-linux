@@ -366,3 +366,6 @@
 357	i386	bpf			sys_bpf
 358	i386	execveat		sys_execveat			stub32_execveat
 359	i386	userfaultfd		sys_userfaultfd
+360	i386	mlock2			sys_mlock2
+361	i386	munlock2		sys_munlock2
+362	i386	munlockall2		sys_munlockall2

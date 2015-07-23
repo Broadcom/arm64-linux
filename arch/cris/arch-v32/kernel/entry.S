@@ -875,6 +875,9 @@ sys_call_table:
 	.long sys_process_vm_writev
 	.long sys_kcmp			/* 350 */
 	.long sys_finit_module
+	.long sys_mlock2
+	.long sys_munlock2
+	.long sys_munlockall2
 
 	/*
 	 * NOTE!! This doesn't have to be exact - we just have
