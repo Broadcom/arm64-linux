@@ -256,7 +256,6 @@ retry:
 		if (unlikely(err == -EFAULT)) {
 			void *page_kaddr;
 
-			BUILD_BUG_ON(zeropage);
 			up_read(&dst_mm->mmap_sem);
 			BUG_ON(!page);
 
