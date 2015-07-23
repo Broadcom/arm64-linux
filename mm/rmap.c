@@ -859,9 +859,13 @@ static int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 			referenced++;
 
 		/*
-		 * In this implmentation, MADV_FREE doesn't support THP free
+		 * Use pmd_freeable instead of raw pmd_dirty because in some
+		 * of architecture, pmd_dirty is not defined unless
+		 * CONFIG_TRANSPARNTE_HUGE is enabled
 		 */
-		dirty++;
+		if (!pmd_freeable(*pmd))
+			dirty++;
+
 		spin_unlock(ptl);
 	} else {
 		pte_t *pte;

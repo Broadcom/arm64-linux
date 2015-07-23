@@ -276,8 +276,26 @@ static int madvise_free_pte_range(pmd_t *pmd, unsigned long addr,
 	spinlock_t *ptl;
 	pte_t *pte, ptent;
 	struct page *page;
+	unsigned long next;
 
-	split_huge_page_pmd(vma, addr, pmd);
+	next = pmd_addr_end(addr, end);
+	if (pmd_trans_huge(*pmd)) {
+		if (next - addr != HPAGE_PMD_SIZE) {
+#ifdef CONFIG_DEBUG_VM
+			if (!rwsem_is_locked(&mm->mmap_sem)) {
+				pr_err("%s: mmap_sem is unlocked! addr=0x%lx end=0x%lx vma->vm_start=0x%lx vma->vm_end=0x%lx\n",
+					__func__, addr, end,
+					vma->vm_start,
+					vma->vm_end);
+				BUG();
+			}
+#endif
+			split_huge_page_pmd(vma, addr, pmd);
+		} else if (!madvise_free_huge_pmd(tlb, vma, pmd, addr))
+			goto next;
+		/* fall through */
+	}
+
 	if (pmd_trans_unstable(pmd))
 		return 0;
 
@@ -321,6 +339,7 @@ static int madvise_free_pte_range(pmd_t *pmd, unsigned long addr,
 	}
 	arch_leave_lazy_mmu_mode();
 	pte_unmap_unlock(pte - 1, ptl);
+next:
 	cond_resched();
 	return 0;
 }
