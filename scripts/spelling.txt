@@ -187,6 +187,7 @@ capatibilities||capabilities
 carefuly||carefully
 cariage||carriage
 catagory||category
+cehck||check
 challange||challenge
 challanges||challenges
 chanell||channel
@@ -199,6 +200,8 @@ charactor||character
 charater||character
 charaters||characters
 charcter||character
+chcek||check
+chck||check
 checksuming||checksumming
 childern||children
 childs||children
