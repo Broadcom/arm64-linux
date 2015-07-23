@@ -596,7 +596,8 @@ struct gen_pool *gen_pool_get(struct device *dev, const char *name)
 {
 	struct gen_pool **p;
 
-	p = devres_find(dev, devm_gen_pool_release, devm_gen_pool_match, name);
+	p = devres_find(dev, devm_gen_pool_release, devm_gen_pool_match,
+			(void *)name);
 	if (!p)
 		return NULL;
 	return *p;
