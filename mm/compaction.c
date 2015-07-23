@@ -732,18 +732,18 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 		 * splitting and collapsing (collapsing has already happened
 		 * if PageLRU is set) but the lock is not necessarily taken
 		 * here and it is wasteful to take it just to check transhuge.
-		 * Check TransHuge without lock and skip the whole pageblock if
-		 * it's either a transhuge or hugetlbfs page, as calling
+		 * Check PageCompound without lock and skip the whole pageblock
+		 * if it's either a transhuge or hugetlbfs page, as calling
 		 * compound_order() without preventing THP from splitting the
 		 * page underneath us may return surprising results.
 		 */
-		if (PageTransHuge(page)) {
-			if (!locked)
-				low_pfn = ALIGN(low_pfn + 1,
-						pageblock_nr_pages) - 1;
+		if (PageCompound(page)) {
+			int nr;
+			if (locked)
+				nr = 1 << compound_order(page);
 			else
-				low_pfn += (1 << compound_order(page)) - 1;
-
+				nr = pageblock_nr_pages;
+			low_pfn = ALIGN(low_pfn + 1, nr) - 1;
 			continue;
 		}
 
@@ -763,11 +763,12 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 			if (!locked)
 				break;
 
-			/* Recheck PageLRU and PageTransHuge under lock */
+			/* Recheck PageLRU and PageCompound under lock */
 			if (!PageLRU(page))
 				continue;
-			if (PageTransHuge(page)) {
-				low_pfn += (1 << compound_order(page)) - 1;
+			if (PageCompound(page)) {
+				int nr = 1 << compound_order(page);
+				low_pfn = ALIGN(low_pfn + 1, nr) - 1;
 				continue;
 			}
 		}
@@ -778,7 +779,7 @@ isolate_migratepages_block(struct compact_control *cc, unsigned long low_pfn,
 		if (__isolate_lru_page(page, isolate_mode) != 0)
 			continue;
 
-		VM_BUG_ON_PAGE(PageTransCompound(page), page);
+		VM_BUG_ON_PAGE(PageCompound(page), page);
 
 		/* Successfully isolated */
 		del_page_from_lru_list(page, lruvec, page_lru(page));
