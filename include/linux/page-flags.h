@@ -282,9 +282,12 @@ PAGEFLAG(Active, active, HEAD) __CLEARPAGEFLAG(Active, active, HEAD)
 __PAGEFLAG(Slab, slab, NO_TAIL)
 __PAGEFLAG(SlobFree, slob_free, NO_TAIL)
 PAGEFLAG(Checked, checked, NO_COMPOUND) /* Used by some filesystems */
-PAGEFLAG(Pinned, pinned, ANY) TESTSCFLAG(Pinned, pinned, ANY)	/* Xen */
-PAGEFLAG(SavePinned, savepinned, ANY);			/* Xen */
-PAGEFLAG(Foreign, foreign, ANY);				/* Xen */
+
+/* Xen */
+PAGEFLAG(Pinned, pinned, NO_COMPOUND) TESTSCFLAG(Pinned, pinned, NO_COMPOUND)
+PAGEFLAG(SavePinned, savepinned, NO_COMPOUND)
+PAGEFLAG(Foreign, foreign, NO_COMPOUND)
+
 PAGEFLAG(Reserved, reserved, ANY) __CLEARPAGEFLAG(Reserved, reserved, ANY)
 PAGEFLAG(SwapBacked, swapbacked, ANY)
 	__CLEARPAGEFLAG(SwapBacked, swapbacked, ANY)
