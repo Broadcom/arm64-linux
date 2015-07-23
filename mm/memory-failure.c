@@ -1723,6 +1723,9 @@ int soft_offline_page(struct page *page, int flags)
 
 	get_online_mems();
 
+	if (get_pageblock_migratetype(page) != MIGRATE_ISOLATE)
+		set_migratetype_isolate(page, true);
+
 	ret = get_any_page(page, pfn, flags);
 	put_online_mems();
 	if (ret > 0) { /* for in-use pages */
@@ -1730,7 +1733,7 @@ int soft_offline_page(struct page *page, int flags)
 			ret = soft_offline_huge_page(page, flags);
 		else
 			ret = __soft_offline_page(page, flags);
-	} else if (ret == 0) { /* for free pages */
+	} else if (ret == 0) {
 		if (PageHuge(page)) {
 			set_page_hwpoison_huge_page(hpage);
 			if (!dequeue_hwpoisoned_huge_page(hpage))
@@ -1741,5 +1744,6 @@ int soft_offline_page(struct page *page, int flags)
 				atomic_long_inc(&num_poisoned_pages);
 		}
 	}
+	unset_migratetype_isolate(page, MIGRATE_MOVABLE);
 	return ret;
 }
