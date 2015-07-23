@@ -5498,10 +5498,10 @@ sub process {
 			     "consider using a completion\n" . $herecurr);
 		}
 
-# recommend kstrto* over simple_strto* and strict_strto*
-		if ($line =~ /\b((simple|strict)_(strto(l|ll|ul|ull)))\s*\(/) {
+# simple_strto*() is deprecated
+		if ($line =~ /\b(simple_strto(l|ll|ul|ull))\s*\(/) {
 			WARN("CONSIDER_KSTRTO",
-			     "$1 is obsolete, use k$3 instead\n" . $herecurr);
+			     "$1 is obsolete, use parse_integer(), kstrto*(), kstrto*_from_user(), sscanf() instead\n" . $herecurr);
 		}
 
 # check for __initcall(), use device_initcall() explicitly or more appropriate function please
