@@ -1031,6 +1031,7 @@ visiters||visitors
 vitual||virtual
 wating||waiting
 whataver||whatever
+whcih||which
 whenver||whenever
 wheter||whether
 whe||when
