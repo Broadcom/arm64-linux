@@ -11,6 +11,8 @@
 
 #include <linux/types.h>
 
+#include <linux/compiler.h>
+
 #define UFFD_API ((__u64)0xAA)
 /*
  * After implementing the respective features it will become:
@@ -70,7 +72,7 @@ struct uffd_msg {
 			__u64	reserved3;
 		} reserved;
 	} arg;
-} __attribute__((packed));
+} __packed;
 
 /*
  * Start at 0x12 and not at 0 to be more strict against bugs.
