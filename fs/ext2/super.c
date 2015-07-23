@@ -383,16 +383,18 @@ static unsigned long get_sb_block(void **data)
 {
 	unsigned long 	sb_block;
 	char 		*options = (char *) *data;
+	int rv;
 
 	if (!options || strncmp(options, "sb=", 3) != 0)
 		return 1;	/* Default location */
 	options += 3;
-	sb_block = simple_strtoul(options, &options, 0);
-	if (*options && *options != ',') {
+	rv = parse_integer(options, 0, &sb_block);
+	if (rv < 0 || (options[rv] && options[rv] != ',')) {
 		printk("EXT2-fs: Invalid sb specification: %s\n",
 		       (char *) *data);
 		return 1;
 	}
+	options += rv;
 	if (*options == ',')
 		options++;
 	*data = (void *) options;
