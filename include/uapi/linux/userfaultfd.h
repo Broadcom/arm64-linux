@@ -9,6 +9,8 @@
 #ifndef _LINUX_USERFAULTFD_H
 #define _LINUX_USERFAULTFD_H
 
+#include <linux/types.h>
+
 #define UFFD_API ((__u64)0xAA)
 /* FIXME: add "|UFFD_BIT_WP" to UFFD_API_BITS after implementing it */
 #define UFFD_API_BITS (UFFD_BIT_WRITE)
