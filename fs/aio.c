@@ -338,9 +338,11 @@ static int aio_ring_mremap(struct vm_area_struct *vma)
 
 static const struct vm_operations_struct aio_ring_vm_ops = {
 	.mremap		= aio_ring_mremap,
+#if IS_ENABLED(CONFIG_MMU)
 	.fault		= filemap_fault,
 	.map_pages	= filemap_map_pages,
 	.page_mkwrite	= filemap_page_mkwrite,
+#endif
 };
 
 static int aio_ring_mmap(struct file *file, struct vm_area_struct *vma)
