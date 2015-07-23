@@ -27,7 +27,7 @@ static int get_range(char **str, int *pint)
 	int x, inc_counter, upper_range;
 
 	(*str)++;
-	upper_range = simple_strtol((*str), NULL, 0);
+	parse_integer(*str, 0, &upper_range);
 	inc_counter = upper_range - *pint;
 	for (x = *pint; x < upper_range; x++)
 		*pint++ = x;
@@ -51,13 +51,14 @@ static int get_range(char **str, int *pint)
 
 int get_option(char **str, int *pint)
 {
-	char *cur = *str;
+	int len;
 
-	if (!cur || !(*cur))
+	if (!str || !*str)
 		return 0;
-	*pint = simple_strtol(cur, str, 0);
-	if (cur == *str)
+	len = parse_integer(*str, 0, pint);
+	if (len < 0)
 		return 0;
+	*str += len;
 	if (**str == ',') {
 		(*str)++;
 		return 2;
@@ -126,38 +127,41 @@ EXPORT_SYMBOL(get_options);
 
 unsigned long long memparse(const char *ptr, char **retptr)
 {
-	char *endptr;	/* local pointer to end of parsed string */
+	unsigned long long val = 0;
+	int len;
 
-	unsigned long long ret = simple_strtoull(ptr, &endptr, 0);
-
-	switch (*endptr) {
+	len = parse_integer(ptr, 0, &val);
+	if (len < 0)
+		goto out;
+	ptr += len;
+	switch (*ptr) {
 	case 'E':
 	case 'e':
-		ret <<= 10;
+		val <<= 10;
 	case 'P':
 	case 'p':
-		ret <<= 10;
+		val <<= 10;
 	case 'T':
 	case 't':
-		ret <<= 10;
+		val <<= 10;
 	case 'G':
 	case 'g':
-		ret <<= 10;
+		val <<= 10;
 	case 'M':
 	case 'm':
-		ret <<= 10;
+		val <<= 10;
 	case 'K':
 	case 'k':
-		ret <<= 10;
-		endptr++;
+		val <<= 10;
+		ptr++;
 	default:
 		break;
 	}
-
+out:
 	if (retptr)
-		*retptr = endptr;
+		*retptr = (char *)ptr;
 
-	return ret;
+	return val;
 }
 EXPORT_SYMBOL(memparse);
 
