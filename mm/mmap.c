@@ -1245,8 +1245,8 @@ static inline int mlock_future_check(struct mm_struct *mm,
 {
 	unsigned long locked, lock_limit;
 
-	/*  mlock MCL_FUTURE? */
-	if (flags & VM_LOCKED) {
+	/*  mlock MCL_FUTURE or MCL_ONFAULT? */
+	if (flags & (VM_LOCKED | VM_LOCKONFAULT)) {
 		locked = len >> PAGE_SHIFT;
 		locked += mm->locked_vm;
 		lock_limit = rlimit(RLIMIT_MEMLOCK);
