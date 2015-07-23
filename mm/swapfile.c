@@ -904,8 +904,8 @@ int swp_swapcount(swp_entry_t entry)
 
 	do {
 		page = list_entry(page->lru.next, struct page, lru);
-		map = kmap_atomic(page) + offset;
-		tmp_count = *map;
+		map = kmap_atomic(page);
+		tmp_count = map[offset];
 		kunmap_atomic(map);
 
 		count += (tmp_count & ~COUNT_CONTINUED) * n;
