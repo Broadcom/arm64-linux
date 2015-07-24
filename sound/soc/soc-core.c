@@ -2140,7 +2140,7 @@ EXPORT_SYMBOL_GPL(snd_soc_codec_set_pll);
 /**
  * snd_soc_dai_set_bclk_ratio - configure BCLK to sample rate ratio.
  * @dai: DAI
- * @ratio Ratio of BCLK to Sample rate.
+ * @ratio: Ratio of BCLK to Sample rate.
  *
  * Configures the DAI for a preset BCLK to sample rate ratio.
  */
@@ -2848,7 +2848,7 @@ static void snd_soc_platform_drv_remove(struct snd_soc_component *component)
  * snd_soc_add_platform - Add a platform to the ASoC core
  * @dev: The parent device for the platform
  * @platform: The platform to add
- * @platform_driver: The driver for the platform
+ * @platform_drv: The driver for the platform
  */
 int snd_soc_add_platform(struct device *dev, struct snd_soc_platform *platform,
 		const struct snd_soc_platform_driver *platform_drv)
