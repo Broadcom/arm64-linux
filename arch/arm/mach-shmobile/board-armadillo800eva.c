@@ -1348,7 +1348,7 @@ static void eva_restart(enum reboot_mode mode, const char *cmd)
 	writel((1 << 31), RESCNT2);
 }
 
-static const char *eva_boards_compat_dt[] __initdata = {
+static const char *eva_boards_compat_dt[] __initconst = {
 	"renesas,armadillo800eva",
 	NULL,
 };

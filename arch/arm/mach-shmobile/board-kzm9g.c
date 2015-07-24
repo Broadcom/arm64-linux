@@ -898,7 +898,7 @@ static void kzm9g_restart(enum reboot_mode mode, const char *cmd)
 	writel((1 << 31), RESCNT2);
 }
 
-static const char *kzm9g_boards_compat_dt[] __initdata = {
+static const char *kzm9g_boards_compat_dt[] __initconst = {
 	"renesas,kzm9g",
 	NULL,
 };

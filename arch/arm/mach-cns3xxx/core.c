@@ -392,7 +392,7 @@ static void __init cns3xxx_init(void)
                         cns3xxx_auxdata, NULL);
 }
 
-static const char *cns3xxx_dt_compat[] __initdata = {
+static const char *cns3xxx_dt_compat[] __initconst = {
 	"cavium,cns3410",
 	"cavium,cns3420",
 	NULL,

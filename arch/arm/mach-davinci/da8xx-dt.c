@@ -59,7 +59,7 @@ static void __init da850_init_machine(void)
 
 }
 
-static const char *da850_boards_compat[] __initdata = {
+static const char *da850_boards_compat[] __initconst = {
 	"enbw,cmc",
 	"ti,da850-evm",
 	"ti,da850",

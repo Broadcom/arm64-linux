@@ -248,7 +248,7 @@ static void __init lpc3250_machine_init(void)
 			     lpc32xx_auxdata_lookup, NULL);
 }
 
-static char const *lpc32xx_dt_compat[] __initdata = {
+static const char *lpc32xx_dt_compat[] __initconst = {
 	"nxp,lpc3220",
 	"nxp,lpc3230",
 	"nxp,lpc3240",
