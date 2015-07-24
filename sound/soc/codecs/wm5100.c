@@ -1247,7 +1247,7 @@ static const struct snd_soc_dapm_route wm5100_dapm_routes[] = {
 	{ "PWM2", NULL, "PWM2 Driver" },
 };
 
-static const struct reg_default wm5100_reva_patches[] = {
+static const struct reg_sequence wm5100_reva_patches[] = {
 	{ WM5100_AUDIO_IF_1_10, 0 },
 	{ WM5100_AUDIO_IF_1_11, 1 },
 	{ WM5100_AUDIO_IF_1_12, 2 },
@@ -2708,7 +2708,7 @@ static int wm5100_runtime_resume(struct device *dev)
 }
 #endif
 
-static struct dev_pm_ops wm5100_pm = {
+static const struct dev_pm_ops wm5100_pm = {
 	SET_RUNTIME_PM_OPS(wm5100_runtime_suspend, wm5100_runtime_resume,
 			   NULL)
 };

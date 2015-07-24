@@ -897,7 +897,7 @@ static bool wm2200_readable_register(struct device *dev, unsigned int reg)
 	}
 }
 
-static const struct reg_default wm2200_reva_patch[] = {
+static const struct reg_sequence wm2200_reva_patch[] = {
 	{ 0x07, 0x0003 },
 	{ 0x102, 0x0200 },
 	{ 0x203, 0x0084 },
@@ -2481,7 +2481,7 @@ static int wm2200_runtime_resume(struct device *dev)
 }
 #endif
 
-static struct dev_pm_ops wm2200_pm = {
+static const struct dev_pm_ops wm2200_pm = {
 	SET_RUNTIME_PM_OPS(wm2200_runtime_suspend, wm2200_runtime_resume,
 			   NULL)
 };
