@@ -1408,7 +1408,7 @@ static int wm5100_hw_params(struct snd_pcm_substream *substream,
 	base = dai->driver->base;
 
 	/* Data sizes if not using TDM */
-	wl = snd_pcm_format_width(params_format(params));
+	wl = params_width(params);
 	if (wl < 0)
 		return wl;
 	fl = snd_soc_params_to_frame_size(params);
@@ -2570,13 +2570,11 @@ static int wm5100_i2c_probe(struct i2c_client *i2c,
 
 		if (irq_flags & (IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING))
 			ret = request_threaded_irq(i2c->irq, NULL,
-						   wm5100_edge_irq,
-						   irq_flags | IRQF_ONESHOT,
+						   wm5100_edge_irq, irq_flags,
 						   "wm5100", wm5100);
 		else
 			ret = request_threaded_irq(i2c->irq, NULL, wm5100_irq,
-						   irq_flags | IRQF_ONESHOT,
-						   "wm5100",
+						   irq_flags, "wm5100",
 						   wm5100);
 
 		if (ret != 0) {
