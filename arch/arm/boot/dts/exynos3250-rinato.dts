@@ -132,6 +132,10 @@
 	};
 };
 
+&cpu0 {
+	cpu0-supply = <&buck2_reg>;
+};
+
 &exynos_usbphy {
 	status = "okay";
 };
@@ -182,7 +186,7 @@
 
 		display-timings {
 			timing-0 {
-				clock-frequency = <0>;
+				clock-frequency = <4600000>;
 				hactive = <320>;
 				vactive = <320>;
 				hfront-porch = <1>;
