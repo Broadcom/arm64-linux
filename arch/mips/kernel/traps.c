@@ -1516,7 +1516,6 @@ asmlinkage void do_watch(struct pt_regs *regs)
 
 asmlinkage void do_mcheck(struct pt_regs *regs)
 {
-	const int field = 2 * sizeof(unsigned long);
 	int multi_match = regs->cp0_status & ST0_TS;
 	enum ctx_state prev_state;
 
@@ -1524,19 +1523,8 @@ asmlinkage void do_mcheck(struct pt_regs *regs)
 	show_regs(regs);
 
 	if (multi_match) {
-		pr_err("Index	: %0x\n", read_c0_index());
-		pr_err("Pagemask: %0x\n", read_c0_pagemask());
-		pr_err("EntryHi : %0*lx\n", field, read_c0_entryhi());
-		pr_err("EntryLo0: %0*lx\n", field, read_c0_entrylo0());
-		pr_err("EntryLo1: %0*lx\n", field, read_c0_entrylo1());
-		pr_err("Wired   : %0x\n", read_c0_wired());
-		pr_err("Pagegrain: %0x\n", read_c0_pagegrain());
-		if (cpu_has_htw) {
-			pr_err("PWField : %0*lx\n", field, read_c0_pwfield());
-			pr_err("PWSize  : %0*lx\n", field, read_c0_pwsize());
-			pr_err("PWCtl   : %0x\n", read_c0_pwctl());
-		}
-		pr_err("\n");
+		dump_tlb_regs();
+		pr_info("\n");
 		dump_tlb_all();
 	}
 
@@ -1638,6 +1626,7 @@ static inline void parity_protection_init(void)
 	case CPU_PROAPTIV:
 	case CPU_P5600:
 	case CPU_QEMU_GENERIC:
+	case CPU_I6400:
 		{
 #define ERRCTL_PE	0x80000000
 #define ERRCTL_L2P	0x00800000

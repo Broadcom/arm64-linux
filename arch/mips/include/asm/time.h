@@ -46,12 +46,12 @@ extern unsigned int mips_hpt_frequency;
  * so it lives here.
  */
 extern int (*perf_irq)(void);
-extern int __weak get_c0_perfcount_int(void);
+extern int get_c0_perfcount_int(void);
 
 /*
  * Initialize the calling CPU's compare interrupt as clockevent device
  */
-extern unsigned int __weak get_c0_compare_int(void);
+extern unsigned int get_c0_compare_int(void);
 extern int r4k_clockevent_init(void);
 
 static inline int mips_clockevent_init(void)

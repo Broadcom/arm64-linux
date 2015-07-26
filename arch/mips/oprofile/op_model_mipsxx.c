@@ -392,6 +392,10 @@ static int __init mipsxx_init(void)
 		op_model_mipsxx_ops.cpu_type = "mips/P5600";
 		break;
 
+	case CPU_I6400:
+		op_model_mipsxx_ops.cpu_type = "mips/I6400";
+		break;
+
 	case CPU_M5150:
 		op_model_mipsxx_ops.cpu_type = "mips/M5150";
 		break;
@@ -438,13 +442,7 @@ static int __init mipsxx_init(void)
 	save_perf_irq = perf_irq;
 	perf_irq = mipsxx_perfcount_handler;
 
-	if (get_c0_perfcount_int)
-		perfcount_irq = get_c0_perfcount_int();
-	else if (cp0_perfcount_irq >= 0)
-		perfcount_irq = MIPS_CPU_IRQ_BASE + cp0_perfcount_irq;
-	else
-		perfcount_irq = -1;
-
+	perfcount_irq = get_c0_perfcount_int();
 	if (perfcount_irq >= 0)
 		return request_irq(perfcount_irq, mipsxx_perfcount_int,
 				   IRQF_PERCPU | IRQF_NOBALANCING |

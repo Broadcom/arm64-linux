@@ -15,6 +15,7 @@
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/irq.h>
 #include <linux/sched.h>
 #include <linux/param.h>
 #include <linux/time.h>
@@ -55,8 +56,14 @@ static int null_perf_irq(void)
 }
 
 int (*perf_irq)(void) = null_perf_irq;
-
 EXPORT_SYMBOL(perf_irq);
+
+int __weak get_c0_perfcount_int(void)
+{
+	if (cp0_perfcount_irq >= 0)
+		return MIPS_CPU_IRQ_BASE + cp0_perfcount_irq;
+	return -1;
+}
 
 /*
  * time_init() - it does the following things.
