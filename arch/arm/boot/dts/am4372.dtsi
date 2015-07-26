@@ -23,6 +23,11 @@
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
 		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
+		serial4 = &uart4;
+		serial5 = &uart5;
 		ethernet0 = &cpsw_emac0;
 		ethernet1 = &cpsw_emac1;
 	};
@@ -82,6 +87,15 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges = <0 0x44c00000 0x287000>;
+
+			wkup_m3: wkup_m3@100000 {
+				compatible = "ti,am4372-wkup-m3";
+				reg = <0x100000 0x4000>,
+				      <0x180000	0x2000>;
+				reg-names = "umem", "dmem";
+				ti,hwmods = "wkup_m3";
+				ti,pm-firmware = "am335x-pm-firmware.elf";
+			};
 
 			prcm: prcm@1f0000 {
 				compatible = "ti,am4-prcm";

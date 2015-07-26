@@ -39,7 +39,7 @@ static void __init pxa3xx_dt_init(void)
 			     pxa3xx_auxdata_lookup, NULL);
 }
 
-static const char *pxa3xx_dt_board_compat[] __initdata = {
+static const char *pxa3xx_dt_board_compat[] __initconst = {
 	"marvell,pxa300",
 	"marvell,pxa310",
 	"marvell,pxa320",

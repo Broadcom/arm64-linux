@@ -1,0 +1,68 @@
+next/fixes-non-critical
+
+next/cleanup
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.3
+	renesas/pm-domain
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-pm-domain-for-v4.3
+	clkevt/set-state
+		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux ARM/clkevt/set-state-4.3
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.3-1
+	brcm/soc
+		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/soc
+	ep93xx/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/ep93xx-cleanup
+	omap/legacy-removal
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/legacy-v2-signed
+
+next/soc
+	rockchip/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-soc1
+
+next/boards
+
+next/dt
+	patch
+		ARM: digicolor: enable watchdog device
+		ARM: digicolor: dts: use stdout-path for console configuration
+		ARM: dts: UniPhier: add on-chip UART device nodes
+		ARM: dts: UniPhier: add USB EHCI device nodes
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.3
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt1
+	lpc18xx/dt
+		https://github.com/manabian/linux-lpc lpc18xx_43xx_dts_4.3
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.3-1
+	brcm/dts
+		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/dts
+	rockchip/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-dts1
+	pxa/dt
+		https://github.com/rjarzmik/linux tags/tags/pxa-dt-4.3
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt2
+
+next/drivers
+	patch
+		memory: add ARM PL172 MultiPort Memory Controller driver
+		doc: dt: add documentation for pl172 memory bindings
+		memory: pl172: fix modular build
+
+next/defconfig
+	patch
+		ARM: multi_v7_defconfig: enable Conexant Digicolor watchdog
+		ARM: multi_v7_defconfig: enable UniPhier UART driver
+	mvebu/config
+		git://git.infradead.org/linux-mvebu tags/mvebu-config-4.3-1
+	ep93xx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/ep93xx-defconfig
+	omap/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/defconfig-signed
+
+fixes
+	foo2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-1
+
