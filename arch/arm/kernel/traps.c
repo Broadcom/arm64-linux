@@ -26,6 +26,7 @@
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/irq.h>
+#include <linux/nmi.h>
 
 #include <linux/atomic.h>
 #include <asm/cacheflush.h>
@@ -480,6 +481,9 @@ asmlinkage void __exception_irq_entry handle_fiq_as_nmi(struct pt_regs *regs)
 	nmi_enter();
 
 	/* nop. FIQ handlers for special arch/arm features can be added here. */
+#ifdef CONFIG_SMP
+	nmi_cpu_backtrace(regs);
+#endif
 
 	nmi_exit();
 
