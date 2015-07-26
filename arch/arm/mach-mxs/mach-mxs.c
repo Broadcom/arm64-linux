@@ -528,7 +528,7 @@ static void mxs_restart(enum reboot_mode mode, const char *cmd)
 	soft_restart(0);
 }
 
-static const char *mxs_dt_compat[] __initdata = {
+static const char *mxs_dt_compat[] __initconst = {
 	"fsl,imx28",
 	"fsl,imx23",
 	NULL,
