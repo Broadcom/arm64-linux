@@ -1469,10 +1469,10 @@ static const struct gpio_chip rockchip_gpiolib_chip = {
  * Interrupt handling
  */
 
-static void rockchip_irq_demux(unsigned int irq, struct irq_desc *desc)
+static void rockchip_irq_demux(unsigned int __irq, struct irq_desc *desc)
 {
-	struct irq_chip *chip = irq_get_chip(irq);
-	struct rockchip_pin_bank *bank = irq_get_handler_data(irq);
+	struct irq_chip *chip = irq_desc_get_chip(desc);
+	struct rockchip_pin_bank *bank = irq_desc_get_handler_data(desc);
 	u32 pend;
 
 	dev_dbg(bank->drvdata->dev, "got irq for bank %s\n", bank->name);
@@ -1482,7 +1482,7 @@ static void rockchip_irq_demux(unsigned int irq, struct irq_desc *desc)
 	pend = readl_relaxed(bank->reg_base + GPIO_INT_STATUS);
 
 	while (pend) {
-		unsigned int virq;
+		unsigned int irq, virq;
 
 		irq = __ffs(pend);
 		pend &= ~BIT(irq);
@@ -1555,9 +1555,9 @@ static int rockchip_irq_set_type(struct irq_data *d, unsigned int type)
 	spin_unlock_irqrestore(&bank->slock, flags);
 
 	if (type & IRQ_TYPE_EDGE_BOTH)
-		__irq_set_handler_locked(d->irq, handle_edge_irq);
+		irq_set_handler_locked(d, handle_edge_irq);
 	else
-		__irq_set_handler_locked(d->irq, handle_level_irq);
+		irq_set_handler_locked(d, handle_level_irq);
 
 	spin_lock_irqsave(&bank->slock, flags);
 	irq_gc_lock(gc);
@@ -1689,8 +1689,8 @@ static int rockchip_interrupts_register(struct platform_device *pdev,
 		gc->chip_types[0].chip.irq_set_type = rockchip_irq_set_type;
 		gc->wake_enabled = IRQ_MSK(bank->nr_pins);
 
-		irq_set_handler_data(bank->irq, bank);
-		irq_set_chained_handler(bank->irq, rockchip_irq_demux);
+		irq_set_chained_handler_and_data(bank->irq,
+						 rockchip_irq_demux, bank);
 	}
 
 	return 0;

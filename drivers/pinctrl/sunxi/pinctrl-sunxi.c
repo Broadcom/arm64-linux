@@ -709,10 +709,11 @@ static struct irq_chip sunxi_pinctrl_level_irq_chip = {
 			  IRQCHIP_EOI_IF_HANDLED,
 };
 
-static void sunxi_pinctrl_irq_handler(unsigned irq, struct irq_desc *desc)
+static void sunxi_pinctrl_irq_handler(unsigned __irq, struct irq_desc *desc)
 {
-	struct irq_chip *chip = irq_get_chip(irq);
-	struct sunxi_pinctrl *pctl = irq_get_handler_data(irq);
+	unsigned int irq = irq_desc_get_irq(desc);
+	struct irq_chip *chip = irq_desc_get_chip(desc);
+	struct sunxi_pinctrl *pctl = irq_desc_get_handler_data(desc);
 	unsigned long bank, reg, val;
 
 	for (bank = 0; bank < pctl->desc->irq_banks; bank++)
