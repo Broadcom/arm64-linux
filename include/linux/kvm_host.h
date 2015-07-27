@@ -139,6 +139,7 @@ static inline bool is_error_page(struct page *page)
 #define KVM_REQ_DISABLE_IBS       24
 #define KVM_REQ_APIC_PAGE_RELOAD  25
 #define KVM_REQ_SMI               26
+#define KVM_REQ_HV_CRASH          27
 
 #define KVM_USERSPACE_IRQ_SOURCE_ID		0
 #define KVM_IRQFD_RESAMPLE_IRQ_SOURCE_ID	1
@@ -423,6 +424,9 @@ struct kvm {
 /* The guest did something we don't support. */
 #define vcpu_unimpl(vcpu, fmt, ...)					\
 	kvm_pr_unimpl("vcpu%i " fmt, (vcpu)->vcpu_id, ## __VA_ARGS__)
+
+#define vcpu_debug(vcpu, fmt, ...)					\
+	kvm_debug("vcpu%i " fmt, (vcpu)->vcpu_id, ## __VA_ARGS__)
 
 static inline struct kvm_vcpu *kvm_get_vcpu(struct kvm *kvm, int i)
 {
