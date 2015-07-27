@@ -69,6 +69,11 @@ enum mixer_version_id {
 	MXR_VER_128_0_0_184,
 };
 
+enum mixer_flag_bits {
+	MXR_BIT_POWERED,
+	MXR_BIT_VSYNC,
+};
+
 struct mixer_context {
 	struct platform_device *pdev;
 	struct device		*dev;
@@ -76,13 +81,11 @@ struct mixer_context {
 	struct exynos_drm_crtc	*crtc;
 	struct exynos_drm_plane	planes[MIXER_WIN_NR];
 	int			pipe;
+	unsigned long		flags;
 	bool			interlace;
-	bool			powered;
 	bool			vp_enabled;
 	bool			has_sclk;
-	u32			int_en;
 
-	struct mutex		mixer_mutex;
 	struct mixer_resources	mixer_res;
 	enum mixer_version_id	mxr_ver;
 	wait_queue_head_t	wait_vsync_queue;
@@ -718,6 +721,10 @@ static irqreturn_t mixer_irq_handler(int irq, void *arg)
 
 	/* handling VSYNC */
 	if (val & MXR_INT_STATUS_VSYNC) {
+		/* vsync interrupt use different bit for read and clear */
+		val |= MXR_INT_CLEAR_VSYNC;
+		val &= ~MXR_INT_STATUS_VSYNC;
+
 		/* interlace scan need to check shadow register */
 		if (ctx->interlace) {
 			base = mixer_reg_read(res, MXR_GRAPHIC_BASE(0));
@@ -743,11 +750,6 @@ static irqreturn_t mixer_irq_handler(int irq, void *arg)
 
 out:
 	/* clear interrupts */
-	if (~val & MXR_INT_EN_VSYNC) {
-		/* vsync interrupt use different bit for read and clear */
-		val &= ~MXR_INT_EN_VSYNC;
-		val |= MXR_INT_CLEAR_VSYNC;
-	}
 	mixer_reg_write(res, MXR_INT_STATUS, val);
 
 	spin_unlock(&res->reg_slock);
@@ -882,8 +884,7 @@ static int mixer_initialize(struct mixer_context *mixer_ctx,
 		}
 	}
 
-	ret = drm_iommu_attach_device_if_possible(mixer_ctx->crtc, drm_dev,
-								mixer_ctx->dev);
+	ret = drm_iommu_attach_device(drm_dev, mixer_ctx->dev);
 	if (ret)
 		priv->pipe--;
 
@@ -892,8 +893,7 @@ static int mixer_initialize(struct mixer_context *mixer_ctx,
 
 static void mixer_ctx_remove(struct mixer_context *mixer_ctx)
 {
-	if (is_drm_iommu_supported(mixer_ctx->drm_dev))
-		drm_iommu_detach_device(mixer_ctx->drm_dev, mixer_ctx->dev);
+	drm_iommu_detach_device(mixer_ctx->drm_dev, mixer_ctx->dev);
 }
 
 static int mixer_enable_vblank(struct exynos_drm_crtc *crtc)
@@ -901,14 +901,13 @@ static int mixer_enable_vblank(struct exynos_drm_crtc *crtc)
 	struct mixer_context *mixer_ctx = crtc->ctx;
 	struct mixer_resources *res = &mixer_ctx->mixer_res;
 
-	if (!mixer_ctx->powered) {
-		mixer_ctx->int_en |= MXR_INT_EN_VSYNC;
+	__set_bit(MXR_BIT_VSYNC, &mixer_ctx->flags);
+	if (!test_bit(MXR_BIT_POWERED, &mixer_ctx->flags))
 		return 0;
-	}
 
 	/* enable vsync interrupt */
-	mixer_reg_writemask(res, MXR_INT_EN, MXR_INT_EN_VSYNC,
-			MXR_INT_EN_VSYNC);
+	mixer_reg_writemask(res, MXR_INT_STATUS, ~0, MXR_INT_CLEAR_VSYNC);
+	mixer_reg_writemask(res, MXR_INT_EN, ~0, MXR_INT_EN_VSYNC);
 
 	return 0;
 }
@@ -918,7 +917,13 @@ static void mixer_disable_vblank(struct exynos_drm_crtc *crtc)
 	struct mixer_context *mixer_ctx = crtc->ctx;
 	struct mixer_resources *res = &mixer_ctx->mixer_res;
 
+	__clear_bit(MXR_BIT_VSYNC, &mixer_ctx->flags);
+
+	if (!test_bit(MXR_BIT_POWERED, &mixer_ctx->flags))
+		return;
+
 	/* disable vsync interrupt */
+	mixer_reg_writemask(res, MXR_INT_STATUS, ~0, MXR_INT_CLEAR_VSYNC);
 	mixer_reg_writemask(res, MXR_INT_EN, 0, MXR_INT_EN_VSYNC);
 }
 
@@ -928,12 +933,8 @@ static void mixer_win_commit(struct exynos_drm_crtc *crtc, unsigned int win)
 
 	DRM_DEBUG_KMS("win: %d\n", win);
 
-	mutex_lock(&mixer_ctx->mixer_mutex);
-	if (!mixer_ctx->powered) {
-		mutex_unlock(&mixer_ctx->mixer_mutex);
+	if (!test_bit(MXR_BIT_POWERED, &mixer_ctx->flags))
 		return;
-	}
-	mutex_unlock(&mixer_ctx->mixer_mutex);
 
 	if (win > 1 && mixer_ctx->vp_enabled)
 		vp_video_buffer(mixer_ctx, win);
@@ -949,12 +950,8 @@ static void mixer_win_disable(struct exynos_drm_crtc *crtc, unsigned int win)
 
 	DRM_DEBUG_KMS("win: %d\n", win);
 
-	mutex_lock(&mixer_ctx->mixer_mutex);
-	if (!mixer_ctx->powered) {
-		mutex_unlock(&mixer_ctx->mixer_mutex);
+	if (!test_bit(MXR_BIT_POWERED, &mixer_ctx->flags))
 		return;
-	}
-	mutex_unlock(&mixer_ctx->mixer_mutex);
 
 	spin_lock_irqsave(&res->reg_slock, flags);
 	mixer_vsync_set_update(mixer_ctx, false);
@@ -970,12 +967,8 @@ static void mixer_wait_for_vblank(struct exynos_drm_crtc *crtc)
 	struct mixer_context *mixer_ctx = crtc->ctx;
 	int err;
 
-	mutex_lock(&mixer_ctx->mixer_mutex);
-	if (!mixer_ctx->powered) {
-		mutex_unlock(&mixer_ctx->mixer_mutex);
+	if (!test_bit(MXR_BIT_POWERED, &mixer_ctx->flags))
 		return;
-	}
-	mutex_unlock(&mixer_ctx->mixer_mutex);
 
 	err = drm_vblank_get(mixer_ctx->drm_dev, mixer_ctx->pipe);
 	if (err < 0) {
@@ -1003,13 +996,8 @@ static void mixer_enable(struct exynos_drm_crtc *crtc)
 	struct mixer_resources *res = &ctx->mixer_res;
 	int ret;
 
-	mutex_lock(&ctx->mixer_mutex);
-	if (ctx->powered) {
-		mutex_unlock(&ctx->mixer_mutex);
+	if (test_bit(MXR_BIT_POWERED, &ctx->flags))
 		return;
-	}
-
-	mutex_unlock(&ctx->mixer_mutex);
 
 	pm_runtime_get_sync(ctx->dev);
 
@@ -1041,13 +1029,14 @@ static void mixer_enable(struct exynos_drm_crtc *crtc)
 		}
 	}
 
-	mutex_lock(&ctx->mixer_mutex);
-	ctx->powered = true;
-	mutex_unlock(&ctx->mixer_mutex);
+	set_bit(MXR_BIT_POWERED, &ctx->flags);
 
 	mixer_reg_writemask(res, MXR_STATUS, ~0, MXR_STATUS_SOFT_RESET);
 
-	mixer_reg_write(res, MXR_INT_EN, ctx->int_en);
+	if (test_bit(MXR_BIT_VSYNC, &ctx->flags)) {
+		mixer_reg_writemask(res, MXR_INT_STATUS, ~0, MXR_INT_CLEAR_VSYNC);
+		mixer_reg_writemask(res, MXR_INT_EN, ~0, MXR_INT_EN_VSYNC);
+	}
 	mixer_win_reset(ctx);
 }
 
@@ -1057,12 +1046,8 @@ static void mixer_disable(struct exynos_drm_crtc *crtc)
 	struct mixer_resources *res = &ctx->mixer_res;
 	int i;
 
-	mutex_lock(&ctx->mixer_mutex);
-	if (!ctx->powered) {
-		mutex_unlock(&ctx->mixer_mutex);
+	if (!test_bit(MXR_BIT_POWERED, &ctx->flags))
 		return;
-	}
-	mutex_unlock(&ctx->mixer_mutex);
 
 	mixer_stop(ctx);
 	mixer_regs_dump(ctx);
@@ -1070,11 +1055,7 @@ static void mixer_disable(struct exynos_drm_crtc *crtc)
 	for (i = 0; i < MIXER_WIN_NR; i++)
 		mixer_win_disable(crtc, i);
 
-	ctx->int_en = mixer_reg_read(res, MXR_INT_EN);
-
-	mutex_lock(&ctx->mixer_mutex);
-	ctx->powered = false;
-	mutex_unlock(&ctx->mixer_mutex);
+	clear_bit(MXR_BIT_POWERED, &ctx->flags);
 
 	clk_disable_unprepare(res->hdmi);
 	clk_disable_unprepare(res->mixer);
@@ -1235,8 +1216,6 @@ static int mixer_probe(struct platform_device *pdev)
 		DRM_ERROR("failed to alloc mixer context.\n");
 		return -ENOMEM;
 	}
-
-	mutex_init(&ctx->mixer_mutex);
 
 	if (dev->of_node) {
 		const struct of_device_id *match;

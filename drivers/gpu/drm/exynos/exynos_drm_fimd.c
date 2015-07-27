@@ -348,13 +348,6 @@ static void fimd_clear_channels(struct exynos_drm_crtc *crtc)
 	pm_runtime_put(ctx->dev);
 }
 
-static void fimd_iommu_detach_devices(struct fimd_context *ctx)
-{
-	/* detach this sub driver from iommu mapping if supported. */
-	if (is_drm_iommu_supported(ctx->drm_dev))
-		drm_iommu_detach_device(ctx->drm_dev, ctx->dev);
-}
-
 static u32 fimd_calc_clkdiv(struct fimd_context *ctx,
 		const struct drm_display_mode *mode)
 {
@@ -894,7 +887,6 @@ static const struct exynos_drm_crtc_ops fimd_crtc_ops = {
 	.win_disable = fimd_win_disable,
 	.te_handler = fimd_te_handler,
 	.clock_enable = fimd_dp_clock_enable,
-	.clear_channels = fimd_clear_channels,
 };
 
 static irqreturn_t fimd_irq_handler(int irq, void *dev_id)
@@ -964,7 +956,9 @@ static int fimd_bind(struct device *dev, struct device *master, void *data)
 	if (ctx->display)
 		exynos_drm_create_enc_conn(drm_dev, ctx->display);
 
-	ret = drm_iommu_attach_device_if_possible(ctx->crtc, drm_dev, dev);
+	fimd_clear_channels(ctx->crtc);
+
+	ret = drm_iommu_attach_device(drm_dev, dev);
 	if (ret)
 		priv->pipe--;
 
@@ -978,7 +972,7 @@ static void fimd_unbind(struct device *dev, struct device *master,
 
 	fimd_disable(ctx->crtc);
 
-	fimd_iommu_detach_devices(ctx);
+	drm_iommu_detach_device(ctx->drm_dev, ctx->dev);
 
 	if (ctx->display)
 		exynos_dpi_remove(ctx->display);

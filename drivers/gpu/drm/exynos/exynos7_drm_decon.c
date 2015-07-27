@@ -126,7 +126,9 @@ static int decon_ctx_initialize(struct decon_context *ctx,
 	ctx->drm_dev = drm_dev;
 	ctx->pipe = priv->pipe++;
 
-	ret = drm_iommu_attach_device_if_possible(ctx->crtc, drm_dev, ctx->dev);
+	decon_clear_channels(ctx->crtc);
+
+	ret = drm_iommu_attach_device(drm_dev, ctx->dev);
 	if (ret)
 		priv->pipe--;
 
@@ -136,8 +138,7 @@ static int decon_ctx_initialize(struct decon_context *ctx,
 static void decon_ctx_remove(struct decon_context *ctx)
 {
 	/* detach this sub driver from iommu mapping if supported. */
-	if (is_drm_iommu_supported(ctx->drm_dev))
-		drm_iommu_detach_device(ctx->drm_dev, ctx->dev);
+	drm_iommu_detach_device(ctx->drm_dev, ctx->dev);
 }
 
 static u32 decon_calc_clkdiv(struct decon_context *ctx,
@@ -623,7 +624,6 @@ static const struct exynos_drm_crtc_ops decon_crtc_ops = {
 	.wait_for_vblank = decon_wait_for_vblank,
 	.win_commit = decon_win_commit,
 	.win_disable = decon_win_disable,
-	.clear_channels = decon_clear_channels,
 };
 
 
