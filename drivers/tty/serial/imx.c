@@ -700,7 +700,8 @@ static irqreturn_t imx_rxint(int irq, void *dev_id)
 		if (sport->port.ignore_status_mask & URXD_DUMMY_READ)
 			goto out;
 
-		tty_insert_flip_char(port, rx, flg);
+		if (tty_insert_flip_char(port, rx, flg) == 0)
+			sport->port.icount.buf_overrun++;
 	}
 
 out:
@@ -766,7 +767,6 @@ static irqreturn_t imx_int(int irq, void *dev_id)
 		writel(USR1_AWAKE, sport->port.membase + USR1);
 
 	if (sts2 & USR2_ORE) {
-		dev_err(sport->port.dev, "Rx FIFO overrun\n");
 		sport->port.icount.overrun++;
 		writel(USR2_ORE, sport->port.membase + USR2);
 	}
@@ -921,8 +921,13 @@ static void dma_rx_callback(void *data)
 	dev_dbg(sport->port.dev, "We get %d bytes.\n", count);
 
 	if (count) {
-		if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ))
-			tty_insert_flip_string(port, sport->rx_buf, count);
+		if (!(sport->port.ignore_status_mask & URXD_DUMMY_READ)) {
+			int bytes = tty_insert_flip_string(port, sport->rx_buf,
+					count);
+
+			if (bytes != count)
+				sport->port.icount.buf_overrun++;
+		}
 		tty_flip_buffer_push(port);
 
 		start_rx_dma(sport);
@@ -1093,10 +1098,23 @@ static void imx_disable_dma(struct imx_port *sport)
 /* half the RX buffer size */
 #define CTSTL 16
 
+static inline void imx_reset(struct imx_port *sport)
+{
+	int i = 100;
+	unsigned long temp;
+
+	temp = readl(sport->port.membase + UCR2);
+	temp &= ~UCR2_SRST;
+	writel(temp, sport->port.membase + UCR2);
+
+	while (!(readl(sport->port.membase + UCR2) & UCR2_SRST) && (--i > 0))
+		udelay(1);
+}
+
 static int imx_startup(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
-	int retval, i;
+	int retval;
 	unsigned long flags, temp;
 
 	retval = clk_prepare_enable(sport->clk_per);
@@ -1123,14 +1141,7 @@ static int imx_startup(struct uart_port *port)
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 	/* Reset fifo's and state machines */
-	i = 100;
-
-	temp = readl(sport->port.membase + UCR2);
-	temp &= ~UCR2_SRST;
-	writel(temp, sport->port.membase + UCR2);
-
-	while (!(readl(sport->port.membase + UCR2) & UCR2_SRST) && (--i > 0))
-		udelay(1);
+	imx_reset(sport);
 
 	/*
 	 * Finally, clear and enable interrupts
@@ -1901,7 +1912,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 {
 	struct imx_port *sport;
 	void __iomem *base;
-	int ret = 0;
+	int ret = 0, reg;
 	struct resource *res;
 	int txirq, rxirq, rtsirq;
 
@@ -1955,6 +1966,27 @@ static int serial_imx_probe(struct platform_device *pdev)
 	}
 
 	sport->port.uartclk = clk_get_rate(sport->clk_per);
+
+	/* For register access, we only need to enable the ipg clock. */
+	ret = clk_prepare_enable(sport->clk_ipg);
+	if (ret)
+		return ret;
+
+	/* Disable interrupts before requesting them */
+	reg = readl_relaxed(sport->port.membase + UCR1);
+	reg &= ~(UCR1_ADEN | UCR1_TRDYEN | UCR1_IDEN | UCR1_RRDYEN |
+		 UCR1_TXMPTYEN | UCR1_RTSDEN);
+	writel_relaxed(reg, sport->port.membase + UCR1);
+
+	clk_disable_unprepare(sport->clk_ipg);
+
+	/*
+	 * Perform a complete reset of the UART device. Needed if we don't
+	 * come straight out of reset.
+	 */
+	writel(0, sport->port.membase + UCR2);
+	writel(0, sport->port.membase + UCR1);
+	imx_reset(sport);
 
 	/*
 	 * Allocate the IRQ(s) i.MX1 has three interrupts whereas later
