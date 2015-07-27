@@ -23,6 +23,7 @@ KASAN_SANITIZE_dumpstack_$(BITS).o := n
 CFLAGS_irq.o := -I$(src)/../include/asm/trace
 
 obj-y			:= process_$(BITS).o signal.o
+obj-$(CONFIG_COMPAT)	+= signal_compat.o
 obj-y			+= traps.o irq.o irq_$(BITS).o dumpstack_$(BITS).o
 obj-y			+= time.o ioport.o ldt.o dumpstack.o nmi.o
 obj-y			+= setup.o x86_init.o i8259.o irqinit.o jump_label.o
@@ -107,8 +108,6 @@ obj-$(CONFIG_EFI)			+= sysfb_efi.o
 
 obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o
 obj-$(CONFIG_TRACING)			+= tracepoint.o
-obj-$(CONFIG_IOSF_MBI)			+= iosf_mbi.o
-obj-$(CONFIG_PMC_ATOM)			+= pmc_atom.o
 
 ###
 # 64 bit specific files

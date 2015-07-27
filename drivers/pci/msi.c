@@ -249,7 +249,7 @@ static void msix_mask_irq(struct msi_desc *desc, u32 flag)
 
 static void msi_set_mask_bit(struct irq_data *data, u32 flag)
 {
-	struct msi_desc *desc = irq_data_get_msi(data);
+	struct msi_desc *desc = irq_data_get_msi_desc(data);
 
 	if (desc->msi_attrib.is_msix) {
 		msix_mask_irq(desc, flag);
@@ -1145,7 +1145,7 @@ EXPORT_SYMBOL(pci_enable_msix_range);
  */
 void pci_msi_domain_write_msg(struct irq_data *irq_data, struct msi_msg *msg)
 {
-	struct msi_desc *desc = irq_data->msi_desc;
+	struct msi_desc *desc = irq_data_get_msi_desc(irq_data);
 
 	/*
 	 * For MSI-X desc->irq is always equal to irq_data->irq. For
