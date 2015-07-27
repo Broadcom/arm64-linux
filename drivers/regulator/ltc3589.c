@@ -378,7 +378,7 @@ static bool ltc3589_volatile_reg(struct device *dev, unsigned int reg)
 	return false;
 }
 
-static struct reg_default ltc3589_reg_defaults[] = {
+static const struct reg_default ltc3589_reg_defaults[] = {
 	{ LTC3589_SCR1,   0x00 },
 	{ LTC3589_OVEN,   0x00 },
 	{ LTC3589_SCR2,   0x00 },
@@ -542,7 +542,6 @@ MODULE_DEVICE_TABLE(i2c, ltc3589_i2c_id);
 static struct i2c_driver ltc3589_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
-		.owner = THIS_MODULE,
 	},
 	.probe = ltc3589_probe,
 	.id_table = ltc3589_i2c_id,
