@@ -699,9 +699,15 @@ int drm_vma_info(struct seq_file *m, void *data)
 		   (void *)(unsigned long)virt_to_phys(high_memory));
 
 	list_for_each_entry(pt, &dev->vmalist, head) {
+		char lock_flag = '-';
+
 		vma = pt->vma;
 		if (!vma)
 			continue;
+		if (vma->vm_flags & VM_LOCKED)
+			lock_flag = 'l';
+		else if (vma->vm_flags & VM_LOCKONFAULT)
+			lock_flag = 'f';
 		seq_printf(m,
 			   "\n%5d 0x%pK-0x%pK %c%c%c%c%c%c 0x%08lx000",
 			   pt->pid,
@@ -710,7 +716,7 @@ int drm_vma_info(struct seq_file *m, void *data)
 			   vma->vm_flags & VM_WRITE ? 'w' : '-',
 			   vma->vm_flags & VM_EXEC ? 'x' : '-',
 			   vma->vm_flags & VM_MAYSHARE ? 's' : 'p',
-			   vma->vm_flags & VM_LOCKED ? 'l' : '-',
+			   lock_flag,
 			   vma->vm_flags & VM_IO ? 'i' : '-',
 			   vma->vm_pgoff);
 

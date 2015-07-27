@@ -1361,6 +1361,21 @@ char *clock(char *buf, char *end, struct clk *clk, struct printf_spec spec,
 	}
 }
 
+static noinline_for_stack
+char *comm_name(char *buf, char *end, struct task_struct *tsk,
+		struct printf_spec spec, const char *fmt)
+{
+	char name[TASK_COMM_LEN];
+
+	/* Caller can pass NULL instead of current. */
+	if (!tsk)
+		tsk = current;
+	/* Not using get_task_comm() in case I'm in IRQ context. */
+	memcpy(name, tsk->comm, TASK_COMM_LEN);
+	name[sizeof(name) - 1] = '\0';
+	return string(buf, end, name, spec);
+}
+
 int kptr_restrict __read_mostly;
 
 /*
@@ -1448,6 +1463,7 @@ int kptr_restrict __read_mostly;
  * - 'Cn' For a clock, it prints the name (Common Clock Framework) or address
  *        (legacy clock framework) of the clock
  * - 'Cr' For a clock, it prints the current rate of the clock
+ * - 'T' task_struct->comm
  *
  * Note: The difference between 'S' and 'F' is that on ia64 and ppc64
  * function pointers are really function descriptors, which contain a
@@ -1459,7 +1475,7 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 {
 	int default_width = 2 * sizeof(void *) + (spec.flags & SPECIAL ? 2 : 0);
 
-	if (!ptr && *fmt != 'K') {
+	if (!ptr && *fmt != 'K' && *fmt != 'T') {
 		/*
 		 * Print (null) with the same width as a pointer so it makes
 		 * tabular output look nice.
@@ -1598,6 +1614,8 @@ char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 		return dentry_name(buf, end,
 				   ((const struct file *)ptr)->f_path.dentry,
 				   spec, fmt);
+	case 'T':
+		return comm_name(buf, end, ptr, spec, fmt);
 	}
 	spec.flags |= SMALL;
 	if (spec.field_width == -1) {
@@ -2471,8 +2489,6 @@ EXPORT_SYMBOL_GPL(bprintf);
 int vsscanf(const char *buf, const char *fmt, va_list args)
 {
 	const char *str = buf;
-	char *next;
-	char digit;
 	int num = 0;
 	u8 qualifier;
 	unsigned int base;
@@ -2484,6 +2500,8 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 	bool is_sign;
 
 	while (*fmt) {
+		int len;
+
 		/* skip any white space in format */
 		/* white space in format matchs any amount of
 		 * white space, including none, in the input.
@@ -2612,81 +2630,88 @@ int vsscanf(const char *buf, const char *fmt, va_list args)
 		 */
 		str = skip_spaces(str);
 
-		digit = *str;
-		if (is_sign && digit == '-')
-			digit = *(str + 1);
-
-		if (!digit
-		    || (base == 16 && !isxdigit(digit))
-		    || (base == 10 && !isdigit(digit))
-		    || (base == 8 && (!isdigit(digit) || digit > '7'))
-		    || (base == 0 && !isdigit(digit)))
+		if (is_sign)
+			len = parse_integer(str, base, &val.s);
+		else
+			len = parse_integer(str, base, &val.u);
+		if (len < 0)
 			break;
 
-		if (is_sign)
-			val.s = qualifier != 'L' ?
-				simple_strtol(str, &next, base) :
-				simple_strtoll(str, &next, base);
-		else
-			val.u = qualifier != 'L' ?
-				simple_strtoul(str, &next, base) :
-				simple_strtoull(str, &next, base);
-
-		if (field_width > 0 && next - str > field_width) {
+		if (field_width > 0) {
 			if (base == 0)
 				_parse_integer_fixup_radix(str, &base);
-			while (next - str > field_width) {
+			while (len > field_width) {
 				if (is_sign)
 					val.s = div_s64(val.s, base);
 				else
 					val.u = div_u64(val.u, base);
-				--next;
+				len--;
 			}
 		}
 
 		switch (qualifier) {
 		case 'H':	/* that's 'hh' in format */
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (signed char)val.s)
+					goto out;
 				*va_arg(args, signed char *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned char)val.u)
+					goto out;
 				*va_arg(args, unsigned char *) = val.u;
+			}
 			break;
 		case 'h':
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (short)val.s)
+					goto out;
 				*va_arg(args, short *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned short)val.u)
+					goto out;
 				*va_arg(args, unsigned short *) = val.u;
+			}
 			break;
 		case 'l':
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (long)val.s)
+					goto out;
 				*va_arg(args, long *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned long)val.u)
+					goto out;
 				*va_arg(args, unsigned long *) = val.u;
+			}
 			break;
 		case 'L':
-			if (is_sign)
+			if (is_sign) {
 				*va_arg(args, long long *) = val.s;
-			else
+			} else {
 				*va_arg(args, unsigned long long *) = val.u;
+			}
 			break;
 		case 'Z':
 		case 'z':
+			if (val.u != (size_t)val.u)
+				goto out;
 			*va_arg(args, size_t *) = val.u;
 			break;
 		default:
-			if (is_sign)
+			if (is_sign) {
+				if (val.s != (int)val.s)
+					goto out;
 				*va_arg(args, int *) = val.s;
-			else
+			} else {
+				if (val.u != (unsigned int)val.u)
+					goto out;
 				*va_arg(args, unsigned int *) = val.u;
+			}
 			break;
 		}
 		num++;
-
-		if (!next)
-			break;
-		str = next;
+		str += len;
 	}
-
+out:
 	return num;
 }
 EXPORT_SYMBOL(vsscanf);

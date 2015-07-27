@@ -368,9 +368,9 @@ static int ocfs2_control_get_this_node(void)
 static int ocfs2_control_do_setnode_msg(struct file *file,
 					struct ocfs2_control_message_setn *msg)
 {
-	long nodenum;
-	char *ptr = NULL;
 	struct ocfs2_control_private *p = file->private_data;
+	int nodenum;
+	int rv;
 
 	if (ocfs2_control_get_handshake_state(file) !=
 	    OCFS2_CONTROL_HANDSHAKE_PROTOCOL)
@@ -384,12 +384,12 @@ static int ocfs2_control_do_setnode_msg(struct file *file,
 		return -EINVAL;
 	msg->space = msg->newline = '\0';
 
-	nodenum = simple_strtol(msg->nodestr, &ptr, 16);
-	if (!ptr || *ptr)
+	rv = parse_integer(msg->nodestr, 16, &nodenum);
+	if (rv < 0)
+		return rv;
+	if (msg->nodestr[rv])
 		return -EINVAL;
-
-	if ((nodenum == LONG_MIN) || (nodenum == LONG_MAX) ||
-	    (nodenum > INT_MAX) || (nodenum < 0))
+	if (nodenum < 0)
 		return -ERANGE;
 	p->op_this_node = nodenum;
 
@@ -399,11 +399,11 @@ static int ocfs2_control_do_setnode_msg(struct file *file,
 static int ocfs2_control_do_setversion_msg(struct file *file,
 					   struct ocfs2_control_message_setv *msg)
  {
-	long major, minor;
-	char *ptr = NULL;
+	u8 major, minor;
 	struct ocfs2_control_private *p = file->private_data;
 	struct ocfs2_protocol_version *max =
 		&ocfs2_user_plugin.sp_max_proto;
+	int rv;
 
 	if (ocfs2_control_get_handshake_state(file) !=
 	    OCFS2_CONTROL_HANDSHAKE_PROTOCOL)
@@ -418,11 +418,15 @@ static int ocfs2_control_do_setversion_msg(struct file *file,
 		return -EINVAL;
 	msg->space1 = msg->space2 = msg->newline = '\0';
 
-	major = simple_strtol(msg->major, &ptr, 16);
-	if (!ptr || *ptr)
+	rv = parse_integer(msg->major, 16, &major);
+	if (rv < 0)
+		return rv;
+	if (msg->major[rv])
 		return -EINVAL;
-	minor = simple_strtol(msg->minor, &ptr, 16);
-	if (!ptr || *ptr)
+	rv = parse_integer(msg->minor, 16, &minor);
+	if (rv < 0)
+		return rv;
+	if (msg->minor[rv])
 		return -EINVAL;
 
 	/*
@@ -430,11 +434,7 @@ static int ocfs2_control_do_setversion_msg(struct file *file,
 	 * must be between 0 and 255, inclusive.  The version passed in
 	 * must be within the maximum version supported by the filesystem.
 	 */
-	if ((major == LONG_MIN) || (major == LONG_MAX) ||
-	    (major > (u8)-1) || (major < 1))
-		return -ERANGE;
-	if ((minor == LONG_MIN) || (minor == LONG_MAX) ||
-	    (minor > (u8)-1) || (minor < 0))
+	if (major < 1)
 		return -ERANGE;
 	if ((major != max->pv_major) ||
 	    (minor > max->pv_minor))
@@ -449,8 +449,8 @@ static int ocfs2_control_do_setversion_msg(struct file *file,
 static int ocfs2_control_do_down_msg(struct file *file,
 				     struct ocfs2_control_message_down *msg)
 {
-	long nodenum;
-	char *p = NULL;
+	int nodenum;
+	int rv;
 
 	if (ocfs2_control_get_handshake_state(file) !=
 	    OCFS2_CONTROL_HANDSHAKE_VALID)
@@ -465,12 +465,12 @@ static int ocfs2_control_do_down_msg(struct file *file,
 		return -EINVAL;
 	msg->space1 = msg->space2 = msg->newline = '\0';
 
-	nodenum = simple_strtol(msg->nodestr, &p, 16);
-	if (!p || *p)
+	rv = parse_integer(msg->nodestr, 16, &nodenum);
+	if (rv < 0)
+		return rv;
+	if (msg->nodestr[rv])
 		return -EINVAL;
-
-	if ((nodenum == LONG_MIN) || (nodenum == LONG_MAX) ||
-	    (nodenum > INT_MAX) || (nodenum < 0))
+	if (nodenum < 0)
 		return -ERANGE;
 
 	ocfs2_control_send_down(msg->uuid, nodenum);

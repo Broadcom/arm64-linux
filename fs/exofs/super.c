@@ -84,6 +84,7 @@ static int parse_options(char *options, struct exofs_mountopt *opts)
 	substring_t args[MAX_OPT_ARGS];
 	int option;
 	bool s_pid = false;
+	int rv;
 
 	EXOFS_DBGMSG("parse_options %s\n", options);
 	/* defaults */
@@ -92,7 +93,6 @@ static int parse_options(char *options, struct exofs_mountopt *opts)
 
 	while ((p = strsep(&options, ",")) != NULL) {
 		int token;
-		char str[32];
 
 		if (!*p)
 			continue;
@@ -108,9 +108,11 @@ static int parse_options(char *options, struct exofs_mountopt *opts)
 			opts->is_osdname = true;
 			break;
 		case Opt_pid:
-			if (0 == match_strlcpy(str, &args[0], sizeof(str)))
+			rv = parse_integer(args[0].from, 0, &opts->pid);
+			if (rv < 0)
+				return rv;
+			if (args[0].from[rv] != '\0')
 				return -EINVAL;
-			opts->pid = simple_strtoull(str, NULL, 0);
 			if (opts->pid < EXOFS_MIN_PID) {
 				EXOFS_ERR("Partition ID must be >= %u",
 					  EXOFS_MIN_PID);

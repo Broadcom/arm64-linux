@@ -754,7 +754,7 @@ static int shmem_writepage(struct page *page, struct writeback_control *wbc)
 	index = page->index;
 	inode = mapping->host;
 	info = SHMEM_I(inode);
-	if (info->flags & VM_LOCKED)
+	if (info->flags & (VM_LOCKED | VM_LOCKONFAULT))
 		goto redirty;
 	if (!total_swap_pages)
 		goto redirty;
@@ -981,7 +981,7 @@ static int shmem_replace_page(struct page **pagep, gfp_t gfp,
 	copy_highpage(newpage, oldpage);
 	flush_dcache_page(newpage);
 
-	__set_page_locked(newpage);
+	__SetPageLocked(newpage);
 	SetPageUptodate(newpage);
 	SetPageSwapBacked(newpage);
 	set_page_private(newpage, swap_index);
@@ -1173,7 +1173,7 @@ repeat:
 		}
 
 		__SetPageSwapBacked(page);
-		__set_page_locked(page);
+		__SetPageLocked(page);
 		if (sgp == SGP_WRITE)
 			__SetPageReferenced(page);
 
@@ -2736,6 +2736,7 @@ static int shmem_parse_options(char *options, struct shmem_sb_info *sbinfo,
 	struct mempolicy *mpol = NULL;
 	uid_t uid;
 	gid_t gid;
+	int rv;
 
 	while (options != NULL) {
 		this_char = options;
@@ -2789,14 +2790,15 @@ static int shmem_parse_options(char *options, struct shmem_sb_info *sbinfo,
 		} else if (!strcmp(this_char,"mode")) {
 			if (remount)
 				continue;
-			sbinfo->mode = simple_strtoul(value, &rest, 8) & 07777;
-			if (*rest)
+			rv = parse_integer(value, 8, &sbinfo->mode);
+			if (rv < 0 || value[rv])
 				goto bad_val;
+			sbinfo->mode &= 07777;
 		} else if (!strcmp(this_char,"uid")) {
 			if (remount)
 				continue;
-			uid = simple_strtoul(value, &rest, 0);
-			if (*rest)
+			rv = parse_integer(value, 0, &uid);
+			if (rv < 0 || value[rv])
 				goto bad_val;
 			sbinfo->uid = make_kuid(current_user_ns(), uid);
 			if (!uid_valid(sbinfo->uid))
@@ -2804,8 +2806,8 @@ static int shmem_parse_options(char *options, struct shmem_sb_info *sbinfo,
 		} else if (!strcmp(this_char,"gid")) {
 			if (remount)
 				continue;
-			gid = simple_strtoul(value, &rest, 0);
-			if (*rest)
+			rv = parse_integer(value, 0, &gid);
+			if (rv < 0 || value[rv])
 				goto bad_val;
 			sbinfo->gid = make_kgid(current_user_ns(), gid);
 			if (!gid_valid(sbinfo->gid))
@@ -3363,8 +3365,8 @@ put_path:
  * shmem_kernel_file_setup - get an unlinked file living in tmpfs which must be
  * 	kernel internal.  There will be NO LSM permission checks against the
  * 	underlying inode.  So users of this interface must do LSM checks at a
- * 	higher layer.  The one user is the big_key implementation.  LSM checks
- * 	are provided at the key level rather than the inode level.
+ *	higher layer.  The users are the big_key and shm implementations.  LSM
+ *	checks are provided at the key or shm level rather than the inode.
  * @name: name for dentry (to be seen in /proc/<pid>/maps
  * @size: size to be set for the file
  * @flags: VM_NORESERVE suppresses pre-accounting of the entire object size

@@ -325,3 +325,6 @@ ENTRY(sys_call_table)
 	.long sys_eventfd
 	.long sys_fallocate
 	.long sys_setns			/* 325 */
+	.long sys_mlock2
+	.long sys_munlock2
+	.long sys_munlockall2

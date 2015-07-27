@@ -532,6 +532,9 @@ sys_call_table:
 	.quad sys_getrandom
 	.quad sys_memfd_create
 	.quad sys_execveat
+	.quad sys_mlock2
+	.quad sys_munlock2			/* 515 */
+	.quad sys_munlockall2
 
 	.size sys_call_table, . - sys_call_table
 	.type sys_call_table, @object

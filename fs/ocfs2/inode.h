@@ -81,8 +81,6 @@ struct ocfs2_inode_info
 	tid_t i_sync_tid;
 	tid_t i_datasync_tid;
 
-	wait_queue_head_t append_dio_wq;
-
 	struct dquot *i_dquot[MAXQUOTAS];
 };
 
@@ -139,6 +137,9 @@ int ocfs2_drop_inode(struct inode *inode);
 /* Flags for ocfs2_iget() */
 #define OCFS2_FI_FLAG_SYSFILE		0x1
 #define OCFS2_FI_FLAG_ORPHAN_RECOVERY	0x2
+#define OCFS2_FI_FLAG_FILECHECK_CHK	0x4
+#define OCFS2_FI_FLAG_FILECHECK_FIX	0x8
+
 struct inode *ocfs2_ilookup(struct super_block *sb, u64 feoff);
 struct inode *ocfs2_iget(struct ocfs2_super *osb, u64 feoff, unsigned flags,
 			 int sysfile_type);

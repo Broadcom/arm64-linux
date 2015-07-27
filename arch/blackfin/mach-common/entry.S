@@ -1704,6 +1704,9 @@ ENTRY(_sys_call_table)
 	.long _sys_memfd_create		/* 390 */
 	.long _sys_bpf
 	.long _sys_execveat
+	.long _sys_mlock2
+	.long _sys_munlock2
+	.long _sys_munlockall2		/* 395 */
 
 	.rept NR_syscalls-(.-_sys_call_table)/4
 	.long _sys_ni_syscall

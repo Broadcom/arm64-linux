@@ -47,7 +47,7 @@ enum {Enabled, Magic};
 typedef struct {
 	struct list_head list;
 	unsigned long flags;		/* type, status, etc. */
-	int offset;			/* offset of magic */
+	unsigned int offset;		/* offset of magic */
 	int size;			/* size of magic/mask */
 	char *magic;			/* magic or filename extension */
 	char *mask;			/* mask, NULL for exact match */
@@ -370,7 +370,13 @@ static Node *create_entry(const char __user *buffer, size_t count)
 		if (!s)
 			goto einval;
 		*s++ = '\0';
-		e->offset = simple_strtoul(p, &p, 10);
+		err = parse_integer(p, 10, &e->offset);
+		if (err < 0) {
+			kfree(e);
+			goto out;
+
+		}
+		p += err;
 		if (*p++)
 			goto einval;
 		pr_debug("register: offset: %#x\n", e->offset);
@@ -548,7 +554,7 @@ static void entry_status(Node *e, char *page)
 	if (!test_bit(Magic, &e->flags)) {
 		sprintf(dp, "extension .%s\n", e->magic);
 	} else {
-		dp += sprintf(dp, "offset %i\nmagic ", e->offset);
+		dp += sprintf(dp, "offset %u\nmagic ", e->offset);
 		dp = bin2hex(dp, e->magic, e->size);
 		if (e->mask) {
 			dp += sprintf(dp, "\nmask ");

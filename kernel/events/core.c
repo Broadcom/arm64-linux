@@ -5816,6 +5816,8 @@ static void perf_event_mmap_event(struct perf_mmap_event *mmap_event)
 			flags |= MAP_EXECUTABLE;
 		if (vma->vm_flags & VM_LOCKED)
 			flags |= MAP_LOCKED;
+		if (vma->vm_flags & VM_LOCKONFAULT)
+			flags |= MAP_LOCKONFAULT;
 		if (vma->vm_flags & VM_HUGETLB)
 			flags |= MAP_HUGETLB;
 
@@ -8872,7 +8874,7 @@ static void perf_event_init_cpu(int cpu)
 	mutex_unlock(&swhash->hlist_mutex);
 }
 
-#if defined CONFIG_HOTPLUG_CPU || defined CONFIG_KEXEC
+#if defined CONFIG_HOTPLUG_CPU || defined CONFIG_KEXEC_CORE
 static void __perf_event_exit_context(void *__info)
 {
 	struct remove_event re = { .detach_group = true };

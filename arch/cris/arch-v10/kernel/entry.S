@@ -963,6 +963,9 @@ sys_call_table:
 	.long sys_memfd_create
 	.long sys_bpf
 	.long sys_execveat
+	.long sys_mlock2		/* 360 */
+	.long sys_munlock2
+	.long sys_munlockall2
 
         /*
          * NOTE!! This doesn't have to be exact - we just have

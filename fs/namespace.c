@@ -37,7 +37,7 @@ static int __init set_mhash_entries(char *str)
 {
 	if (!str)
 		return 0;
-	mhash_entries = simple_strtoul(str, &str, 0);
+	parse_integer(str, 0, &mhash_entries);
 	return 1;
 }
 __setup("mhash_entries=", set_mhash_entries);
@@ -47,7 +47,7 @@ static int __init set_mphash_entries(char *str)
 {
 	if (!str)
 		return 0;
-	mphash_entries = simple_strtoul(str, &str, 0);
+	parse_integer(str, 0, &mphash_entries);
 	return 1;
 }
 __setup("mphash_entries=", set_mphash_entries);

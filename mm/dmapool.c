@@ -242,7 +242,7 @@ static struct dma_page *pool_alloc_page(struct dma_pool *pool, gfp_t mem_flags)
 	return page;
 }
 
-static inline int is_page_busy(struct dma_page *page)
+static inline bool is_page_busy(struct dma_page *page)
 {
 	return page->in_use != 0;
 }
@@ -270,6 +270,9 @@ static void pool_free_page(struct dma_pool *pool, struct dma_page *page)
 void dma_pool_destroy(struct dma_pool *pool)
 {
 	bool empty = false;
+
+	if (unlikely(!pool))
+		return;
 
 	mutex_lock(&pools_reg_lock);
 	mutex_lock(&pools_lock);

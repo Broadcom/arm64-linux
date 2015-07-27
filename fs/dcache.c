@@ -3369,7 +3369,7 @@ static int __init set_dhash_entries(char *str)
 {
 	if (!str)
 		return 0;
-	dhash_entries = simple_strtoul(str, &str, 0);
+	parse_integer(str, 0, &dhash_entries);
 	return 1;
 }
 __setup("dhash_entries=", set_dhash_entries);
@@ -3442,22 +3442,15 @@ void __init vfs_caches_init_early(void)
 	inode_init_early();
 }
 
-void __init vfs_caches_init(unsigned long mempages)
+void __init vfs_caches_init(void)
 {
-	unsigned long reserve;
-
-	/* Base hash sizes on available memory, with a reserve equal to
-           150% of current kernel size */
-
-	reserve = min((mempages - nr_free_pages()) * 3/2, mempages - 1);
-	mempages -= reserve;
-
 	names_cachep = kmem_cache_create("names_cache", PATH_MAX, 0,
 			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
 
 	dcache_init();
 	inode_init();
-	files_init(mempages);
+	files_init();
+	files_maxfiles_init();
 	mnt_init();
 	bdev_cache_init();
 	chrdev_init();

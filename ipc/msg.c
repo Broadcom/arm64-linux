@@ -37,6 +37,7 @@
 #include <linux/rwsem.h>
 #include <linux/nsproxy.h>
 #include <linux/ipc_namespace.h>
+#include <linux/freezer.h>
 
 #include <asm/current.h>
 #include <linux/uaccess.h>
@@ -675,7 +676,7 @@ long do_msgsnd(int msqid, long mtype, void __user *mtext,
 
 		ipc_unlock_object(&msq->q_perm);
 		rcu_read_unlock();
-		schedule();
+		freezable_schedule();
 
 		rcu_read_lock();
 		ipc_lock_object(&msq->q_perm);
@@ -917,7 +918,7 @@ long do_msgrcv(int msqid, void __user *buf, size_t bufsz, long msgtyp, int msgfl
 
 		ipc_unlock_object(&msq->q_perm);
 		rcu_read_unlock();
-		schedule();
+		freezable_schedule();
 
 		/* Lockless receive, part 1:
 		 * Disable preemption.  We don't hold a reference to the queue

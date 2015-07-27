@@ -332,5 +332,8 @@
 #define __NR_memfd_create		1340
 #define __NR_bpf			1341
 #define __NR_execveat			1342
+#define __NR_mlock2			1343
+#define __NR_munlock2			1344
+#define __NR_munlockall2		1345
 
 #endif /* _UAPI_ASM_IA64_UNISTD_H */

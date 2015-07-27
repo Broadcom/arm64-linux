@@ -116,7 +116,7 @@ static int v9fs_parse_options(struct v9fs_session_info *v9ses, char *opts)
 	substring_t args[MAX_OPT_ARGS];
 	char *p;
 	int option = 0;
-	char *s, *e;
+	char *s;
 	int ret = 0;
 
 	/* setup defaults */
@@ -269,8 +269,10 @@ static int v9fs_parse_options(struct v9fs_session_info *v9ses, char *opts)
 			} else {
 				uid_t uid;
 				v9ses->flags |= V9FS_ACCESS_SINGLE;
-				uid = simple_strtoul(s, &e, 10);
-				if (*e != '\0') {
+				ret = parse_integer(s, 10, &uid);
+				if (ret < 0)
+					return ret;
+				if (s[ret] != '\0') {
 					ret = -EINVAL;
 					pr_info("Unknown access argument %s\n",
 						s);

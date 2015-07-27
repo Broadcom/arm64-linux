@@ -429,4 +429,7 @@ EXPORT(sysn32_call_table)
 	PTR	sys_memfd_create
 	PTR	sys_bpf
 	PTR	compat_sys_execveat		/* 6320 */
+	PTR	sys_mlock2
+	PTR	sys_munlock2
+	PTR	sys_munlockall2
 	.size	sysn32_call_table,.-sysn32_call_table

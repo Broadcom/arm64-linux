@@ -250,7 +250,7 @@ static ssize_t codec_reg_write_file(struct file *file,
 	char buf[32];
 	size_t buf_size;
 	char *start = buf;
-	unsigned long reg, value;
+	unsigned int reg, value;
 	struct snd_soc_codec *codec = file->private_data;
 	int ret;
 
@@ -261,10 +261,13 @@ static ssize_t codec_reg_write_file(struct file *file,
 
 	while (*start == ' ')
 		start++;
-	reg = simple_strtoul(start, &start, 16);
+	ret = parse_integer(start, 16, &reg);
+	if (ret < 0)
+		return ret;
+	start += ret;
 	while (*start == ' ')
 		start++;
-	ret = kstrtoul(start, 16, &value);
+	ret = kstrtouint(start, 16, &value);
 	if (ret)
 		return ret;
 

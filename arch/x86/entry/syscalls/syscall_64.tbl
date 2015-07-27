@@ -329,6 +329,11 @@
 320	common	kexec_file_load		sys_kexec_file_load
 321	common	bpf			sys_bpf
 322	64	execveat		stub_execveat
+323	common	userfaultfd		sys_userfaultfd
+324	common	mlock2			sys_mlock2
+325	common	munlock2		sys_munlock2
+326	common	munlockall2		sys_munlockall2
+
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact

@@ -36,7 +36,7 @@
 #include <linux/debugfs.h>
 #include <linux/slab.h>
 #include <linux/bitmap.h>
-
+#include <linux/ktime.h>
 #include "heartbeat.h"
 #include "tcp.h"
 #include "nodemanager.h"
@@ -1061,37 +1061,6 @@ bail:
 	return ret;
 }
 
-/* Subtract b from a, storing the result in a. a *must* have a larger
- * value than b. */
-static void o2hb_tv_subtract(struct timeval *a,
-			     struct timeval *b)
-{
-	/* just return 0 when a is after b */
-	if (a->tv_sec < b->tv_sec ||
-	    (a->tv_sec == b->tv_sec && a->tv_usec < b->tv_usec)) {
-		a->tv_sec = 0;
-		a->tv_usec = 0;
-		return;
-	}
-
-	a->tv_sec -= b->tv_sec;
-	a->tv_usec -= b->tv_usec;
-	while ( a->tv_usec < 0 ) {
-		a->tv_sec--;
-		a->tv_usec += 1000000;
-	}
-}
-
-static unsigned int o2hb_elapsed_msecs(struct timeval *start,
-				       struct timeval *end)
-{
-	struct timeval res = *end;
-
-	o2hb_tv_subtract(&res, start);
-
-	return res.tv_sec * 1000 + res.tv_usec / 1000;
-}
-
 /*
  * we ride the region ref that the region dir holds.  before the region
  * dir is removed and drops it ref it will wait to tear down this
@@ -1102,7 +1071,7 @@ static int o2hb_thread(void *data)
 	int i, ret;
 	struct o2hb_region *reg = data;
 	struct o2hb_bio_wait_ctxt write_wc;
-	struct timeval before_hb, after_hb;
+	ktime_t before_hb, after_hb;
 	unsigned int elapsed_msec;
 
 	mlog(ML_HEARTBEAT|ML_KTHREAD, "hb thread running\n");
@@ -1119,18 +1088,18 @@ static int o2hb_thread(void *data)
 		 * hr_timeout_ms between disk writes. On busy systems
 		 * this should result in a heartbeat which is less
 		 * likely to time itself out. */
-		do_gettimeofday(&before_hb);
+		before_hb = ktime_get_real();
 
 		ret = o2hb_do_disk_heartbeat(reg);
 
-		do_gettimeofday(&after_hb);
-		elapsed_msec = o2hb_elapsed_msecs(&before_hb, &after_hb);
+		after_hb = ktime_get_real();
+
+		elapsed_msec = (unsigned int)
+				ktime_ms_delta(after_hb, before_hb);
 
 		mlog(ML_HEARTBEAT,
-		     "start = %lu.%lu, end = %lu.%lu, msec = %u, ret = %d\n",
-		     before_hb.tv_sec, (unsigned long) before_hb.tv_usec,
-		     after_hb.tv_sec, (unsigned long) after_hb.tv_usec,
-		     elapsed_msec, ret);
+		     "start = %lld, end = %lld, msec = %u, ret = %d\n",
+		     before_hb.tv64, after_hb.tv64, elapsed_msec, ret);
 
 		if (!kthread_should_stop() &&
 		    elapsed_msec < reg->hr_timeout_ms) {
@@ -1484,13 +1453,12 @@ static int o2hb_read_block_input(struct o2hb_region *reg,
 				 unsigned long *ret_bytes,
 				 unsigned int *ret_bits)
 {
-	unsigned long bytes;
-	char *p = (char *)page;
+	unsigned int bytes;
+	int rv;
 
-	bytes = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	rv = kstrtouint(page, 0, &bytes);
+	if (rv < 0)
+		return rv;
 	/* Heartbeat and fs min / max block sizes are the same. */
 	if (bytes > 4096 || bytes < 512)
 		return -ERANGE;
@@ -1543,18 +1511,14 @@ static ssize_t o2hb_region_start_block_write(struct o2hb_region *reg,
 					     const char *page,
 					     size_t count)
 {
-	unsigned long long tmp;
-	char *p = (char *)page;
+	int rv;
 
 	if (reg->hr_bdev)
 		return -EINVAL;
 
-	tmp = simple_strtoull(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
-	reg->hr_start_block = tmp;
-
+	rv = kstrtoull(page, 0, &reg->hr_start_block);
+	if (rv < 0)
+		return rv;
 	return count;
 }
 
@@ -1568,20 +1532,19 @@ static ssize_t o2hb_region_blocks_write(struct o2hb_region *reg,
 					const char *page,
 					size_t count)
 {
-	unsigned long tmp;
-	char *p = (char *)page;
+	unsigned int tmp;
+	int rv;
 
 	if (reg->hr_bdev)
 		return -EINVAL;
 
-	tmp = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	rv = kstrtouint(page, 0, &tmp);
+	if (rv < 0)
+		return rv;
 	if (tmp > O2NM_MAX_NODES || tmp == 0)
 		return -ERANGE;
 
-	reg->hr_blocks = (unsigned int)tmp;
+	reg->hr_blocks = tmp;
 
 	return count;
 }
@@ -1620,17 +1583,13 @@ static int o2hb_map_slot_data(struct o2hb_region *reg)
 	struct o2hb_disk_slot *slot;
 
 	reg->hr_tmp_block = kmalloc(reg->hr_block_bytes, GFP_KERNEL);
-	if (reg->hr_tmp_block == NULL) {
-		mlog_errno(-ENOMEM);
+	if (reg->hr_tmp_block == NULL)
 		return -ENOMEM;
-	}
 
 	reg->hr_slots = kcalloc(reg->hr_blocks,
 				sizeof(struct o2hb_disk_slot), GFP_KERNEL);
-	if (reg->hr_slots == NULL) {
-		mlog_errno(-ENOMEM);
+	if (reg->hr_slots == NULL)
 		return -ENOMEM;
-	}
 
 	for(i = 0; i < reg->hr_blocks; i++) {
 		slot = &reg->hr_slots[i];
@@ -1646,17 +1605,13 @@ static int o2hb_map_slot_data(struct o2hb_region *reg)
 
 	reg->hr_slot_data = kcalloc(reg->hr_num_pages, sizeof(struct page *),
 				    GFP_KERNEL);
-	if (!reg->hr_slot_data) {
-		mlog_errno(-ENOMEM);
+	if (!reg->hr_slot_data)
 		return -ENOMEM;
-	}
 
 	for(i = 0; i < reg->hr_num_pages; i++) {
 		page = alloc_page(GFP_KERNEL);
-		if (!page) {
-			mlog_errno(-ENOMEM);
+		if (!page)
 			return -ENOMEM;
-		}
 
 		reg->hr_slot_data[i] = page;
 
@@ -1688,10 +1643,8 @@ static int o2hb_populate_slot_data(struct o2hb_region *reg)
 	struct o2hb_disk_heartbeat_block *hb_block;
 
 	ret = o2hb_read_slots(reg, reg->hr_blocks);
-	if (ret) {
-		mlog_errno(ret);
+	if (ret)
 		goto out;
-	}
 
 	/* We only want to get an idea of the values initially in each
 	 * slot, so we do no verification - o2hb_check_slot will
@@ -1717,9 +1670,8 @@ static ssize_t o2hb_region_dev_write(struct o2hb_region *reg,
 				     size_t count)
 {
 	struct task_struct *hb_task;
-	long fd;
+	int fd;
 	int sectsize;
-	char *p = (char *)page;
 	struct fd f;
 	struct inode *inode;
 	ssize_t ret = -EINVAL;
@@ -1733,10 +1685,9 @@ static ssize_t o2hb_region_dev_write(struct o2hb_region *reg,
 	if (o2nm_this_node() == O2NM_MAX_NODES)
 		goto out;
 
-	fd = simple_strtol(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
+	ret = kstrtoint(page, 0, &fd);
+	if (ret < 0)
 		goto out;
-
 	if (fd < 0 || fd >= INT_MAX)
 		goto out;
 
@@ -2210,12 +2161,12 @@ static ssize_t o2hb_heartbeat_group_threshold_store(struct o2hb_heartbeat_group 
 						    const char *page,
 						    size_t count)
 {
-	unsigned long tmp;
-	char *p = (char *)page;
+	unsigned int tmp;
+	int rv;
 
-	tmp = simple_strtoul(p, &p, 10);
-	if (!p || (*p && (*p != '\n')))
-                return -EINVAL;
+	rv = kstrtouint(page, 10, &tmp);
+	if (rv < 0)
+		return rv;
 
 	/* this will validate ranges for us. */
 	o2hb_dead_threshold_set((unsigned int) tmp);

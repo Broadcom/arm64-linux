@@ -195,13 +195,12 @@ static ssize_t o2nm_node_num_write(struct o2nm_node *node, const char *page,
 				   size_t count)
 {
 	struct o2nm_cluster *cluster = to_o2nm_cluster_from_node(node);
-	unsigned long tmp;
-	char *p = (char *)page;
+	unsigned int tmp;
+	int rv;
 
-	tmp = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	rv = parse_integer(page, 0, &tmp);
+	if (rv < 0)
+		return rv;
 	if (tmp >= O2NM_MAX_NODES)
 		return -ERANGE;
 
@@ -215,16 +214,15 @@ static ssize_t o2nm_node_num_write(struct o2nm_node *node, const char *page,
 
 	write_lock(&cluster->cl_nodes_lock);
 	if (cluster->cl_nodes[tmp])
-		p = NULL;
+		rv = -EEXIST;
 	else  {
 		cluster->cl_nodes[tmp] = node;
 		node->nd_num = tmp;
 		set_bit(tmp, cluster->cl_nodes_bitmap);
 	}
 	write_unlock(&cluster->cl_nodes_lock);
-	if (p == NULL)
-		return -EEXIST;
-
+	if (rv < 0)
+		return rv;
 	return count;
 }
 static ssize_t o2nm_node_ipv4_port_read(struct o2nm_node *node, char *page)
@@ -235,13 +233,12 @@ static ssize_t o2nm_node_ipv4_port_read(struct o2nm_node *node, char *page)
 static ssize_t o2nm_node_ipv4_port_write(struct o2nm_node *node,
 					 const char *page, size_t count)
 {
-	unsigned long tmp;
-	char *p = (char *)page;
+	u16 tmp;
+	int rv;
 
-	tmp = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	rv = kstrtou16(page, 0, &tmp);
+	if (rv < 0)
+		return rv;
 	if (tmp == 0)
 		return -EINVAL;
 	if (tmp >= (u16)-1)
@@ -305,13 +302,11 @@ static ssize_t o2nm_node_local_write(struct o2nm_node *node, const char *page,
 {
 	struct o2nm_cluster *cluster = to_o2nm_cluster_from_node(node);
 	unsigned long tmp;
-	char *p = (char *)page;
 	ssize_t ret;
 
-	tmp = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	ret = kstrtoul(page, 0, &tmp);
+	if (ret < 0)
+		return ret;
 	tmp = !!tmp; /* boolean of whether this node wants to be local */
 
 	/* setting local turns on networking rx for now so we require having
@@ -484,16 +479,15 @@ struct o2nm_cluster_attribute {
 static ssize_t o2nm_cluster_attr_write(const char *page, ssize_t count,
                                        unsigned int *val)
 {
-	unsigned long tmp;
-	char *p = (char *)page;
+	unsigned int tmp;
+	int rv;
 
-	tmp = simple_strtoul(p, &p, 0);
-	if (!p || (*p && (*p != '\n')))
-		return -EINVAL;
-
+	rv = kstrtouint(page, 0, &tmp);
+	if (rv < 0)
+		return rv;
 	if (tmp == 0)
 		return -EINVAL;
-	if (tmp >= (u32)-1)
+	if (tmp >= (unsigned int)-1)
 		return -ERANGE;
 
 	*val = tmp;

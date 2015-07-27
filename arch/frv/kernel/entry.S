@@ -1515,5 +1515,8 @@ sys_call_table:
 	.long sys_rt_tgsigqueueinfo	/* 335 */
 	.long sys_perf_event_open
 	.long sys_setns
+	.long sys_mlock2
+	.long sys_munlock2
+	.long sys_munlockall2		/* 340 */
 
 syscall_table_size = (. - sys_call_table)

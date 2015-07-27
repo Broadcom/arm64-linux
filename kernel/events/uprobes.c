@@ -201,7 +201,7 @@ static int __replace_page(struct vm_area_struct *vma, unsigned long addr,
 		try_to_free_swap(page);
 	pte_unmap_unlock(ptep, ptl);
 
-	if (vma->vm_flags & VM_LOCKED)
+	if (vma->vm_flags & (VM_LOCKED | VM_LOCKONFAULT))
 		munlock_vma_page(page);
 	put_page(page);
 

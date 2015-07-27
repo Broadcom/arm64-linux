@@ -246,10 +246,11 @@ void __vma_link_list(struct mm_struct *mm, struct vm_area_struct *vma,
 extern long populate_vma_page_range(struct vm_area_struct *vma,
 		unsigned long start, unsigned long end, int *nonblocking);
 extern void munlock_vma_pages_range(struct vm_area_struct *vma,
-			unsigned long start, unsigned long end);
+		unsigned long start, unsigned long end, vm_flags_t to_drop);
 static inline void munlock_vma_pages_all(struct vm_area_struct *vma)
 {
-	munlock_vma_pages_range(vma, vma->vm_start, vma->vm_end);
+	munlock_vma_pages_range(vma, vma->vm_start, vma->vm_end,
+				VM_LOCKED | VM_LOCKONFAULT);
 }
 
 /*
@@ -426,4 +427,19 @@ unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 #define ALLOC_CMA		0x80 /* allow allocations from CMA areas */
 #define ALLOC_FAIR		0x100 /* fair zone allocation */
 
+enum ttu_flags;
+struct tlbflush_unmap_batch;
+
+#ifdef CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH
+void try_to_unmap_flush(void);
+void try_to_unmap_flush_dirty(void);
+#else
+static inline void try_to_unmap_flush(void)
+{
+}
+static inline void try_to_unmap_flush_dirty(void)
+{
+}
+
+#endif /* CONFIG_ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH */
 #endif	/* __MM_INTERNAL_H */

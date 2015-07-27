@@ -44,7 +44,7 @@ static int match_one(char *s, const char *p, substring_t args[])
 		p = meta + 1;
 
 		if (isdigit(*p))
-			len = simple_strtoul(p, (char **) &p, 10);
+			p += parse_integer(p, 10, (unsigned int *)&len);
 		else if (*p == '%') {
 			if (*s++ != '%')
 				return 0;
@@ -57,6 +57,11 @@ static int match_one(char *s, const char *p, substring_t args[])
 
 		args[argc].from = s;
 		switch (*p++) {
+			union {
+				int i;
+				unsigned int u;
+			} u;
+
 		case 's': {
 			size_t str_len = strlen(s);
 
@@ -68,19 +73,20 @@ static int match_one(char *s, const char *p, substring_t args[])
 			break;
 		}
 		case 'd':
-			simple_strtol(s, &args[argc].to, 0);
+			len = parse_integer(s, 0, &u.i);
 			goto num;
 		case 'u':
-			simple_strtoul(s, &args[argc].to, 0);
+			len = parse_integer(s, 0, &u.u);
 			goto num;
 		case 'o':
-			simple_strtoul(s, &args[argc].to, 8);
+			len = parse_integer(s, 8, &u.u);
 			goto num;
 		case 'x':
-			simple_strtoul(s, &args[argc].to, 16);
+			len = parse_integer(s, 16, &u.u);
 		num:
-			if (args[argc].to == args[argc].from)
+			if (len < 0)
 				return 0;
+			args[argc].to = args[argc].from + len;
 			break;
 		default:
 			return 0;
@@ -127,10 +133,8 @@ EXPORT_SYMBOL(match_token);
  */
 static int match_number(substring_t *s, int *result, int base)
 {
-	char *endp;
 	char *buf;
 	int ret;
-	long val;
 	size_t len = s->to - s->from;
 
 	buf = kmalloc(len + 1, GFP_KERNEL);
@@ -139,16 +143,11 @@ static int match_number(substring_t *s, int *result, int base)
 	memcpy(buf, s->from, len);
 	buf[len] = '\0';
 
-	ret = 0;
-	val = simple_strtol(buf, &endp, base);
-	if (endp == buf)
-		ret = -EINVAL;
-	else if (val < (long)INT_MIN || val > (long)INT_MAX)
-		ret = -ERANGE;
-	else
-		*result = (int) val;
+	ret = parse_integer(buf, base, result);
 	kfree(buf);
-	return ret;
+	if (ret < 0)
+		return ret;
+	return 0;
 }
 
 /**

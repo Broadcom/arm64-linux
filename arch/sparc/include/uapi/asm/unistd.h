@@ -416,8 +416,11 @@
 #define __NR_memfd_create	348
 #define __NR_bpf		349
 #define __NR_execveat		350
+#define __NR_mlock2		351
+#define __NR_munlock2		352
+#define __NR_munlockall2	353
 
-#define NR_syscalls		351
+#define NR_syscalls		354
 
 /* Bitmask values returned from kern_features system call.  */
 #define KERN_FEATURE_MIXED_MODE_STACK	0x00000001

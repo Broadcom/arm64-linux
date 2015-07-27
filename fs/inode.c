@@ -1828,7 +1828,7 @@ static int __init set_ihash_entries(char *str)
 {
 	if (!str)
 		return 0;
-	ihash_entries = simple_strtoul(str, &str, 0);
+	parse_integer(str, 0, &ihash_entries);
 	return 1;
 }
 __setup("ihash_entries=", set_ihash_entries);

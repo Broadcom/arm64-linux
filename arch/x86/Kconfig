@@ -41,6 +41,7 @@ config X86
 	select ARCH_USE_CMPXCHG_LOCKREF		if X86_64
 	select ARCH_USE_QUEUED_RWLOCKS
 	select ARCH_USE_QUEUED_SPINLOCKS
+	select ARCH_WANT_BATCHED_UNMAP_TLB_FLUSH if SMP
 	select ARCH_WANTS_DYNAMIC_TASK_STRUCT
 	select ARCH_WANT_FRAME_POINTERS
 	select ARCH_WANT_IPC_PARSE_VERSION	if X86_32
@@ -1724,6 +1725,7 @@ source kernel/Kconfig.hz
 
 config KEXEC
 	bool "kexec system call"
+	select KEXEC_CORE
 	---help---
 	  kexec is a system call that implements the ability to shutdown your
 	  current kernel, and to start another kernel.  It is like a reboot
@@ -1740,8 +1742,8 @@ config KEXEC
 
 config KEXEC_FILE
 	bool "kexec file based system call"
+	select KEXEC_CORE
 	select BUILD_BIN2C
-	depends on KEXEC
 	depends on X86_64
 	depends on CRYPTO=y
 	depends on CRYPTO_SHA256=y

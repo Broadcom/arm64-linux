@@ -73,7 +73,7 @@ SYSCALL_DEFINE3(msync, unsigned long, start, size_t, len, int, flags)
 		}
 		/* Here vma->vm_start <= start < vma->vm_end. */
 		if ((flags & MS_INVALIDATE) &&
-				(vma->vm_flags & VM_LOCKED)) {
+			    (vma->vm_flags & (VM_LOCKED | VM_LOCKONFAULT))) {
 			error = -EBUSY;
 			goto out_unlock;
 		}

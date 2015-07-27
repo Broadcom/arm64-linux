@@ -433,6 +433,9 @@
 #define __IGNORE_munlock
 #define __IGNORE_mlockall
 #define __IGNORE_munlockall
+#define __IGNORE_mlock2
+#define __IGNORE_munlock2
+#define __IGNORE_munlockall2
 #define __IGNORE_mincore
 #define __IGNORE_madvise
 #define __IGNORE_remap_file_pages
