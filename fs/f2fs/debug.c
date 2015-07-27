@@ -33,8 +33,8 @@ static void update_general_status(struct f2fs_sb_info *sbi)
 	int i;
 
 	/* validation check of the segment numbers */
-	si->hit_ext = sbi->read_hit_ext;
-	si->total_ext = sbi->total_hit_ext;
+	si->hit_ext = atomic_read(&sbi->read_hit_ext);
+	si->total_ext = atomic_read(&sbi->total_hit_ext);
 	si->ext_tree = sbi->total_ext_tree;
 	si->ext_node = atomic_read(&sbi->total_ext_node);
 	si->ndirty_node = get_pages(sbi, F2FS_DIRTY_NODES);
@@ -49,6 +49,7 @@ static void update_general_status(struct f2fs_sb_info *sbi)
 	si->valid_count = valid_user_blocks(sbi);
 	si->valid_node_count = valid_node_count(sbi);
 	si->valid_inode_count = valid_inode_count(sbi);
+	si->inline_xattr = atomic_read(&sbi->inline_xattr);
 	si->inline_inode = atomic_read(&sbi->inline_inode);
 	si->inline_dir = atomic_read(&sbi->inline_dir);
 	si->utilization = utilization(sbi);
@@ -226,6 +227,8 @@ static int stat_show(struct seq_file *s, void *v)
 		seq_printf(s, "Other: %u)\n  - Data: %u\n",
 			   si->valid_node_count - si->valid_inode_count,
 			   si->valid_count - si->valid_node_count);
+		seq_printf(s, "  - Inline_xattr Inode: %u\n",
+			   si->inline_xattr);
 		seq_printf(s, "  - Inline_data Inode: %u\n",
 			   si->inline_inode);
 		seq_printf(s, "  - Inline_dentry Inode: %u\n",
@@ -366,6 +369,10 @@ int f2fs_build_stats(struct f2fs_sb_info *sbi)
 	si->sbi = sbi;
 	sbi->stat_info = si;
 
+	atomic_set(&sbi->total_hit_ext, 0);
+	atomic_set(&sbi->read_hit_ext, 0);
+
+	atomic_set(&sbi->inline_xattr, 0);
 	atomic_set(&sbi->inline_inode, 0);
 	atomic_set(&sbi->inline_dir, 0);
 	atomic_set(&sbi->inplace_count, 0);

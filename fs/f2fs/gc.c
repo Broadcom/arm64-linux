@@ -487,7 +487,7 @@ block_t start_bidx_of_node(unsigned int node_ofs, struct f2fs_inode_info *fi)
 	return bidx * ADDRS_PER_BLOCK + ADDRS_PER_INODE(fi);
 }
 
-static int check_dnode(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
+static bool is_alive(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
 		struct node_info *dni, block_t blkaddr, unsigned int *nofs)
 {
 	struct page *node_page;
@@ -500,13 +500,13 @@ static int check_dnode(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
 
 	node_page = get_node_page(sbi, nid);
 	if (IS_ERR(node_page))
-		return 0;
+		return false;
 
 	get_node_info(sbi, nid, dni);
 
 	if (sum->version != dni->version) {
 		f2fs_put_page(node_page, 1);
-		return 0;
+		return false;
 	}
 
 	*nofs = ofs_of_node(node_page);
@@ -514,8 +514,8 @@ static int check_dnode(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
 	f2fs_put_page(node_page, 1);
 
 	if (source_blkaddr != blkaddr)
-		return 0;
-	return 1;
+		return false;
+	return true;
 }
 
 static void move_encrypted_block(struct inode *inode, block_t bidx)
@@ -552,31 +552,41 @@ static void move_encrypted_block(struct inode *inode, block_t bidx)
 	fio.page = page;
 	fio.blk_addr = dn.data_blkaddr;
 
-	fio.encrypted_page = grab_cache_page(META_MAPPING(fio.sbi), fio.blk_addr);
+	fio.encrypted_page = pagecache_get_page(META_MAPPING(fio.sbi),
+					fio.blk_addr,
+					FGP_LOCK|FGP_CREAT,
+					GFP_NOFS);
 	if (!fio.encrypted_page)
 		goto put_out;
 
-	f2fs_submit_page_bio(&fio);
-
-	/* allocate block address */
-	f2fs_wait_on_page_writeback(dn.node_page, NODE);
-
-	allocate_data_block(fio.sbi, NULL, fio.blk_addr,
-					&fio.blk_addr, &sum, CURSEG_COLD_DATA);
-	dn.data_blkaddr = fio.blk_addr;
+	err = f2fs_submit_page_bio(&fio);
+	if (err)
+		goto put_page_out;
 
 	/* write page */
 	lock_page(fio.encrypted_page);
+
+	if (unlikely(!PageUptodate(fio.encrypted_page)))
+		goto put_page_out;
+	if (unlikely(fio.encrypted_page->mapping != META_MAPPING(fio.sbi)))
+		goto put_page_out;
+
 	set_page_writeback(fio.encrypted_page);
+
+	/* allocate block address */
+	f2fs_wait_on_page_writeback(dn.node_page, NODE);
+	allocate_data_block(fio.sbi, NULL, fio.blk_addr,
+					&fio.blk_addr, &sum, CURSEG_COLD_DATA);
 	fio.rw = WRITE_SYNC;
 	f2fs_submit_page_mbio(&fio);
 
+	dn.data_blkaddr = fio.blk_addr;
 	set_data_blkaddr(&dn);
 	f2fs_update_extent_cache(&dn);
 	set_inode_flag(F2FS_I(inode), FI_APPEND_WRITE);
 	if (page->index == 0)
 		set_inode_flag(F2FS_I(inode), FI_FIRST_BLOCK_WRITTEN);
-
+put_page_out:
 	f2fs_put_page(fio.encrypted_page, 1);
 put_out:
 	f2fs_put_dnode(&dn);
@@ -658,7 +668,7 @@ next_step:
 		}
 
 		/* Get an inode by ino with checking validity */
-		if (check_dnode(sbi, entry, &dni, start_addr + off, &nofs) == 0)
+		if (!is_alive(sbi, entry, &dni, start_addr + off, &nofs))
 			continue;
 
 		if (phase == 1) {
