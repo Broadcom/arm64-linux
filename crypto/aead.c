@@ -307,9 +307,22 @@ static void crypto_aead_show(struct seq_file *m, struct crypto_alg *alg)
 	seq_printf(m, "geniv        : <none>\n");
 }
 
+static void crypto_aead_free_instance(struct crypto_instance *inst)
+{
+	struct aead_instance *aead = aead_instance(inst);
+
+	if (!aead->free) {
+		inst->tmpl->free(inst);
+		return;
+	}
+
+	aead->free(aead);
+}
+
 static const struct crypto_type crypto_new_aead_type = {
 	.extsize = crypto_alg_extsize,
 	.init_tfm = crypto_aead_init_tfm,
+	.free = crypto_aead_free_instance,
 #ifdef CONFIG_PROC_FS
 	.show = crypto_aead_show,
 #endif
@@ -591,7 +604,7 @@ struct aead_instance *aead_geniv_alloc(struct crypto_template *tmpl,
 		return ERR_CAST(algt);
 
 	if ((algt->type ^ (CRYPTO_ALG_TYPE_AEAD | CRYPTO_ALG_GENIV)) &
-	    algt->mask)
+	    algt->mask & ~CRYPTO_ALG_AEAD_NEW)
 		return ERR_PTR(-EINVAL);
 
 	name = crypto_attr_alg_name(tb[1]);
@@ -670,7 +683,8 @@ struct aead_instance *aead_geniv_alloc(struct crypto_template *tmpl,
 	    CRYPTO_MAX_ALG_NAME)
 		goto err_drop_alg;
 
-	inst->alg.base.cra_flags = alg->base.cra_flags & CRYPTO_ALG_ASYNC;
+	inst->alg.base.cra_flags = alg->base.cra_flags &
+				   (CRYPTO_ALG_ASYNC | CRYPTO_ALG_AEAD_NEW);
 	inst->alg.base.cra_priority = alg->base.cra_priority;
 	inst->alg.base.cra_blocksize = alg->base.cra_blocksize;
 	inst->alg.base.cra_alignmask = alg->base.cra_alignmask;

@@ -175,7 +175,7 @@ static int instantiate_rng(struct device *ctrldev, int state_handle_mask,
 {
 	struct caam_drv_private *ctrlpriv = dev_get_drvdata(ctrldev);
 	struct caam_ctrl __iomem *ctrl;
-	u32 *desc, status, rdsta_val;
+	u32 *desc, status = 0, rdsta_val;
 	int ret = 0, sh_idx;
 
 	ctrl = (struct caam_ctrl __iomem *)ctrlpriv->ctrl;
@@ -207,7 +207,8 @@ static int instantiate_rng(struct device *ctrldev, int state_handle_mask,
 		 * CAAM eras), then try again.
 		 */
 		rdsta_val = rd_reg32(&ctrl->r4tst[0].rdsta) & RDSTA_IFMASK;
-		if (status || !(rdsta_val & (1 << sh_idx)))
+		if ((status && status != JRSTA_SSRC_JUMP_HALT_CC) ||
+		    !(rdsta_val & (1 << sh_idx)))
 			ret = -EAGAIN;
 		if (ret)
 			break;
@@ -370,14 +371,14 @@ static void kick_trng(struct platform_device *pdev, int ent_delay)
 int caam_get_era(void)
 {
 	struct device_node *caam_node;
-	for_each_compatible_node(caam_node, NULL, "fsl,sec-v4.0") {
-		const uint32_t *prop = (uint32_t *)of_get_property(caam_node,
-				"fsl,sec-era",
-				NULL);
-		return prop ? *prop : -ENOTSUPP;
-	}
+	int ret;
+	u32 prop;
 
-	return -ENOTSUPP;
+	caam_node = of_find_compatible_node(NULL, NULL, "fsl,sec-v4.0");
+	ret = of_property_read_u32(caam_node, "fsl,sec-era", &prop);
+	of_node_put(caam_node);
+
+	return IS_ERR_VALUE(ret) ? -ENOTSUPP : prop;
 }
 EXPORT_SYMBOL(caam_get_era);
 
@@ -444,8 +445,9 @@ static int caam_probe(struct platform_device *pdev)
 	 * Enable DECO watchdogs and, if this is a PHYS_ADDR_T_64BIT kernel,
 	 * long pointers in master configuration register
 	 */
-	setbits32(&ctrl->mcr, MCFGR_WDENABLE |
-		  (sizeof(dma_addr_t) == sizeof(u64) ? MCFGR_LONG_PTR : 0));
+	clrsetbits_be32(&ctrl->mcr, MCFGR_AWCACHE_MASK, MCFGR_AWCACHE_CACH |
+			MCFGR_WDENABLE | (sizeof(dma_addr_t) == sizeof(u64) ?
+					 MCFGR_LONG_PTR : 0));
 
 	/*
 	 *  Read the Compile Time paramters and SCFGR to determine

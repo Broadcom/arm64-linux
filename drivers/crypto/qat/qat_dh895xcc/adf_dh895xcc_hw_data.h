@@ -48,6 +48,7 @@
 #define ADF_DH895x_HW_DATA_H_
 
 /* PCIe configuration space */
+#define ADF_DH895XCC_SRAM_BAR 0
 #define ADF_DH895XCC_PMISC_BAR 1
 #define ADF_DH895XCC_ETR_BAR 2
 #define ADF_DH895XCC_RX_RINGS_OFFSET 8
@@ -84,5 +85,7 @@
 #define ADF_DH895XCC_ADMINMSGLR_OFFSET (0x3A000 + 0x578)
 #define ADF_DH895XCC_MAILBOX_BASE_OFFSET 0x20970
 #define ADF_DH895XCC_MAILBOX_STRIDE 0x1000
+/* FW names */
 #define ADF_DH895XCC_FW "qat_895xcc.bin"
+#define ADF_DH895XCC_MMP "qat_mmp.bin"
 #endif
