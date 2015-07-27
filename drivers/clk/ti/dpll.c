@@ -15,6 +15,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/slab.h>
 #include <linux/err.h>
@@ -341,7 +342,6 @@ static void __init of_ti_dpll_setup(struct device_node *node,
 	struct clk_init_data *init = NULL;
 	const char **parent_names = NULL;
 	struct dpll_data *dd = NULL;
-	int i;
 	u8 dpll_mode = 0;
 
 	dd = kzalloc(sizeof(*dd), GFP_KERNEL);
@@ -370,8 +370,7 @@ static void __init of_ti_dpll_setup(struct device_node *node,
 	if (!parent_names)
 		goto cleanup;
 
-	for (i = 0; i < init->num_parents; i++)
-		parent_names[i] = of_clk_get_parent_name(node, i);
+	of_clk_parent_fill(node, parent_names, init->num_parents);
 
 	init->parent_names = parent_names;
 

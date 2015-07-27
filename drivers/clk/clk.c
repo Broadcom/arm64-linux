@@ -9,6 +9,7 @@
  * Standard functionality for the common clock API.  See Documentation/clk.txt
  */
 
+#include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/clk/clk-conf.h>
 #include <linux/module.h>
@@ -58,6 +59,8 @@ struct clk_core {
 	unsigned long		flags;
 	unsigned int		enable_count;
 	unsigned int		prepare_count;
+	unsigned long		min_rate;
+	unsigned long		max_rate;
 	unsigned long		accuracy;
 	int			phase;
 	struct hlist_head	children;
@@ -111,12 +114,14 @@ static void clk_prepare_unlock(void)
 }
 
 static unsigned long clk_enable_lock(void)
+	__acquires(enable_lock)
 {
 	unsigned long flags;
 
 	if (!spin_trylock_irqsave(&enable_lock, flags)) {
 		if (enable_owner == current) {
 			enable_refcnt++;
+			__acquire(enable_lock);
 			return flags;
 		}
 		spin_lock_irqsave(&enable_lock, flags);
@@ -129,12 +134,15 @@ static unsigned long clk_enable_lock(void)
 }
 
 static void clk_enable_unlock(unsigned long flags)
+	__releases(enable_lock)
 {
 	WARN_ON_ONCE(enable_owner != current);
 	WARN_ON_ONCE(enable_refcnt == 0);
 
-	if (--enable_refcnt)
+	if (--enable_refcnt) {
+		__release(enable_lock);
 		return;
+	}
 	enable_owner = NULL;
 	spin_unlock_irqrestore(&enable_lock, flags);
 }
@@ -436,28 +444,31 @@ static bool mux_is_better_rate(unsigned long rate, unsigned long now,
 	return now <= rate && now > best;
 }
 
-static long
-clk_mux_determine_rate_flags(struct clk_hw *hw, unsigned long rate,
-			     unsigned long min_rate,
-			     unsigned long max_rate,
-			     unsigned long *best_parent_rate,
-			     struct clk_hw **best_parent_p,
+static int
+clk_mux_determine_rate_flags(struct clk_hw *hw, struct clk_rate_request *req,
 			     unsigned long flags)
 {
 	struct clk_core *core = hw->core, *parent, *best_parent = NULL;
-	int i, num_parents;
-	unsigned long parent_rate, best = 0;
+	int i, num_parents, ret;
+	unsigned long best = 0;
+	struct clk_rate_request parent_req = *req;
 
 	/* if NO_REPARENT flag set, pass through to current parent */
 	if (core->flags & CLK_SET_RATE_NO_REPARENT) {
 		parent = core->parent;
-		if (core->flags & CLK_SET_RATE_PARENT)
-			best = __clk_determine_rate(parent ? parent->hw : NULL,
-						    rate, min_rate, max_rate);
-		else if (parent)
+		if (core->flags & CLK_SET_RATE_PARENT) {
+			ret = __clk_determine_rate(parent ? parent->hw : NULL,
+						   &parent_req);
+			if (ret)
+				return ret;
+
+			best = parent_req.rate;
+		} else if (parent) {
 			best = clk_core_get_rate_nolock(parent);
-		else
+		} else {
 			best = clk_core_get_rate_nolock(core);
+		}
+
 		goto out;
 	}
 
@@ -467,24 +478,33 @@ clk_mux_determine_rate_flags(struct clk_hw *hw, unsigned long rate,
 		parent = clk_core_get_parent_by_index(core, i);
 		if (!parent)
 			continue;
-		if (core->flags & CLK_SET_RATE_PARENT)
-			parent_rate = __clk_determine_rate(parent->hw, rate,
-							   min_rate,
-							   max_rate);
-		else
-			parent_rate = clk_core_get_rate_nolock(parent);
-		if (mux_is_better_rate(rate, parent_rate, best, flags)) {
+
+		if (core->flags & CLK_SET_RATE_PARENT) {
+			parent_req = *req;
+			ret = __clk_determine_rate(parent->hw, &parent_req);
+			if (ret)
+				continue;
+		} else {
+			parent_req.rate = clk_core_get_rate_nolock(parent);
+		}
+
+		if (mux_is_better_rate(req->rate, parent_req.rate,
+				       best, flags)) {
 			best_parent = parent;
-			best = parent_rate;
+			best = parent_req.rate;
 		}
 	}
 
+	if (!best_parent)
+		return -EINVAL;
+
 out:
 	if (best_parent)
-		*best_parent_p = best_parent->hw;
-	*best_parent_rate = best;
+		req->best_parent_hw = best_parent->hw;
+	req->best_parent_rate = best;
+	req->rate = best;
 
-	return best;
+	return 0;
 }
 
 struct clk *__clk_lookup(const char *name)
@@ -500,8 +520,8 @@ static void clk_core_get_boundaries(struct clk_core *core,
 {
 	struct clk *clk_user;
 
-	*min_rate = 0;
-	*max_rate = ULONG_MAX;
+	*min_rate = core->min_rate;
+	*max_rate = core->max_rate;
 
 	hlist_for_each_entry(clk_user, &core->clks, clks_node)
 		*min_rate = max(*min_rate, clk_user->min_rate);
@@ -510,33 +530,30 @@ static void clk_core_get_boundaries(struct clk_core *core,
 		*max_rate = min(*max_rate, clk_user->max_rate);
 }
 
+void clk_hw_set_rate_range(struct clk_hw *hw, unsigned long min_rate,
+			   unsigned long max_rate)
+{
+	hw->core->min_rate = min_rate;
+	hw->core->max_rate = max_rate;
+}
+EXPORT_SYMBOL_GPL(clk_hw_set_rate_range);
+
 /*
  * Helper for finding best parent to provide a given frequency. This can be used
  * directly as a determine_rate callback (e.g. for a mux), or from a more
  * complex clock that may combine a mux with other operations.
  */
-long __clk_mux_determine_rate(struct clk_hw *hw, unsigned long rate,
-			      unsigned long min_rate,
-			      unsigned long max_rate,
-			      unsigned long *best_parent_rate,
-			      struct clk_hw **best_parent_p)
+int __clk_mux_determine_rate(struct clk_hw *hw,
+			     struct clk_rate_request *req)
 {
-	return clk_mux_determine_rate_flags(hw, rate, min_rate, max_rate,
-					    best_parent_rate,
-					    best_parent_p, 0);
+	return clk_mux_determine_rate_flags(hw, req, 0);
 }
 EXPORT_SYMBOL_GPL(__clk_mux_determine_rate);
 
-long __clk_mux_determine_rate_closest(struct clk_hw *hw, unsigned long rate,
-			      unsigned long min_rate,
-			      unsigned long max_rate,
-			      unsigned long *best_parent_rate,
-			      struct clk_hw **best_parent_p)
+int __clk_mux_determine_rate_closest(struct clk_hw *hw,
+				     struct clk_rate_request *req)
 {
-	return clk_mux_determine_rate_flags(hw, rate, min_rate, max_rate,
-					    best_parent_rate,
-					    best_parent_p,
-					    CLK_MUX_ROUND_CLOSEST);
+	return clk_mux_determine_rate_flags(hw, req, CLK_MUX_ROUND_CLOSEST);
 }
 EXPORT_SYMBOL_GPL(__clk_mux_determine_rate_closest);
 
@@ -759,14 +776,11 @@ int clk_enable(struct clk *clk)
 }
 EXPORT_SYMBOL_GPL(clk_enable);
 
-static unsigned long clk_core_round_rate_nolock(struct clk_core *core,
-						unsigned long rate,
-						unsigned long min_rate,
-						unsigned long max_rate)
+static int clk_core_round_rate_nolock(struct clk_core *core,
+				      struct clk_rate_request *req)
 {
-	unsigned long parent_rate = 0;
 	struct clk_core *parent;
-	struct clk_hw *parent_hw;
+	long rate;
 
 	lockdep_assert_held(&prepare_lock);
 
@@ -774,21 +788,28 @@ static unsigned long clk_core_round_rate_nolock(struct clk_core *core,
 		return 0;
 
 	parent = core->parent;
-	if (parent)
-		parent_rate = parent->rate;
+	if (parent) {
+		req->best_parent_hw = parent->hw;
+		req->best_parent_rate = parent->rate;
+	} else {
+		req->best_parent_hw = NULL;
+		req->best_parent_rate = 0;
+	}
 
 	if (core->ops->determine_rate) {
-		parent_hw = parent ? parent->hw : NULL;
-		return core->ops->determine_rate(core->hw, rate,
-						min_rate, max_rate,
-						&parent_rate, &parent_hw);
-	} else if (core->ops->round_rate)
-		return core->ops->round_rate(core->hw, rate, &parent_rate);
-	else if (core->flags & CLK_SET_RATE_PARENT)
-		return clk_core_round_rate_nolock(core->parent, rate, min_rate,
-						  max_rate);
-	else
-		return core->rate;
+		return core->ops->determine_rate(core->hw, req);
+	} else if (core->ops->round_rate) {
+		rate = core->ops->round_rate(core->hw, req->rate,
+					     &req->best_parent_rate);
+		if (rate < 0)
+			return rate;
+
+		req->rate = rate;
+	} else if (core->flags & CLK_SET_RATE_PARENT) {
+		return clk_core_round_rate_nolock(parent, req);
+	}
+
+	return 0;
 }
 
 /**
@@ -800,15 +821,14 @@ static unsigned long clk_core_round_rate_nolock(struct clk_core *core,
  *
  * Useful for clk_ops such as .set_rate and .determine_rate.
  */
-unsigned long __clk_determine_rate(struct clk_hw *hw,
-				   unsigned long rate,
-				   unsigned long min_rate,
-				   unsigned long max_rate)
+int __clk_determine_rate(struct clk_hw *hw, struct clk_rate_request *req)
 {
-	if (!hw)
+	if (!hw) {
+		req->rate = 0;
 		return 0;
+	}
 
-	return clk_core_round_rate_nolock(hw->core, rate, min_rate, max_rate);
+	return clk_core_round_rate_nolock(hw->core, req);
 }
 EXPORT_SYMBOL_GPL(__clk_determine_rate);
 
@@ -821,15 +841,20 @@ EXPORT_SYMBOL_GPL(__clk_determine_rate);
  */
 unsigned long __clk_round_rate(struct clk *clk, unsigned long rate)
 {
-	unsigned long min_rate;
-	unsigned long max_rate;
+	struct clk_rate_request req;
+	int ret;
 
 	if (!clk)
 		return 0;
 
-	clk_core_get_boundaries(clk->core, &min_rate, &max_rate);
+	clk_core_get_boundaries(clk->core, &req.min_rate, &req.max_rate);
+	req.rate = rate;
 
-	return clk_core_round_rate_nolock(clk->core, rate, min_rate, max_rate);
+	ret = clk_core_round_rate_nolock(clk->core, &req);
+	if (ret)
+		return 0;
+
+	return req.rate;
 }
 EXPORT_SYMBOL_GPL(__clk_round_rate);
 
@@ -1249,7 +1274,6 @@ static struct clk_core *clk_calc_new_rates(struct clk_core *core,
 {
 	struct clk_core *top = core;
 	struct clk_core *old_parent, *parent;
-	struct clk_hw *parent_hw;
 	unsigned long best_parent_rate = 0;
 	unsigned long new_rate;
 	unsigned long min_rate;
@@ -1270,20 +1294,29 @@ static struct clk_core *clk_calc_new_rates(struct clk_core *core,
 
 	/* find the closest rate and parent clk/rate */
 	if (core->ops->determine_rate) {
-		parent_hw = parent ? parent->hw : NULL;
-		ret = core->ops->determine_rate(core->hw, rate,
-					       min_rate,
-					       max_rate,
-					       &best_parent_rate,
-					       &parent_hw);
+		struct clk_rate_request req;
+
+		req.rate = rate;
+		req.min_rate = min_rate;
+		req.max_rate = max_rate;
+		if (parent) {
+			req.best_parent_hw = parent->hw;
+			req.best_parent_rate = parent->rate;
+		} else {
+			req.best_parent_hw = NULL;
+			req.best_parent_rate = 0;
+		}
+
+		ret = core->ops->determine_rate(core->hw, &req);
 		if (ret < 0)
 			return NULL;
 
-		new_rate = ret;
-		parent = parent_hw ? parent_hw->core : NULL;
+		best_parent_rate = req.best_parent_rate;
+		new_rate = req.rate;
+		parent = req.best_parent_hw ? req.best_parent_hw->core : NULL;
 	} else if (core->ops->round_rate) {
 		ret = core->ops->round_rate(core->hw, rate,
-					   &best_parent_rate);
+					    &best_parent_rate);
 		if (ret < 0)
 			return NULL;
 
@@ -2479,6 +2512,8 @@ struct clk *clk_register(struct device *dev, struct clk_hw *hw)
 	core->hw = hw;
 	core->flags = hw->init->flags;
 	core->num_parents = hw->init->num_parents;
+	core->min_rate = 0;
+	core->max_rate = ULONG_MAX;
 	hw->core = core;
 
 	/* allocate local copy in case parent_names is __initdata */
@@ -3054,8 +3089,6 @@ struct clock_provider {
 	struct list_head node;
 };
 
-static LIST_HEAD(clk_provider_list);
-
 /*
  * This function looks for a parent clock. If there is one, then it
  * checks that the provider for this parent clock was initialized, in
@@ -3106,14 +3139,24 @@ void __init of_clk_init(const struct of_device_id *matches)
 	struct clock_provider *clk_provider, *next;
 	bool is_init_done;
 	bool force = false;
+	LIST_HEAD(clk_provider_list);
 
 	if (!matches)
 		matches = &__clk_of_table;
 
 	/* First prepare the list of the clocks providers */
 	for_each_matching_node_and_match(np, matches, &match) {
-		struct clock_provider *parent =
-			kzalloc(sizeof(struct clock_provider),	GFP_KERNEL);
+		struct clock_provider *parent;
+
+		parent = kzalloc(sizeof(*parent), GFP_KERNEL);
+		if (!parent) {
+			list_for_each_entry_safe(clk_provider, next,
+						 &clk_provider_list, node) {
+				list_del(&clk_provider->node);
+				kfree(clk_provider);
+			}
+			return;
+		}
 
 		parent->clk_init_cb = match->data;
 		parent->np = np;

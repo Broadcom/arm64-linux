@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -816,7 +817,7 @@ static void __init rk3188_clk_init(struct device_node *np)
 
 		rate = pll->rate_table;
 		while (rate->rate > 0) {
-			rate->bwadj = 0;
+			rate->nb = 1;
 			rate++;
 		}
 	}

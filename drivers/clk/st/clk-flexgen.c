@@ -5,6 +5,7 @@
  * Author:  Maxime Coquelin <maxime.coquelin@st.com> for ST-Microelectronics.
  * License terms:  GNU General Public License (GPL), version 2  */
 
+#include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -243,7 +244,7 @@ static const char ** __init flexgen_get_parents(struct device_node *np,
 						       int *num_parents)
 {
 	const char **parents;
-	int nparents, i;
+	int nparents;
 
 	nparents = of_clk_get_parent_count(np);
 	if (WARN_ON(nparents <= 0))
@@ -253,10 +254,8 @@ static const char ** __init flexgen_get_parents(struct device_node *np,
 	if (!parents)
 		return NULL;
 
-	for (i = 0; i < nparents; i++)
-		parents[i] = of_clk_get_parent_name(np, i);
+	*num_parents = of_clk_parent_fill(np, parents, nparents);
 
-	*num_parents = nparents;
 	return parents;
 }
 
