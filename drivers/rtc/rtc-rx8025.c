@@ -161,9 +161,7 @@ static void rx8025_work(struct work_struct *work)
 	if (status & RX8025_BIT_CTRL2_CTFG) {
 		/* periodic */
 		status &= ~RX8025_BIT_CTRL2_CTFG;
-		local_irq_disable();
 		rtc_update_irq(rx8025->rtc, 1, RTC_PF | RTC_IRQF);
-		local_irq_enable();
 	}
 
 	if (status & RX8025_BIT_CTRL2_DAFG) {
@@ -172,9 +170,7 @@ static void rx8025_work(struct work_struct *work)
 		if (rx8025_write_reg(client, RX8025_REG_CTRL1,
 				     rx8025->ctrl1 & ~RX8025_BIT_CTRL1_DALE))
 			goto out;
-		local_irq_disable();
 		rtc_update_irq(rx8025->rtc, 1, RTC_AF | RTC_IRQF);
-		local_irq_enable();
 	}
 
 	/* acknowledge IRQ */
@@ -628,7 +624,6 @@ static int rx8025_remove(struct i2c_client *client)
 static struct i2c_driver rx8025_driver = {
 	.driver = {
 		.name = "rtc-rx8025",
-		.owner = THIS_MODULE,
 	},
 	.probe		= rx8025_probe,
 	.remove		= rx8025_remove,

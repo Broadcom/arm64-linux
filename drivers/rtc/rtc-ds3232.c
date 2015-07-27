@@ -443,7 +443,7 @@ static int ds3232_remove(struct i2c_client *client)
 {
 	struct ds3232 *ds3232 = i2c_get_clientdata(client);
 
-	if (client->irq >= 0) {
+	if (client->irq > 0) {
 		mutex_lock(&ds3232->mutex);
 		ds3232->exiting = 1;
 		mutex_unlock(&ds3232->mutex);
@@ -500,7 +500,6 @@ MODULE_DEVICE_TABLE(i2c, ds3232_id);
 static struct i2c_driver ds3232_driver = {
 	.driver = {
 		.name = "rtc-ds3232",
-		.owner = THIS_MODULE,
 		.pm	= &ds3232_pm_ops,
 	},
 	.probe = ds3232_probe,
