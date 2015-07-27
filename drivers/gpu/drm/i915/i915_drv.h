@@ -206,11 +206,11 @@ enum intel_display_power_domain {
 
 enum hpd_pin {
 	HPD_NONE = 0,
-	HPD_PORT_A = HPD_NONE, /* PORT_A is internal */
 	HPD_TV = HPD_NONE,     /* TV is known to be unreliable */
 	HPD_CRT,
 	HPD_SDVO_B,
 	HPD_SDVO_C,
+	HPD_PORT_A,
 	HPD_PORT_B,
 	HPD_PORT_C,
 	HPD_PORT_D,
@@ -2610,6 +2610,8 @@ struct i915_params {
 	bool reset;
 	bool disable_display;
 	bool disable_vtd_wa;
+	bool enable_guc_submission;
+	int guc_log_level;
 	int use_mmio_flip;
 	int mmio_debug;
 	bool verbose_state_checks;
@@ -2646,7 +2648,7 @@ void intel_hpd_irq_handler(struct drm_device *dev, u32 pin_mask, u32 long_mask);
 void intel_hpd_init(struct drm_i915_private *dev_priv);
 void intel_hpd_init_work(struct drm_i915_private *dev_priv);
 void intel_hpd_cancel_work(struct drm_i915_private *dev_priv);
-enum port intel_hpd_pin_to_port(enum hpd_pin pin);
+bool intel_hpd_pin_to_port(enum hpd_pin pin, enum port *port);
 
 /* i915_irq.c */
 void i915_queue_hangcheck(struct drm_device *dev);
@@ -2758,6 +2760,8 @@ void i915_gem_object_init(struct drm_i915_gem_object *obj,
 			 const struct drm_i915_gem_object_ops *ops);
 struct drm_i915_gem_object *i915_gem_alloc_object(struct drm_device *dev,
 						  size_t size);
+struct drm_i915_gem_object *i915_gem_object_create_from_data(
+		struct drm_device *dev, const void *data, size_t size);
 void i915_init_vm(struct drm_i915_private *dev_priv,
 		  struct i915_address_space *vm);
 void i915_gem_free_object(struct drm_gem_object *obj);

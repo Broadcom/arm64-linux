@@ -4030,24 +4030,14 @@ static ssize_t i915_displayport_test_active_write(struct file *file,
 {
 	char *input_buffer;
 	int status = 0;
-	struct seq_file *m;
 	struct drm_device *dev;
 	struct drm_connector *connector;
 	struct list_head *connector_list;
 	struct intel_dp *intel_dp;
 	int val = 0;
 
-	m = file->private_data;
-	if (!m) {
-		status = -ENODEV;
-		return status;
-	}
-	dev = m->private;
+	dev = ((struct seq_file *)file->private_data)->private;
 
-	if (!dev) {
-		status = -ENODEV;
-		return status;
-	}
 	connector_list = &dev->mode_config.connector_list;
 
 	if (len == 0)
@@ -4071,9 +4061,7 @@ static ssize_t i915_displayport_test_active_write(struct file *file,
 		    DRM_MODE_CONNECTOR_DisplayPort)
 			continue;
 
-		if (connector->connector_type ==
-		    DRM_MODE_CONNECTOR_DisplayPort &&
-		    connector->status == connector_status_connected &&
+		if (connector->status == connector_status_connected &&
 		    connector->encoder != NULL) {
 			intel_dp = enc_to_intel_dp(connector->encoder);
 			status = kstrtoint(input_buffer, 10, &val);
@@ -4104,9 +4092,6 @@ static int i915_displayport_test_active_show(struct seq_file *m, void *data)
 	struct drm_connector *connector;
 	struct list_head *connector_list = &dev->mode_config.connector_list;
 	struct intel_dp *intel_dp;
-
-	if (!dev)
-		return -ENODEV;
 
 	list_for_each_entry(connector, connector_list, head) {
 
@@ -4152,9 +4137,6 @@ static int i915_displayport_test_data_show(struct seq_file *m, void *data)
 	struct list_head *connector_list = &dev->mode_config.connector_list;
 	struct intel_dp *intel_dp;
 
-	if (!dev)
-		return -ENODEV;
-
 	list_for_each_entry(connector, connector_list, head) {
 
 		if (connector->connector_type !=
@@ -4193,9 +4175,6 @@ static int i915_displayport_test_type_show(struct seq_file *m, void *data)
 	struct drm_connector *connector;
 	struct list_head *connector_list = &dev->mode_config.connector_list;
 	struct intel_dp *intel_dp;
-
-	if (!dev)
-		return -ENODEV;
 
 	list_for_each_entry(connector, connector_list, head) {
 
