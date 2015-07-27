@@ -213,7 +213,17 @@ struct i40e_hw_capabilities {
 	bool dcb;
 	bool fcoe;
 	bool iscsi; /* Indicates iSCSI enabled */
-	bool mfp_mode_1;
+	bool flex10_enable;
+	bool flex10_capable;
+	u32  flex10_mode;
+#define I40E_FLEX10_MODE_UNKNOWN	0x0
+#define I40E_FLEX10_MODE_DCC		0x1
+#define I40E_FLEX10_MODE_DCI		0x2
+
+	u32 flex10_status;
+#define I40E_FLEX10_STATUS_DCC_ERROR	0x1
+#define I40E_FLEX10_STATUS_VC_MODE	0x2
+
 	bool mgmt_cem;
 	bool ieee_1588;
 	bool iwarp;
@@ -481,6 +491,7 @@ struct i40e_hw {
 
 	/* debug mask */
 	u32 debug_mask;
+	char err_str[16];
 };
 
 static inline bool i40e_is_vf(struct i40e_hw *hw)
@@ -594,7 +605,7 @@ enum i40e_rx_desc_status_bits {
 };
 
 #define I40E_RXD_QW1_STATUS_SHIFT	0
-#define I40E_RXD_QW1_STATUS_MASK	(((1 << I40E_RX_DESC_STATUS_LAST) - 1) \
+#define I40E_RXD_QW1_STATUS_MASK	((BIT(I40E_RX_DESC_STATUS_LAST) - 1) \
 					 << I40E_RXD_QW1_STATUS_SHIFT)
 
 #define I40E_RXD_QW1_STATUS_TSYNINDX_SHIFT   I40E_RX_DESC_STATUS_TSYNINDX_SHIFT
@@ -602,8 +613,8 @@ enum i40e_rx_desc_status_bits {
 					     I40E_RXD_QW1_STATUS_TSYNINDX_SHIFT)
 
 #define I40E_RXD_QW1_STATUS_TSYNVALID_SHIFT  I40E_RX_DESC_STATUS_TSYNVALID_SHIFT
-#define I40E_RXD_QW1_STATUS_TSYNVALID_MASK	(0x1UL << \
-					 I40E_RXD_QW1_STATUS_TSYNVALID_SHIFT)
+#define I40E_RXD_QW1_STATUS_TSYNVALID_MASK \
+				    BIT_ULL(I40E_RXD_QW1_STATUS_TSYNVALID_SHIFT)
 
 enum i40e_rx_desc_fltstat_values {
 	I40E_RX_DESC_FLTSTAT_NO_DATA	= 0,
@@ -737,8 +748,7 @@ enum i40e_rx_ptype_payload_layer {
 					 I40E_RXD_QW1_LENGTH_HBUF_SHIFT)
 
 #define I40E_RXD_QW1_LENGTH_SPH_SHIFT	63
-#define I40E_RXD_QW1_LENGTH_SPH_MASK	(0x1ULL << \
-					 I40E_RXD_QW1_LENGTH_SPH_SHIFT)
+#define I40E_RXD_QW1_LENGTH_SPH_MASK	BIT_ULL(I40E_RXD_QW1_LENGTH_SPH_SHIFT)
 
 enum i40e_rx_desc_ext_status_bits {
 	/* Note: These are predefined bit offsets */
@@ -914,12 +924,12 @@ enum i40e_tx_ctx_desc_eipt_offload {
 #define I40E_TXD_CTX_QW0_NATT_SHIFT	9
 #define I40E_TXD_CTX_QW0_NATT_MASK	(0x3ULL << I40E_TXD_CTX_QW0_NATT_SHIFT)
 
-#define I40E_TXD_CTX_UDP_TUNNELING	(0x1ULL << I40E_TXD_CTX_QW0_NATT_SHIFT)
+#define I40E_TXD_CTX_UDP_TUNNELING	BIT_ULL(I40E_TXD_CTX_QW0_NATT_SHIFT)
 #define I40E_TXD_CTX_GRE_TUNNELING	(0x2ULL << I40E_TXD_CTX_QW0_NATT_SHIFT)
 
 #define I40E_TXD_CTX_QW0_EIP_NOINC_SHIFT	11
-#define I40E_TXD_CTX_QW0_EIP_NOINC_MASK	(0x1ULL << \
-					 I40E_TXD_CTX_QW0_EIP_NOINC_SHIFT)
+#define I40E_TXD_CTX_QW0_EIP_NOINC_MASK \
+				       BIT_ULL(I40E_TXD_CTX_QW0_EIP_NOINC_SHIFT)
 
 #define I40E_TXD_CTX_EIP_NOINC_IPID_CONST	I40E_TXD_CTX_QW0_EIP_NOINC_MASK
 
@@ -984,8 +994,8 @@ enum i40e_filter_program_desc_fd_status {
 };
 
 #define I40E_TXD_FLTR_QW0_DEST_VSI_SHIFT	23
-#define I40E_TXD_FLTR_QW0_DEST_VSI_MASK	(0x1FFUL << \
-					 I40E_TXD_FLTR_QW0_DEST_VSI_SHIFT)
+#define I40E_TXD_FLTR_QW0_DEST_VSI_MASK \
+				       BIT_ULL(I40E_TXD_FLTR_QW0_DEST_VSI_SHIFT)
 
 #define I40E_TXD_FLTR_QW1_CMD_SHIFT	4
 #define I40E_TXD_FLTR_QW1_CMD_MASK	(0xFFFFULL << \
@@ -1003,8 +1013,7 @@ enum i40e_filter_program_desc_pcmd {
 #define I40E_TXD_FLTR_QW1_DEST_MASK	(0x3ULL << I40E_TXD_FLTR_QW1_DEST_SHIFT)
 
 #define I40E_TXD_FLTR_QW1_CNT_ENA_SHIFT	(0x7ULL + I40E_TXD_FLTR_QW1_CMD_SHIFT)
-#define I40E_TXD_FLTR_QW1_CNT_ENA_MASK	(0x1ULL << \
-					 I40E_TXD_FLTR_QW1_CNT_ENA_SHIFT)
+#define I40E_TXD_FLTR_QW1_CNT_ENA_MASK	BIT_ULL(I40E_TXD_FLTR_QW1_CNT_ENA_SHIFT)
 
 #define I40E_TXD_FLTR_QW1_FD_STATUS_SHIFT	(0x9ULL + \
 						 I40E_TXD_FLTR_QW1_CMD_SHIFT)
@@ -1109,6 +1118,8 @@ struct i40e_hw_port_stats {
 	u64 fd_atr_match;
 	u64 fd_sb_match;
 	u64 fd_atr_tunnel_match;
+	u32 fd_atr_status;
+	u32 fd_sb_status;
 	/* EEE LPI */
 	u32 tx_lpi_status;
 	u32 rx_lpi_status;

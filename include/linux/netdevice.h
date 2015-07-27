@@ -766,6 +766,13 @@ struct netdev_phys_item_id {
 	unsigned char id_len;
 };
 
+static inline bool netdev_phys_item_id_same(struct netdev_phys_item_id *a,
+					    struct netdev_phys_item_id *b)
+{
+	return a->id_len == b->id_len &&
+	       memcmp(a->id, b->id, a->id_len) == 0;
+}
+
 typedef u16 (*select_queue_fallback_t)(struct net_device *dev,
 				       struct sk_buff *skb);
 
@@ -1041,6 +1048,12 @@ typedef u16 (*select_queue_fallback_t)(struct net_device *dev,
  *	TX queue.
  * int (*ndo_get_iflink)(const struct net_device *dev);
  *	Called to get the iflink value of this device.
+ * void (*ndo_change_proto_down)(struct net_device *dev,
+ *				  bool proto_down);
+ *	This function is used to pass protocol port error state information
+ *	to the switch driver. The switch driver can react to the proto_down
+ *      by doing a phys down on the associated switch port.
+ *
  */
 struct net_device_ops {
 	int			(*ndo_init)(struct net_device *dev);
@@ -1211,6 +1224,8 @@ struct net_device_ops {
 						      int queue_index,
 						      u32 maxrate);
 	int			(*ndo_get_iflink)(const struct net_device *dev);
+	int			(*ndo_change_proto_down)(struct net_device *dev,
+							 bool proto_down);
 };
 
 /**
@@ -1448,6 +1463,8 @@ enum netdev_priv_flags {
  *
  *	@xps_maps:	XXX: need comments on this one
  *
+ *	@offload_fwd_mark:	Offload device fwding mark
+ *
  *	@trans_start:		Time (in jiffies) of last Tx
  *	@watchdog_timeo:	Represents the timeout that is used by
  *				the watchdog ( see dev_watchdog() )
@@ -1501,6 +1518,10 @@ enum netdev_priv_flags {
  *			for hardware timestamping
  *
  *	@qdisc_tx_busylock:	XXX: need comments on this one
+ *
+ *	@proto_down:	protocol port state information can be sent to the
+ *			switch driver and used to set the phys state of the
+ *			switch port.
  *
  *	FIXME: cleanup struct net_device such that network protocol info
  *	moves out.
@@ -1685,6 +1706,10 @@ struct net_device {
 	struct xps_dev_maps __rcu *xps_maps;
 #endif
 
+#ifdef CONFIG_NET_SWITCHDEV
+	u32			offload_fwd_mark;
+#endif
+
 	/* These may be needed for future network-power-down code. */
 
 	/*
@@ -1762,6 +1787,7 @@ struct net_device {
 #endif
 	struct phy_device *phydev;
 	struct lock_class_key *qdisc_tx_busylock;
+	bool proto_down;
 };
 #define to_net_dev(d) container_of(d, struct net_device, dev)
 
@@ -2982,6 +3008,7 @@ int dev_get_phys_port_id(struct net_device *dev,
 			 struct netdev_phys_item_id *ppid);
 int dev_get_phys_port_name(struct net_device *dev,
 			   char *name, size_t len);
+int dev_change_proto_down(struct net_device *dev, bool proto_down);
 struct sk_buff *validate_xmit_skb_list(struct sk_buff *skb, struct net_device *dev);
 struct sk_buff *dev_hard_start_xmit(struct sk_buff *skb, struct net_device *dev,
 				    struct netdev_queue *txq, int *ret);

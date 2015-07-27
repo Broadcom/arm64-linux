@@ -283,6 +283,8 @@ static void br_multicast_del_pg(struct net_bridge *br,
 		rcu_assign_pointer(*pp, p->next);
 		hlist_del_init(&p->mglist);
 		del_timer(&p->timer);
+		br_mdb_notify(br->dev, p->port, &pg->addr, RTM_DELMDB,
+			      p->state);
 		call_rcu_bh(&p->rcu, br_multicast_free_pg);
 
 		if (!mp->ports && !mp->mglist &&
@@ -704,7 +706,7 @@ static int br_multicast_add_group(struct net_bridge *br,
 	if (unlikely(!p))
 		goto err;
 	rcu_assign_pointer(*pp, p);
-	br_mdb_notify(br->dev, port, group, RTM_NEWMDB);
+	br_mdb_notify(br->dev, port, group, RTM_NEWMDB, MDB_TEMPORARY);
 
 found:
 	mod_timer(&p->timer, now + br->multicast_membership_interval);
@@ -924,6 +926,15 @@ void br_multicast_add_port(struct net_bridge_port *port)
 
 void br_multicast_del_port(struct net_bridge_port *port)
 {
+	struct net_bridge *br = port->br;
+	struct net_bridge_port_group *pg;
+	struct hlist_node *n;
+
+	/* Take care of the remaining groups, only perm ones should be left */
+	spin_lock_bh(&br->multicast_lock);
+	hlist_for_each_entry_safe(pg, n, &port->mglist, mglist)
+		br_multicast_del_pg(br, pg);
+	spin_unlock_bh(&br->multicast_lock);
 	del_timer_sync(&port->multicast_router_timer);
 }
 
@@ -963,7 +974,8 @@ void br_multicast_disable_port(struct net_bridge_port *port)
 
 	spin_lock(&br->multicast_lock);
 	hlist_for_each_entry_safe(pg, n, &port->mglist, mglist)
-		br_multicast_del_pg(br, pg);
+		if (pg->state == MDB_TEMPORARY)
+			br_multicast_del_pg(br, pg);
 
 	if (!hlist_unhashed(&port->rlist))
 		hlist_del_init_rcu(&port->rlist);
@@ -1462,8 +1474,9 @@ br_multicast_leave_group(struct net_bridge *br,
 			rcu_assign_pointer(*pp, p->next);
 			hlist_del_init(&p->mglist);
 			del_timer(&p->timer);
+			br_mdb_notify(br->dev, port, group, RTM_DELMDB,
+				      p->state);
 			call_rcu_bh(&p->rcu, br_multicast_free_pg);
-			br_mdb_notify(br->dev, port, group, RTM_DELMDB);
 
 			if (!mp->ports && !mp->mglist &&
 			    netif_running(br->dev))
@@ -1752,12 +1765,6 @@ void br_multicast_open(struct net_bridge *br)
 
 void br_multicast_stop(struct net_bridge *br)
 {
-	struct net_bridge_mdb_htable *mdb;
-	struct net_bridge_mdb_entry *mp;
-	struct hlist_node *n;
-	u32 ver;
-	int i;
-
 	del_timer_sync(&br->multicast_router_timer);
 	del_timer_sync(&br->ip4_other_query.timer);
 	del_timer_sync(&br->ip4_own_query.timer);
@@ -1765,6 +1772,15 @@ void br_multicast_stop(struct net_bridge *br)
 	del_timer_sync(&br->ip6_other_query.timer);
 	del_timer_sync(&br->ip6_own_query.timer);
 #endif
+}
+
+void br_multicast_dev_del(struct net_bridge *br)
+{
+	struct net_bridge_mdb_htable *mdb;
+	struct net_bridge_mdb_entry *mp;
+	struct hlist_node *n;
+	u32 ver;
+	int i;
 
 	spin_lock_bh(&br->multicast_lock);
 	mdb = mlock_dereference(br->mdb, br);

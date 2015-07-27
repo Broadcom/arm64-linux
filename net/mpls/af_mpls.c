@@ -15,6 +15,7 @@
 #include <net/ip_fib.h>
 #include <net/netevent.h>
 #include <net/netns/generic.h>
+#include <net/ip6_route.h>
 #include "internal.h"
 
 #define LABEL_NOT_SPECIFIED (1<<20)
@@ -58,10 +59,11 @@ static inline struct mpls_dev *mpls_dev_get(const struct net_device *dev)
 	return rcu_dereference_rtnl(dev->mpls_ptr);
 }
 
-static bool mpls_output_possible(const struct net_device *dev)
+bool mpls_output_possible(const struct net_device *dev)
 {
 	return dev && (dev->flags & IFF_UP) && netif_carrier_ok(dev);
 }
+EXPORT_SYMBOL_GPL(mpls_output_possible);
 
 static unsigned int mpls_rt_header_size(const struct mpls_route *rt)
 {
@@ -69,13 +71,14 @@ static unsigned int mpls_rt_header_size(const struct mpls_route *rt)
 	return rt->rt_labels * sizeof(struct mpls_shim_hdr);
 }
 
-static unsigned int mpls_dev_mtu(const struct net_device *dev)
+unsigned int mpls_dev_mtu(const struct net_device *dev)
 {
 	/* The amount of data the layer 2 frame can hold */
 	return dev->mtu;
 }
+EXPORT_SYMBOL_GPL(mpls_dev_mtu);
 
-static bool mpls_pkt_too_big(const struct sk_buff *skb, unsigned int mtu)
+bool mpls_pkt_too_big(const struct sk_buff *skb, unsigned int mtu)
 {
 	if (skb->len <= mtu)
 		return false;
@@ -85,6 +88,7 @@ static bool mpls_pkt_too_big(const struct sk_buff *skb, unsigned int mtu)
 
 	return true;
 }
+EXPORT_SYMBOL_GPL(mpls_pkt_too_big);
 
 static bool mpls_egress(struct mpls_route *rt, struct sk_buff *skb,
 			struct mpls_entry_decoded dec)
@@ -327,6 +331,70 @@ static unsigned find_free_label(struct net *net)
 	return LABEL_NOT_SPECIFIED;
 }
 
+static struct net_device *inet_fib_lookup_dev(struct net *net, void *addr)
+{
+	struct net_device *dev = NULL;
+	struct rtable *rt;
+	struct in_addr daddr;
+
+	memcpy(&daddr, addr, sizeof(struct in_addr));
+	rt = ip_route_output(net, daddr.s_addr, 0, 0, 0);
+	if (IS_ERR(rt))
+		goto errout;
+
+	dev = rt->dst.dev;
+	dev_hold(dev);
+
+	ip_rt_put(rt);
+
+errout:
+	return dev;
+}
+
+static struct net_device *inet6_fib_lookup_dev(struct net *net, void *addr)
+{
+	struct net_device *dev = NULL;
+	struct dst_entry *dst;
+	struct flowi6 fl6;
+
+	memset(&fl6, 0, sizeof(fl6));
+	memcpy(&fl6.daddr, addr, sizeof(struct in6_addr));
+	dst = ip6_route_output(net, NULL, &fl6);
+	if (dst->error)
+		goto errout;
+
+	dev = dst->dev;
+	dev_hold(dev);
+
+errout:
+	dst_release(dst);
+
+	return dev;
+}
+
+static struct net_device *find_outdev(struct net *net,
+				      struct mpls_route_config *cfg)
+{
+	struct net_device *dev = NULL;
+
+	if (!cfg->rc_ifindex) {
+		switch (cfg->rc_via_table) {
+		case NEIGH_ARP_TABLE:
+			dev = inet_fib_lookup_dev(net, cfg->rc_via);
+			break;
+		case NEIGH_ND_TABLE:
+			dev = inet6_fib_lookup_dev(net, cfg->rc_via);
+			break;
+		case NEIGH_LINK_TABLE:
+			break;
+		}
+	} else {
+		dev = dev_get_by_index(net, cfg->rc_ifindex);
+	}
+
+	return dev;
+}
+
 static int mpls_route_add(struct mpls_route_config *cfg)
 {
 	struct mpls_route __rcu **platform_label;
@@ -358,7 +426,7 @@ static int mpls_route_add(struct mpls_route_config *cfg)
 		goto errout;
 
 	err = -ENODEV;
-	dev = dev_get_by_index(net, cfg->rc_ifindex);
+	dev = find_outdev(net, cfg);
 	if (!dev)
 		goto errout;
 
@@ -626,6 +694,7 @@ int nla_put_labels(struct sk_buff *skb, int attrtype,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nla_put_labels);
 
 int nla_get_labels(const struct nlattr *nla,
 		   u32 max_labels, u32 *labels, u32 label[])
@@ -671,6 +740,7 @@ int nla_get_labels(const struct nlattr *nla,
 	*labels = nla_labels;
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nla_get_labels);
 
 static int rtm_to_route_config(struct sk_buff *skb,  struct nlmsghdr *nlh,
 			       struct mpls_route_config *cfg)
