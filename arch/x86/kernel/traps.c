@@ -131,7 +131,7 @@ void ist_enter(struct pt_regs *regs)
 	preempt_count_add(HARDIRQ_OFFSET);
 
 	/* This code is a bit fragile.  Test it. */
-	rcu_lockdep_assert(rcu_is_watching(), "ist_enter didn't work");
+	RCU_LOCKDEP_WARN(!rcu_is_watching(), "ist_enter didn't work");
 }
 
 void ist_exit(struct pt_regs *regs)

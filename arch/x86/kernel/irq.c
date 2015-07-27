@@ -234,7 +234,7 @@ __visible unsigned int __irq_entry do_IRQ(struct pt_regs *regs)
 	entering_irq();
 
 	/* entering_irq() tells RCU that we're not quiescent.  Check it. */
-	rcu_lockdep_assert(rcu_is_watching(), "IRQ failed to wake up RCU");
+	RCU_LOCKDEP_WARN(!rcu_is_watching(), "IRQ failed to wake up RCU");
 
 	irq = __this_cpu_read(vector_irq[vector]);
 
