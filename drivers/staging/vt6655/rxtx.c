@@ -387,7 +387,6 @@ s_uGetDataDuration(
 		break;
 	}
 
-	ASSERT(false);
 	return 0;
 }
 
@@ -1089,7 +1088,7 @@ s_cbFillTxBufHead(struct vnt_private *pDevice, unsigned char byPktType,
 
 
 	/* Set RrvTime/RTS/CTS Buffer */
-	wTxBufSize = sizeof(STxBufHead);
+	wTxBufSize = sizeof(struct vnt_tx_fifo_head);
 	if (byPktType == PK_TYPE_11GB || byPktType == PK_TYPE_11GA) {/* 802.11g packet */
 
 		if (byFBOption == AUTO_FB_NONE) {
@@ -1203,7 +1202,6 @@ s_cbFillTxBufHead(struct vnt_private *pDevice, unsigned char byPktType,
 
 	ptdCurr->pTDInfo->dwReqCount = cbReqCount;
 	ptdCurr->pTDInfo->dwHeaderLength = cbHeaderLength;
-	ptdCurr->pTDInfo->skb_dma = ptdCurr->pTDInfo->buf_dma;
 
 	return cbHeaderLength;
 }

@@ -2599,14 +2599,14 @@ static int comedi_open(struct inode *inode, struct file *file)
 	cfp->dev = dev;
 
 	mutex_lock(&dev->mutex);
-	if (!dev->attached && !capable(CAP_NET_ADMIN)) {
-		dev_dbg(dev->class_dev, "not attached and not CAP_NET_ADMIN\n");
+	if (!dev->attached && !capable(CAP_SYS_ADMIN)) {
+		dev_dbg(dev->class_dev, "not attached and not CAP_SYS_ADMIN\n");
 		rc = -ENODEV;
 		goto out;
 	}
 	if (dev->attached && dev->use_count == 0) {
 		if (!try_module_get(dev->driver->module)) {
-			rc = -ENOSYS;
+			rc = -ENXIO;
 			goto out;
 		}
 		if (dev->open) {

@@ -12,10 +12,6 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/module.h>
@@ -29,7 +25,6 @@
 #include "fbtft.h"
 
 #define DRVNAME	    "flexfb"
-
 
 static char *chip;
 module_param(chip, charp, 0);
@@ -67,7 +62,6 @@ MODULE_PARM_DESC(nobacklight, "Turn off backlight functionality.");
 static bool latched;
 module_param(latched, bool, 0);
 MODULE_PARM_DESC(latched, "Use with latched 16-bit databus");
-
 
 static int *initp;
 static int initp_num;
@@ -132,14 +126,12 @@ static int ssd1351_init[] = { -1, 0xfd, 0x12, -1, 0xfd, 0xb1, -1, 0xae, -1, 0xb3
 			      -1, 0xab, 0x01, -1, 0xb1, 0x32, -1, 0xb4, 0xa0, 0xb5, 0x55, -1, 0xbb, 0x17, -1, 0xbe, 0x05,
 			      -1, 0xc1, 0xc8, 0x80, 0xc8, -1, 0xc7, 0x0f, -1, 0xb6, 0x01, -1, 0xa6, -1, 0xaf, -3 };
 
-
 /* ili9320, ili9325 */
 static void flexfb_set_addr_win_1(struct fbtft_par *par,
 				  int xs, int ys, int xe, int ye)
 {
-	fbtft_par_dbg(DEBUG_SET_ADDR_WIN, par,
-		     "%s(xs=%d, ys=%d, xe=%d, ye=%d)\n",
-		     __func__, xs, ys, xe, ye);
+	fbtft_par_dbg(DEBUG_SET_ADDR_WIN, par, "%s(xs=%d, ys=%d, xe=%d, ye=%d)\n",
+		      __func__, xs, ys, xe, ye);
 	switch (par->info->var.rotate) {
 	/* R20h = Horizontal GRAM Start Address */
 	/* R21h = Vertical GRAM Start Address */
@@ -242,7 +234,7 @@ static int flexfb_verify_gpios_db(struct fbtft_par *par)
 		return -EINVAL;
 	}
 	if (latched)
-		num_db = buswidth/2;
+		num_db = buswidth / 2;
 	for (i = 0; i < num_db; i++) {
 		if (par->gpio.db[i] < 0) {
 			dev_err(par->info->device,
@@ -288,7 +280,6 @@ static int flexfb_probe_common(struct spi_device *sdev,
 				initp_num = ARRAY_SIZE(st7735r_init);
 			}
 
-
 		} else if (!strcmp(chip, "hx8340bn")) {
 			if (!width)
 				width = 176;
@@ -299,7 +290,6 @@ static int flexfb_probe_common(struct spi_device *sdev,
 				initp = hx8340bn_init;
 				initp_num = ARRAY_SIZE(hx8340bn_init);
 			}
-
 
 		} else if (!strcmp(chip, "ili9225")) {
 			if (!width)
@@ -313,8 +303,6 @@ static int flexfb_probe_common(struct spi_device *sdev,
 				initp_num = ARRAY_SIZE(ili9225_init);
 			}
 
-
-
 		} else if (!strcmp(chip, "ili9320")) {
 			if (!width)
 				width = 240;
@@ -326,7 +314,6 @@ static int flexfb_probe_common(struct spi_device *sdev,
 				initp = ili9320_init;
 				initp_num = ARRAY_SIZE(ili9320_init);
 			}
-
 
 		} else if (!strcmp(chip, "ili9325")) {
 			if (!width)
@@ -352,7 +339,6 @@ static int flexfb_probe_common(struct spi_device *sdev,
 				initp_num = ARRAY_SIZE(ili9341_init);
 			}
 
-
 		} else if (!strcmp(chip, "ssd1289")) {
 			if (!width)
 				width = 240;
@@ -364,8 +350,6 @@ static int flexfb_probe_common(struct spi_device *sdev,
 				initp = ssd1289_init;
 				initp_num = ARRAY_SIZE(ssd1289_init);
 			}
-
-
 
 		} else if (!strcmp(chip, "ssd1351")) {
 			if (!width)
@@ -527,8 +511,8 @@ static int flexfb_remove_common(struct device *dev, struct fb_info *info)
 		return -EINVAL;
 	par = info->par;
 	if (par)
-		fbtft_par_dbg(DEBUG_DRIVER_INIT_FUNCTIONS, par,
-			"%s()\n", __func__);
+		fbtft_par_dbg(DEBUG_DRIVER_INIT_FUNCTIONS, par, "%s()\n",
+			      __func__);
 	fbtft_unregister_framebuffer(info);
 	fbtft_framebuffer_release(info);
 

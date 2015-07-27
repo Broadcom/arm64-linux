@@ -623,12 +623,11 @@ static void device_init_rd0_ring(struct vnt_private *pDevice)
 	for (i = 0; i < pDevice->sOpts.nRxDescs0; i ++, curr += sizeof(SRxDesc)) {
 		pDesc = &(pDevice->aRD0Ring[i]);
 		pDesc->pRDInfo = alloc_rd_info();
-		ASSERT(pDesc->pRDInfo);
+
 		if (!device_alloc_rx_buf(pDevice, pDesc))
 			dev_err(&pDevice->pcid->dev, "can not alloc rx bufs\n");
 
 		pDesc->next = &(pDevice->aRD0Ring[(i+1) % pDevice->sOpts.nRxDescs0]);
-		pDesc->pRDInfo->curr_desc = cpu_to_le32(curr);
 		pDesc->next_desc = cpu_to_le32(curr + sizeof(SRxDesc));
 	}
 
@@ -647,12 +646,11 @@ static void device_init_rd1_ring(struct vnt_private *pDevice)
 	for (i = 0; i < pDevice->sOpts.nRxDescs1; i ++, curr += sizeof(SRxDesc)) {
 		pDesc = &(pDevice->aRD1Ring[i]);
 		pDesc->pRDInfo = alloc_rd_info();
-		ASSERT(pDesc->pRDInfo);
+
 		if (!device_alloc_rx_buf(pDevice, pDesc))
 			dev_err(&pDevice->pcid->dev, "can not alloc rx bufs\n");
 
 		pDesc->next = &(pDevice->aRD1Ring[(i+1) % pDevice->sOpts.nRxDescs1]);
-		pDesc->pRDInfo->curr_desc = cpu_to_le32(curr);
 		pDesc->next_desc = cpu_to_le32(curr + sizeof(SRxDesc));
 	}
 
@@ -705,13 +703,12 @@ static void device_init_td0_ring(struct vnt_private *pDevice)
 	for (i = 0; i < pDevice->sOpts.nTxDescs[0]; i++, curr += sizeof(STxDesc)) {
 		pDesc = &(pDevice->apTD0Rings[i]);
 		pDesc->pTDInfo = alloc_td_info();
-		ASSERT(pDesc->pTDInfo);
+
 		if (pDevice->flags & DEVICE_FLAGS_TX_ALIGN) {
 			pDesc->pTDInfo->buf = pDevice->tx0_bufs + (i)*PKT_BUF_SZ;
 			pDesc->pTDInfo->buf_dma = pDevice->tx_bufs_dma0 + (i)*PKT_BUF_SZ;
 		}
 		pDesc->next = &(pDevice->apTD0Rings[(i+1) % pDevice->sOpts.nTxDescs[0]]);
-		pDesc->pTDInfo->curr_desc = cpu_to_le32(curr);
 		pDesc->next_desc = cpu_to_le32(curr+sizeof(STxDesc));
 	}
 
@@ -731,13 +728,12 @@ static void device_init_td1_ring(struct vnt_private *pDevice)
 	for (i = 0; i < pDevice->sOpts.nTxDescs[1]; i++, curr += sizeof(STxDesc)) {
 		pDesc = &(pDevice->apTD1Rings[i]);
 		pDesc->pTDInfo = alloc_td_info();
-		ASSERT(pDesc->pTDInfo);
+
 		if (pDevice->flags & DEVICE_FLAGS_TX_ALIGN) {
 			pDesc->pTDInfo->buf = pDevice->tx1_bufs + (i) * PKT_BUF_SZ;
 			pDesc->pTDInfo->buf_dma = pDevice->tx_bufs_dma1 + (i) * PKT_BUF_SZ;
 		}
 		pDesc->next = &(pDevice->apTD1Rings[(i + 1) % pDevice->sOpts.nTxDescs[1]]);
-		pDesc->pTDInfo->curr_desc = cpu_to_le32(curr);
 		pDesc->next_desc = cpu_to_le32(curr+sizeof(STxDesc));
 	}
 
@@ -754,13 +750,7 @@ static void device_free_td0_ring(struct vnt_private *pDevice)
 		PSTxDesc        pDesc = &(pDevice->apTD0Rings[i]);
 		PDEVICE_TD_INFO  pTDInfo = pDesc->pTDInfo;
 
-		if (pTDInfo->skb_dma && (pTDInfo->skb_dma != pTDInfo->buf_dma))
-			dma_unmap_single(&pDevice->pcid->dev, pTDInfo->skb_dma,
-					 pTDInfo->skb->len, DMA_TO_DEVICE);
-
-		if (pTDInfo->skb)
-			dev_kfree_skb(pTDInfo->skb);
-
+		dev_kfree_skb(pTDInfo->skb);
 		kfree(pDesc->pTDInfo);
 	}
 }
@@ -773,13 +763,7 @@ static void device_free_td1_ring(struct vnt_private *pDevice)
 		PSTxDesc        pDesc = &(pDevice->apTD1Rings[i]);
 		PDEVICE_TD_INFO  pTDInfo = pDesc->pTDInfo;
 
-		if (pTDInfo->skb_dma && (pTDInfo->skb_dma != pTDInfo->buf_dma))
-			dma_unmap_single(&pDevice->pcid->dev, pTDInfo->skb_dma,
-					 pTDInfo->skb->len, DMA_TO_DEVICE);
-
-		if (pTDInfo->skb)
-			dev_kfree_skb(pTDInfo->skb);
-
+		dev_kfree_skb(pTDInfo->skb);
 		kfree(pDesc->pTDInfo);
 	}
 }
@@ -822,7 +806,6 @@ static bool device_alloc_rx_buf(struct vnt_private *pDevice, PSRxDesc pRD)
 	pRDInfo->skb = dev_alloc_skb((int)pDevice->rx_buf_sz);
 	if (pRDInfo->skb == NULL)
 		return false;
-	ASSERT(pRDInfo->skb);
 
 	pRDInfo->skb_dma =
 		dma_map_single(&pDevice->pcid->dev,
@@ -980,16 +963,9 @@ static void device_free_tx_buf(struct vnt_private *pDevice, PSTxDesc pDesc)
 	PDEVICE_TD_INFO  pTDInfo = pDesc->pTDInfo;
 	struct sk_buff *skb = pTDInfo->skb;
 
-	/* pre-allocated buf_dma can't be unmapped. */
-	if (pTDInfo->skb_dma && (pTDInfo->skb_dma != pTDInfo->buf_dma)) {
-		dma_unmap_single(&pDevice->pcid->dev, pTDInfo->skb_dma,
-				 skb->len, DMA_TO_DEVICE);
-	}
-
 	if (skb)
 		ieee80211_tx_status_irqsafe(pDevice->hw, skb);
 
-	pTDInfo->skb_dma = 0;
 	pTDInfo->skb = NULL;
 	pTDInfo->byFlags = 0;
 }
@@ -1211,9 +1187,6 @@ static int vnt_tx_packet(struct vnt_private *priv, struct sk_buff *skb)
 
 	vnt_generate_fifo_header(priv, dma_idx, head_td, skb);
 
-	if (MACbIsRegBitsOn(priv->PortOffset, MAC_REG_PSCTL, PSCTL_PS))
-		MACbPSWakeup(priv->PortOffset);
-
 	spin_lock_irqsave(&priv->lock, flags);
 
 	priv->bPWBitOn = false;
@@ -1223,7 +1196,7 @@ static int vnt_tx_packet(struct vnt_private *priv, struct sk_buff *skb)
 	head_td->m_td1TD1.wReqCount =
 			cpu_to_le16((u16)head_td->pTDInfo->dwReqCount);
 
-	head_td->buff_addr = cpu_to_le32(head_td->pTDInfo->skb_dma);
+	head_td->buff_addr = cpu_to_le32(head_td->pTDInfo->buf_dma);
 
 	/* Poll Transmit the adapter */
 	wmb();
@@ -1774,6 +1747,12 @@ vt6655_probe(struct pci_dev *pcid, const struct pci_device_id *ent)
 		return -ENODEV;
 	}
 
+	if (dma_set_mask(&pcid->dev, DMA_BIT_MASK(32))) {
+		dev_err(&pcid->dev, ": Failed to set dma 32 bit mask\n");
+		device_free_info(priv);
+		return -ENODEV;
+	}
+
 	INIT_WORK(&priv->interrupt_work, vnt_interrupt_work);
 
 	/* do reset */
@@ -1811,6 +1790,7 @@ vt6655_probe(struct pci_dev *pcid, const struct pci_device_id *ent)
 	ieee80211_hw_set(priv->hw, SIGNAL_DBM);
 	ieee80211_hw_set(priv->hw, RX_INCLUDES_FCS);
 	ieee80211_hw_set(priv->hw, REPORTS_TX_ACK_STATUS);
+	ieee80211_hw_set(priv->hw, SUPPORTS_PS);
 
 	priv->hw->max_signal = 100;
 

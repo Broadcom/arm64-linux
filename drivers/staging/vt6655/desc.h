@@ -170,13 +170,12 @@
 typedef struct tagDEVICE_RD_INFO {
 	struct sk_buff *skb;
 	dma_addr_t  skb_dma;
-	dma_addr_t  curr_desc;
 } DEVICE_RD_INFO,   *PDEVICE_RD_INFO;
 
 #ifdef __BIG_ENDIAN
 
 typedef struct tagRDES0 {
-	volatile unsigned short wResCount;
+	volatile __le16 wResCount;
 	union {
 		volatile u16    f15Reserved;
 		struct {
@@ -191,7 +190,7 @@ SRDES0, *PSRDES0;
 #else
 
 typedef struct tagRDES0 {
-	unsigned short wResCount;
+	__le16         wResCount;
 	unsigned short f15Reserved:15;
 	unsigned short f1Owner:1;
 } __attribute__ ((__packed__))
@@ -200,7 +199,7 @@ SRDES0;
 #endif
 
 typedef struct tagRDES1 {
-	unsigned short wReqCount;
+	__le16	       wReqCount;
 	unsigned short wReserved;
 } __attribute__ ((__packed__))
 SRDES1;
@@ -209,8 +208,8 @@ SRDES1;
 typedef struct tagSRxDesc {
 	volatile SRDES0 m_rd0RD0;
 	volatile SRDES1 m_rd1RD1;
-	volatile u32    buff_addr;
-	volatile u32    next_desc;
+	volatile __le32 buff_addr;
+	volatile __le32 next_desc;
 	struct tagSRxDesc *next __aligned(8);
 	volatile PDEVICE_RD_INFO pRDInfo __aligned(8);
 } __attribute__ ((__packed__))
@@ -246,7 +245,7 @@ STDES0;
 #endif
 
 typedef struct tagTDES1 {
-	volatile    unsigned short wReqCount;
+	volatile    __le16        wReqCount;
 	volatile    unsigned char byTCR;
 	volatile    unsigned char byReserved;
 } __attribute__ ((__packed__))
@@ -256,9 +255,7 @@ typedef struct tagDEVICE_TD_INFO {
 	void *mic_hdr;
 	struct sk_buff *skb;
 	unsigned char *buf;
-	dma_addr_t          skb_dma;
 	dma_addr_t          buf_dma;
-	dma_addr_t          curr_desc;
 	unsigned long dwReqCount;
 	unsigned long dwHeaderLength;
 	unsigned char byFlags;
@@ -268,34 +265,13 @@ typedef struct tagDEVICE_TD_INFO {
 typedef struct tagSTxDesc {
 	volatile    STDES0  m_td0TD0;
 	volatile    STDES1  m_td1TD1;
-	volatile    u32    buff_addr;
-	volatile    u32    next_desc;
+	volatile    __le32  buff_addr;
+	volatile    __le32  next_desc;
 	struct tagSTxDesc *next __aligned(8);
 	volatile    PDEVICE_TD_INFO pTDInfo __aligned(8);
 } __attribute__ ((__packed__))
 STxDesc, *PSTxDesc;
 typedef const STxDesc *PCSTxDesc;
-
-typedef struct tagSTxSyncDesc {
-	volatile    STDES0  m_td0TD0;
-	volatile    STDES1  m_td1TD1;
-	volatile    u32 buff_addr; /* pointer to logical buffer */
-	volatile    u32 next_desc; /* pointer to next logical descriptor */
-	volatile    unsigned short m_wFIFOCtl;
-	volatile    unsigned short m_wTimeStamp;
-	struct tagSTxSyncDesc *next __aligned(8);
-	volatile    PDEVICE_TD_INFO pTDInfo __aligned(8);
-} __attribute__ ((__packed__))
-STxSyncDesc, *PSTxSyncDesc;
-typedef const STxSyncDesc *PCSTxSyncDesc;
-
-/* RsvTime buffer header */
-typedef struct tagSRrvTime_atim {
-	unsigned short wCTSTxRrvTime_ba;
-	unsigned short wTxRrvTime_a;
-} __attribute__ ((__packed__))
-SRrvTime_atim, *PSRrvTime_atim;
-typedef const SRrvTime_atim *PCSRrvTime_atim;
 
 /* Length, Service, and Signal fields of Phy for Tx */
 struct vnt_phy_field {
@@ -309,43 +285,5 @@ union vnt_phy_field_swap {
 	u16 swap[2];
 	u32 field_write;
 };
-
-/* Tx FIFO header */
-typedef struct tagSTxBufHead {
-	u32 adwTxKey[4];
-	unsigned short wFIFOCtl;
-	unsigned short wTimeStamp;
-	unsigned short wFragCtl;
-	unsigned char byTxPower;
-	unsigned char wReserved;
-} __attribute__ ((__packed__))
-STxBufHead, *PSTxBufHead;
-typedef const STxBufHead *PCSTxBufHead;
-
-typedef struct tagSBEACONCtl {
-	u32 BufReady:1;
-	u32 TSF:15;
-	u32 BufLen:11;
-	u32 Reserved:5;
-} __attribute__ ((__packed__))
-SBEACONCtl;
-
-typedef struct tagSSecretKey {
-	u32 dwLowDword;
-	unsigned char byHighByte;
-} __attribute__ ((__packed__))
-SSecretKey;
-
-typedef struct tagSKeyEntry {
-	unsigned char abyAddrHi[2];
-	unsigned short wKCTL;
-	unsigned char abyAddrLo[4];
-	u32 dwKey0[4];
-	u32 dwKey1[4];
-	u32 dwKey2[4];
-	u32 dwKey3[4];
-	u32 dwKey4[4];
-} __attribute__ ((__packed__))
-SKeyEntry;
 
 #endif /* __DESC_H__ */

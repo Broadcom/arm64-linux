@@ -24,7 +24,7 @@
 
 #include "modedb.h"
 
-int smi_indent = 0;
+int smi_indent;
 
 
 /*
@@ -47,9 +47,9 @@ static int g_noaccel;
 static int g_nomtrr;
 static const char *g_fbmode[] = {NULL, NULL};
 static const char *g_def_fbmode = "800x600-16@60";
-static char *g_settings = NULL;
+static char *g_settings;
 static int g_dualview;
-static char *g_option = NULL;
+static char *g_option;
 
 
 static const struct fb_videomode lynx750_ext[] = {
@@ -967,7 +967,7 @@ static int lynxfb_set_fbinfo(struct fb_info *info, int index)
 	var->accel_flags = 0;
 	var->vmode = FB_VMODE_NONINTERLACED;
 
-	pr_debug("#1 show info->cmap : \nstart=%d,len=%d,red=%p,green=%p,blue=%p,transp=%p\n",
+	pr_debug("#1 show info->cmap :\nstart=%d,len=%d,red=%p,green=%p,blue=%p,transp=%p\n",
 		 info->cmap.start, info->cmap.len,
 		 info->cmap.red, info->cmap.green, info->cmap.blue,
 		 info->cmap.transp);

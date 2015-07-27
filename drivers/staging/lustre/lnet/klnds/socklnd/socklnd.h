@@ -46,6 +46,7 @@
 #include <linux/sysctl.h>
 #include <linux/uio.h>
 #include <linux/unistd.h>
+#include <asm/irq.h>
 #include <net/sock.h>
 #include <net/tcp.h>
 

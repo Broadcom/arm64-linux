@@ -12,10 +12,8 @@
 #include "wilc_wfi_cfgoperations.h"
 #include "host_interface.h"
 
-
 MODULE_AUTHOR("Mai Daftedar");
 MODULE_LICENSE("Dual BSD/GPL");
-
 
 struct net_device *WILC_WFI_devs[2];
 
@@ -31,9 +29,8 @@ module_param(timeout, int, 0);
 /*
  * Do we run in NAPI mode?
  */
-static int use_napi ;
+static int use_napi;
 module_param(use_napi, int, 0);
-
 
 /*
  * A structure representing an in-flight packet.
@@ -45,11 +42,8 @@ struct WILC_WFI_packet {
 	u8 data[ETH_DATA_LEN];
 };
 
-
-
 int pool_size = 8;
 module_param(pool_size, int, 0);
-
 
 static void WILC_WFI_TxTimeout(struct net_device *dev);
 static void (*WILC_WFI_Interrupt)(int, void *, struct pt_regs *);
@@ -71,7 +65,7 @@ void WILC_WFI_SetupPool(struct net_device *dev)
 
 	priv->ppool = NULL;
 	for (i = 0; i < pool_size; i++) {
-		pkt = kmalloc (sizeof (struct WILC_WFI_packet), GFP_KERNEL);
+		pkt = kmalloc(sizeof(struct WILC_WFI_packet), GFP_KERNEL);
 		if (pkt == NULL) {
 			PRINT_D(RX_DBG, "Ran out of memory allocating packet pool\n");
 			return;
@@ -99,7 +93,7 @@ void WILC_WFI_TearDownPool(struct net_device *dev)
 
 	while ((pkt = priv->ppool)) {
 		priv->ppool = pkt->next;
-		kfree (pkt);
+		kfree(pkt);
 		/* FIXME - in-flight packets ? */
 	}
 }
@@ -207,6 +201,7 @@ struct WILC_WFI_packet *WILC_WFI_DequeueBuf(struct net_device *dev)
 static void WILC_WFI_RxInts(struct net_device *dev, int enable)
 {
 	struct WILC_WFI_priv *priv = netdev_priv(dev);
+
 	priv->rx_int_enabled = enable;
 }
 
@@ -251,7 +246,6 @@ int WILC_WFI_Open(struct net_device *dev)
 int WILC_WFI_Release(struct net_device *dev)
 {
 	/* release ports, irq and such -- like fops->close */
-
 	netif_stop_queue(dev); /* can't transmit any more */
 
 	return 0;
@@ -324,7 +318,6 @@ void WILC_WFI_Rx(struct net_device *dev, struct WILC_WFI_packet *pkt)
 		PRINT_INFO(RX_DBG, "In monitor device name %s\n", dev->name);
 		priv = wiphy_priv(priv->dev->ieee80211_ptr->wiphy);
 		PRINT_D(RX_DBG, "VALUE PASSED IN OF HRWD %p\n", priv->hWILCWFIDrv);
-		/* host_int_get_rssi(priv->hWILCWFIDrv, &(rssi)); */
 		if (INFO) {
 			for (i = 14; i < skb->len; i++)
 				PRINT_INFO(RX_DBG, "RXdata[%d] %02x\n", i, skb->data[i]);
@@ -512,7 +505,6 @@ void WILC_WFI_HwTx(char *buf, int len, struct net_device *dev)
 	u32 *saddr, *daddr;
 	struct WILC_WFI_packet *tx_buffer;
 
-
 	/* I am paranoid. Ain't I? */
 	if (len < sizeof(struct ethhdr) + sizeof(struct iphdr)) {
 		PRINT_D(RX_DBG, "WILC_WFI: Hmm... packet too short (%i octets)\n",
@@ -522,6 +514,7 @@ void WILC_WFI_HwTx(char *buf, int len, struct net_device *dev)
 
 	if (0) {  /* enable this conditional to look at the data */
 		int i;
+
 		PRINT_D(RX_DBG, "len is %i", len);
 		for (i = 14; i < len; i++)
 			PRINT_D(RX_DBG, "TXdata[%d] %02x\n", i, buf[i] & 0xff);
@@ -579,7 +572,6 @@ void WILC_WFI_HwTx(char *buf, int len, struct net_device *dev)
 			(unsigned long) priv->stats.tx_packets);
 	} else
 		WILC_WFI_Interrupt(0, dev, NULL);
-
 }
 
 /**
@@ -597,12 +589,6 @@ int WILC_WFI_Tx(struct sk_buff *skb, struct net_device *dev)
 	int len;
 	char *data, shortpkt[ETH_ZLEN];
 	struct WILC_WFI_priv *priv = netdev_priv(dev);
-
-	/* priv = wiphy_priv(priv->dev->ieee80211_ptr->wiphy); */
-
-	/*  if(priv->monitor_flag) */
-	/*	 mac80211_hwsim_monitor_rx(skb); */
-
 
 	data = skb->data;
 	len = skb->len;
@@ -677,6 +663,7 @@ int WILC_WFI_Ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 struct net_device_stats *WILC_WFI_Stats(struct net_device *dev)
 {
 	struct WILC_WFI_priv *priv = netdev_priv(dev);
+
 	return &priv->stats;
 }
 
@@ -789,7 +776,6 @@ void WILC_WFI_Init(struct net_device *dev)
 {
 	struct WILC_WFI_priv *priv;
 
-
 	/*
 	 * Then, assign other fields in dev, using ether_setup() and some
 	 * hand assignments
@@ -833,12 +819,6 @@ void WILC_WFI_Cleanup(void)
 	int i;
 	struct WILC_WFI_priv *priv[2];
 
-	/*if(hwsim_mon!=NULL)
-	 * {
-	 *      PRINT_D(RX_DBG, "Freeing monitor interface\n");
-	 *      unregister_netdev(hwsim_mon);
-	 *      free_netdev(hwsim_mon);
-	 * }*/
 	for (i = 0; i < 2; i++) {
 		priv[i] = netdev_priv(WILC_WFI_devs[i]);
 
@@ -861,12 +841,6 @@ void WILC_WFI_Cleanup(void)
 
 void StartConfigSim(void);
 
-
-
-
-
-
-
 /**
  *  @brief      WILC_WFI_Stat
  *  @details    Return statistics to the caller
@@ -883,17 +857,15 @@ int WILC_WFI_InitModule(void)
 	int result, i, ret = -ENOMEM;
 	struct WILC_WFI_priv *priv[2], *netpriv;
 	struct wireless_dev *wdev;
+
 	WILC_WFI_Interrupt = use_napi ? WILC_WFI_NapiInterrupt : WILC_WFI_RegularInterrupt;
-	char buf[IFNAMSIZ];
 
 	for (i = 0; i < 2; i++)	{
-
 		/* Allocate the net devices */
 		WILC_WFI_devs[i] = alloc_netdev(sizeof(struct WILC_WFI_priv), "wlan%d",
 						WILC_WFI_Init);
 		if (WILC_WFI_devs[i] == NULL)
 			goto out;
-		/* priv[i] = netdev_priv(WILC_WFI_devs[i]); */
 
 		wdev = WILC_WFI_WiphyRegister(WILC_WFI_devs[i]);
 		WILC_WFI_devs[i]->ieee80211_ptr = wdev;
@@ -911,30 +883,17 @@ int WILC_WFI_InitModule(void)
 			ret = 0;
 	}
 
-
 	/*init atmel driver */
 	priv[0] = netdev_priv(WILC_WFI_devs[0]);
 	priv[1] = netdev_priv(WILC_WFI_devs[1]);
 
-	if (priv[1]->dev->ieee80211_ptr->wiphy->interface_modes && BIT(NL80211_IFTYPE_MONITOR))	{
-		/* snprintf(buf, IFNAMSIZ, "mon.%s",  priv[1]->dev->name); */
-		/*	WILC_WFI_init_mon_interface(); */
-		/*	priv[1]->monitor_flag = 1; */
-
-	}
 	priv[0]->bCfgScanning = false;
 	priv[0]->u32RcvdChCount = 0;
 
 	WILC_memset(priv[0]->au8AssociatedBss, 0xFF, ETH_ALEN);
 
-
-	/* ret = host_int_init(&priv[0]->hWILCWFIDrv); */
-	/*copy handle to the other driver*/
-	/* priv[1]->hWILCWFIDrv = priv[0]->hWILCWFIDrv; */
-	if (ret) {
+	if (ret)
 		PRINT_ER("Error Init Driver\n");
-	}
-
 
 out:
 	if (ret)
@@ -943,7 +902,6 @@ out:
 
 
 }
-
 
 module_init(WILC_WFI_InitModule);
 module_exit(WILC_WFI_Cleanup);

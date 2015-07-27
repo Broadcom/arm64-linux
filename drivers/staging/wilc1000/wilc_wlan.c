@@ -118,11 +118,10 @@ static void wilc_debug(uint32_t flag, char *fmt, ...)
 {
 	char buf[256];
 	va_list args;
-	int len;
 
 	if (flag & dbgflag) {
 		va_start(args, fmt);
-		len = vsprintf(buf, fmt, args);
+		vsprintf(buf, fmt, args);
 		va_end(args);
 
 		if (g_wlan.os_func.os_debug)
@@ -1782,7 +1781,7 @@ static int wilc_wlan_stop(void)
 /******************************************************************************/
 	reg = ((1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 8) | (1 << 9) | (1 << 26) | (1 << 29) | (1 << 30) | (1 << 31)); /**/
 	/**/
-	ret = p->hif_func.hif_write_reg(WILC_GLB_RESET_0, reg);                                 /**/
+	p->hif_func.hif_write_reg(WILC_GLB_RESET_0, reg);                                 /**/
 	reg = ~(1 << 10);                                                                                               /**/
 	/**/
 	ret = p->hif_func.hif_write_reg(WILC_GLB_RESET_0, reg);                                 /**/

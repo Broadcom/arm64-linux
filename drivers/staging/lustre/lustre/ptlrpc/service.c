@@ -732,7 +732,7 @@ ptlrpc_register_service(struct ptlrpc_service_conf *conf,
 
 	service = kzalloc(offsetof(struct ptlrpc_service, srv_parts[ncpts]),
 			  GFP_NOFS);
-	if (service == NULL) {
+	if (!service) {
 		kfree(cpts);
 		return ERR_PTR(-ENOMEM);
 	}
@@ -2298,7 +2298,7 @@ static int ptlrpc_main(void *arg)
 	}
 
 	env = kzalloc(sizeof(*env), GFP_NOFS);
-	if (env == NULL) {
+	if (!env) {
 		rc = -ENOMEM;
 		goto out_srv_fini;
 	}
@@ -2826,9 +2826,7 @@ void ptlrpc_hr_fini(void)
 	ptlrpc_stop_hr_threads();
 
 	cfs_percpt_for_each(hrp, i, ptlrpc_hr.hr_partitions) {
-		if (hrp->hrp_thrs != NULL) {
-			kfree(hrp->hrp_thrs);
-		}
+		kfree(hrp->hrp_thrs);
 	}
 
 	cfs_percpt_free(ptlrpc_hr.hr_partitions);
