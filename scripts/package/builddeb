@@ -25,8 +25,13 @@ create_package() {
 	chown -R root:root "$pdir"
 	chmod -R go-w "$pdir"
 
+	# Create the package
+	dpkg-gencontrol $forcearch -Vkernel:debarch="${debarch}" -p$pname -P"$pdir"
+	dpkg --build "$pdir" ..
+}
+
+set_debarch() {
 	# Attempt to find the correct Debian architecture
-	local forcearch="" debarch=""
 	case "$UTS_MACHINE" in
 	i386|ia64|alpha)
 		debarch="$UTS_MACHINE" ;;
@@ -47,6 +52,7 @@ create_package() {
 	arm*)
 		debarch=arm$(grep -q CONFIG_AEABI=y $KCONFIG_CONFIG && echo el || true) ;;
 	*)
+		debarch=$(dpkg --print-architecture)
 		echo "" >&2
 		echo "** ** **  WARNING  ** ** **" >&2
 		echo "" >&2
@@ -59,13 +65,8 @@ create_package() {
 	if [ -n "$KBUILD_DEBARCH" ] ; then
 		debarch="$KBUILD_DEBARCH"
 	fi
-	if [ -n "$debarch" ] ; then
-		forcearch="-DArchitecture=$debarch"
-	fi
+	forcearch="-DArchitecture=$debarch"
 
-	# Create the package
-	dpkg-gencontrol $forcearch -Vkernel:debarch="${debarch:-$(dpkg --print-architecture)}" -p$pname -P"$pdir"
-	dpkg --build "$pdir" ..
 }
 
 # Some variables and settings used throughout the script
@@ -86,6 +87,9 @@ fwpackagename=linux-firmware-image-$version
 kernel_headers_packagename=linux-headers-$version
 libc_headers_packagename=linux-libc-dev
 dbg_packagename=$packagename-dbg
+debarch=
+forcearch=
+set_debarch
 
 if [ "$ARCH" = "um" ] ; then
 	packagename=user-mode-linux-$version
@@ -143,6 +147,13 @@ else
 	cp arch/$ARCH/boot/$KBUILD_IMAGE "$tmpdir/$installed_image_path"
 fi
 
+if grep -q "^CONFIG_OF=y" $KCONFIG_CONFIG ; then
+	# Only some architectures with OF support have this target
+	if grep -q dtbs_install "${srctree}/arch/$SRCARCH/Makefile"; then
+		$MAKE KBUILD_SRC= INSTALL_DTBS_PATH="$tmpdir/usr/lib/$packagename" dtbs_install
+	fi
+fi
+
 if grep -q '^CONFIG_MODULES=y' $KCONFIG_CONFIG ; then
 	INSTALL_MOD_PATH="$tmpdir" $MAKE KBUILD_SRC= modules_install
 	rm -f "$tmpdir/lib/modules/$version/build"
@@ -162,6 +173,12 @@ if grep -q '^CONFIG_MODULES=y' $KCONFIG_CONFIG ; then
 			# then add a link to those
 			$OBJCOPY --add-gnu-debuglink=$dbg_dir/usr/lib/debug/$module $tmpdir/$module
 		done
+
+		# resign stripped modules
+		MODULE_SIG_ALL="$(grep -s '^CONFIG_MODULE_SIG_ALL=y' $KCONFIG_CONFIG || true)"
+		if [ -n "$MODULE_SIG_ALL" ]; then
+			INSTALL_MOD_PATH="$tmpdir" $MAKE KBUILD_SRC= modules_sign
+		fi
 	fi
 fi
 
