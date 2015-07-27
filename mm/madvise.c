@@ -393,7 +393,7 @@ static int madvise_free_single_vma(struct vm_area_struct *vma,
 		return -EINVAL;
 
 	/* MADV_FREE works for only anon vma at the moment */
-	if (vma->vm_file)
+	if (!vma_is_anonymous(vma))
 		return -EINVAL;
 
 	start = max(vma->vm_start, start_addr);
