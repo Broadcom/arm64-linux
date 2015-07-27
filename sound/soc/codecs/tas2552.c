@@ -38,7 +38,7 @@
 
 #include "tas2552.h"
 
-static struct reg_default tas2552_reg_defs[] = {
+static const struct reg_default tas2552_reg_defs[] = {
 	{TAS2552_CFG_1, 0x22},
 	{TAS2552_CFG_3, 0x80},
 	{TAS2552_DOUT, 0x00},
@@ -520,7 +520,7 @@ static const struct dev_pm_ops tas2552_pm = {
 			   NULL)
 };
 
-static struct snd_soc_dai_ops tas2552_speaker_dai_ops = {
+static const struct snd_soc_dai_ops tas2552_speaker_dai_ops = {
 	.hw_params	= tas2552_hw_params,
 	.prepare	= tas2552_prepare,
 	.set_sysclk	= tas2552_set_dai_sysclk,
@@ -769,7 +769,6 @@ MODULE_DEVICE_TABLE(of, tas2552_of_match);
 static struct i2c_driver tas2552_i2c_driver = {
 	.driver = {
 		.name = "tas2552",
-		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(tas2552_of_match),
 		.pm = &tas2552_pm,
 	},

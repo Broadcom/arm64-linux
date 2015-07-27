@@ -238,6 +238,7 @@ struct snd_soc_tplg_manifest {
 	__le32 graph_elems;	/* number of graph elements */
 	__le32 dai_elems;	/* number of DAI elements */
 	__le32 dai_link_elems;	/* number of DAI link elements */
+	struct snd_soc_tplg_private priv;
 } __attribute__((packed));
 
 /*
@@ -347,6 +348,7 @@ struct snd_soc_tplg_dapm_widget {
 	__le32 reg;		/* negative reg = no direct dapm */
 	__le32 shift;		/* bits to shift */
 	__le32 mask;		/* non-shifted mask */
+	__le32 subseq;		/* sort within widget type */
 	__u32 invert;		/* invert the power bit */
 	__u32 ignore_suspend;	/* kept enabled over suspend */
 	__u16 event_flags;

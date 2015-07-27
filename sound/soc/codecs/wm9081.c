@@ -30,7 +30,7 @@
 #include <sound/wm9081.h>
 #include "wm9081.h"
 
-static struct reg_default wm9081_reg[] = {
+static const struct reg_default wm9081_reg[] = {
 	{  2, 0x00B9 },     /* R2  - Analogue Lineout */
 	{  3, 0x00B9 },     /* R3  - Analogue Speaker PGA */
 	{  4, 0x0001 },     /* R4  - VMID Control */
@@ -1378,7 +1378,6 @@ MODULE_DEVICE_TABLE(i2c, wm9081_i2c_id);
 static struct i2c_driver wm9081_i2c_driver = {
 	.driver = {
 		.name = "wm9081",
-		.owner = THIS_MODULE,
 	},
 	.probe =    wm9081_i2c_probe,
 	.remove =   wm9081_i2c_remove,

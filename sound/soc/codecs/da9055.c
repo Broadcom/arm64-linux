@@ -948,7 +948,7 @@ struct da9055_priv {
 	struct da9055_platform_data *pdata;
 };
 
-static struct reg_default da9055_reg_defaults[] = {
+static const struct reg_default da9055_reg_defaults[] = {
 	{ 0x21, 0x10 },
 	{ 0x22, 0x0A },
 	{ 0x23, 0x00 },
@@ -1538,7 +1538,6 @@ static const struct of_device_id da9055_of_match[] = {
 static struct i2c_driver da9055_i2c_driver = {
 	.driver = {
 		.name = "da9055-codec",
-		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(da9055_of_match),
 	},
 	.probe		= da9055_i2c_probe,

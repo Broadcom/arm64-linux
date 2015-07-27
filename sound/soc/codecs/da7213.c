@@ -954,7 +954,7 @@ static const struct snd_soc_dapm_route da7213_audio_map[] = {
 	{"LINE", NULL, "Lineout PGA"},
 };
 
-static struct reg_default da7213_reg_defaults[] = {
+static const struct reg_default da7213_reg_defaults[] = {
 	{ DA7213_DIG_ROUTING_DAI, 0x10 },
 	{ DA7213_SR, 0x0A },
 	{ DA7213_REFERENCES, 0x80 },
@@ -1585,7 +1585,6 @@ MODULE_DEVICE_TABLE(i2c, da7213_i2c_id);
 static struct i2c_driver da7213_i2c_driver = {
 	.driver = {
 		.name = "da7213",
-		.owner = THIS_MODULE,
 	},
 	.probe		= da7213_i2c_probe,
 	.remove		= da7213_remove,

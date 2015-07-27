@@ -680,7 +680,7 @@ struct da7210_priv {
 	int master;
 };
 
-static struct reg_default da7210_reg_defaults[] = {
+static const struct reg_default da7210_reg_defaults[] = {
 	{ 0x00, 0x00 },
 	{ 0x01, 0x11 },
 	{ 0x03, 0x00 },
@@ -1182,7 +1182,7 @@ static struct snd_soc_codec_driver soc_codec_dev_da7210 = {
 
 #if IS_ENABLED(CONFIG_I2C)
 
-static struct reg_default da7210_regmap_i2c_patch[] = {
+static const struct reg_sequence da7210_regmap_i2c_patch[] = {
 
 	/* System controller master disable */
 	{ DA7210_STARTUP1, 0x00 },
@@ -1259,7 +1259,6 @@ MODULE_DEVICE_TABLE(i2c, da7210_i2c_id);
 static struct i2c_driver da7210_i2c_driver = {
 	.driver = {
 		.name = "da7210",
-		.owner = THIS_MODULE,
 	},
 	.probe		= da7210_i2c_probe,
 	.remove		= da7210_i2c_remove,
@@ -1269,7 +1268,7 @@ static struct i2c_driver da7210_i2c_driver = {
 
 #if defined(CONFIG_SPI_MASTER)
 
-static struct reg_default da7210_regmap_spi_patch[] = {
+static const struct reg_sequence da7210_regmap_spi_patch[] = {
 	/* Dummy read to give two pulses over nCS for SPI */
 	{ DA7210_AUX2, 0x00 },
 	{ DA7210_AUX2, 0x00 },

@@ -1236,8 +1236,8 @@ static int cs42l73_set_tristate(struct snd_soc_dai *dai, int tristate)
 	struct snd_soc_codec *codec = dai->codec;
 	int id = dai->id;
 
-	return snd_soc_update_bits(codec, CS42L73_SPC(id),
-					0x7F, tristate << 7);
+	return snd_soc_update_bits(codec, CS42L73_SPC(id), CS42L73_SP_3ST,
+				   tristate << 7);
 }
 
 static const struct snd_pcm_hw_constraint_list constraints_12_24 = {
@@ -1491,7 +1491,6 @@ MODULE_DEVICE_TABLE(i2c, cs42l73_id);
 static struct i2c_driver cs42l73_i2c_driver = {
 	.driver = {
 		   .name = "cs42l73",
-		   .owner = THIS_MODULE,
 		   .of_match_table = cs42l73_of_match,
 		   },
 	.id_table = cs42l73_id,
