@@ -115,7 +115,7 @@ config MFD_CROS_EC_I2C
 
 config MFD_CROS_EC_SPI
 	tristate "ChromeOS Embedded Controller (SPI)"
-	depends on MFD_CROS_EC && CROS_EC_PROTO && SPI && OF
+	depends on MFD_CROS_EC && CROS_EC_PROTO && SPI
 
 	---help---
 	  If you say Y here, you get support for talking to the ChromeOS EC
@@ -185,6 +185,18 @@ config MFD_DA9055
 
 	  This driver can be built as a module. If built as a module it will be
 	  called "da9055"
+
+config MFD_DA9062
+	tristate "Dialog Semiconductor DA9062 PMIC Support"
+	select MFD_CORE
+	select REGMAP_I2C
+	select REGMAP_IRQ
+	depends on I2C=y
+	help
+	  Say yes here for support for the Dialog Semiconductor DA9062 PMIC.
+	  This includes the I2C driver and core APIs.
+	  Additional drivers must be enabled in order to use the functionality
+	  of the device.
 
 config MFD_DA9063
 	bool "Dialog Semiconductor DA9063 PMIC Support"
@@ -376,12 +388,14 @@ config MFD_KEMPLD
 	  device may provide functions like watchdog, GPIO, UART and I2C bus.
 
 	  The following modules are supported:
+		* COMe-bBL6
 		* COMe-bHL6
 		* COMe-bIP#
 		* COMe-bPC2 (ETXexpress-PC)
 		* COMe-bSC# (ETXexpress-SC T#)
 		* COMe-cBL6
 		* COMe-cBT6
+		* COMe-cBW6
 		* COMe-cCT6
 		* COMe-cDC2 (microETXexpress-DC)
 		* COMe-cHL6
@@ -1356,6 +1370,12 @@ config MFD_WM8997
 	depends on MFD_ARIZONA
 	help
 	  Support for Wolfson Microelectronics WM8997 low power audio SoC
+
+config MFD_WM8998
+	bool "Wolfson Microelectronics WM8998"
+	depends on MFD_ARIZONA
+	help
+	  Support for Wolfson Microelectronics WM8998 low power audio SoC
 
 config MFD_WM8400
 	bool "Wolfson Microelectronics WM8400"

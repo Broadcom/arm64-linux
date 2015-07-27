@@ -52,7 +52,7 @@
 #define TPS6586X_VERSIONCRC	0xcd
 
 /* Maximum register */
-#define TPS6586X_MAX_REGISTER	(TPS6586X_VERSIONCRC + 1)
+#define TPS6586X_MAX_REGISTER	TPS6586X_VERSIONCRC
 
 struct tps6586x_irq_data {
 	u8	mask_reg;
@@ -467,7 +467,7 @@ static bool is_volatile_reg(struct device *dev, unsigned int reg)
 static const struct regmap_config tps6586x_regmap_config = {
 	.reg_bits = 8,
 	.val_bits = 8,
-	.max_register = TPS6586X_MAX_REGISTER - 1,
+	.max_register = TPS6586X_MAX_REGISTER,
 	.volatile_reg = is_volatile_reg,
 	.cache_type = REGCACHE_RBTREE,
 };
@@ -610,7 +610,6 @@ MODULE_DEVICE_TABLE(i2c, tps6586x_id_table);
 static struct i2c_driver tps6586x_driver = {
 	.driver	= {
 		.name	= "tps6586x",
-		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(tps6586x_of_match),
 	},
 	.probe		= tps6586x_i2c_probe,
