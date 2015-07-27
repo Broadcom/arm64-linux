@@ -1065,7 +1065,7 @@ static struct sk_buff *tun_alloc_skb(struct tun_file *tfile,
 		linear = len;
 
 	skb = sock_alloc_send_pskb(sk, prepad + linear, len - linear, noblock,
-				   &err, 0);
+				   &err, 1);
 	if (!skb)
 		return ERR_PTR(err);
 
