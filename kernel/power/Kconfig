@@ -103,6 +103,16 @@ config PM_SLEEP_SMP
 	depends on PM_SLEEP
 	select HOTPLUG_CPU
 
+config PM_SUSPEND_DO_SYNC_DEFAULT
+	int "Default value for /sys/power/suspend_do_sync"
+	range 0 1
+	default "1"
+	depends on SUSPEND
+	---help---
+	Set default value for /sys/power/pm_suspend_do_sync, which
+	controls if the kernel invokes sys_sync() on suspend to RAM.
+	Value 1 will do the sys_sync(), 0 will not.
+
 config PM_AUTOSLEEP
 	bool "Opportunistic sleep"
 	depends on PM_SLEEP

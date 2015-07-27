@@ -256,3 +256,12 @@ Description:
 		Writing a "1" enables this printing while writing a "0"
 		disables it.  The default value is "0".  Reading from this file
 		will display the current value.
+
+What:		/sys/power/pm_suspend_do_sync
+Date:		July, 2015
+Contact:	Len Brown <len.brown@intel.com>
+Description:
+		The /sys/power/pm_suspend_do_sync file controls whether the kernel
+		will invoke sys_sync() on entry to the suspend to RAM path.
+		Yes if 1, no if 0.  The default is set by build option
+		CONFIG_PM_SUSPEND_DO_SYNC_DEFAULT.
