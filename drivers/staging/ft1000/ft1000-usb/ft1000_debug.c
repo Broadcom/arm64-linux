@@ -413,7 +413,6 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 	int i;
 	u16 tempword;
 	unsigned long flags;
-	struct timeval tv;
 	struct IOCTL_GET_VER get_ver_data;
 	struct IOCTL_GET_DSP_STAT get_stat_data;
 	u8 ConnectionMsg[] = {
@@ -520,8 +519,7 @@ static long ft1000_ioctl(struct file *file, unsigned int command,
 		get_stat_data.nRxPkts = info->stats.rx_packets;
 		get_stat_data.nTxBytes = info->stats.tx_bytes;
 		get_stat_data.nRxBytes = info->stats.rx_bytes;
-		do_gettimeofday(&tv);
-		get_stat_data.ConTm = (u32)(tv.tv_sec - info->ConTm);
+		get_stat_data.ConTm = ktime_get_seconds() - info->ConTm;
 		pr_debug("Connection Time = %d\n", (int)get_stat_data.ConTm);
 		if (copy_to_user(argp, &get_stat_data, sizeof(get_stat_data))) {
 			pr_debug("copy fault occurred\n");
