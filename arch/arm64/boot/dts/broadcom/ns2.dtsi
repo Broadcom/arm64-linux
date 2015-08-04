@@ -89,6 +89,18 @@
 		brcm,pcie-ob-window-size = <256>;
 
 		status = "disabled";
+
+		msi-parent = <&msi4>;
+		msi4: msi@50020000 {
+			msi-controller;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 301 IRQ_TYPE_NONE>,
+				     <GIC_SPI 302 IRQ_TYPE_NONE>,
+				     <GIC_SPI 303 IRQ_TYPE_NONE>,
+				     <GIC_SPI 304 IRQ_TYPE_NONE>,
+				     <GIC_SPI 305 IRQ_TYPE_NONE>,
+				     <GIC_SPI 306 IRQ_TYPE_NONE>;
+		};
 	};
 
 	soc: soc {
