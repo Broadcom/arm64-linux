@@ -311,6 +311,29 @@ static int iproc_pcie_map_ranges(struct iproc_pcie *pcie)
 	return 0;
 }
 
+static int iproc_pcie_msi_enable(struct iproc_pcie *pcie)
+{
+	struct device_node *msi_node;
+	struct pci_bus *bus = pcie->root_bus;
+
+	msi_node = of_parse_phandle(pcie->dev->of_node, "msi-parent", 0);
+	if (!msi_node)
+		return -ENODEV;
+
+	bus->msi = of_pci_find_msi_chip_by_node(msi_node);
+	if (bus->msi) {
+		bus->msi->dev = pcie->dev;
+		return 0;
+	}
+
+	/* fall back to legacy iProc event queue based MSI */
+	bus->msi = iproc_pcie_msi_init(pcie, msi_node);
+	if (IS_ERR(bus->msi))
+		return PTR_ERR(bus->msi);
+
+	return 0;
+}
+
 int iproc_pcie_setup(struct iproc_pcie *pcie)
 {
 	int ret;
@@ -366,6 +389,10 @@ int iproc_pcie_setup(struct iproc_pcie *pcie)
 	}
 
 	iproc_pcie_enable(pcie);
+
+	if (IS_ENABLED(CONFIG_PCI_MSI))
+		if (iproc_pcie_msi_enable(pcie))
+			dev_info(pcie->dev, "failed to enable MSI\n");
 
 	pci_scan_child_bus(bus);
 	pci_assign_unassigned_bus_resources(bus);

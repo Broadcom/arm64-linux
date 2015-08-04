@@ -31,13 +31,13 @@ struct iproc_pcie_ob {
 
 /**
  * iProc PCIe device
+ *
  * @dev: pointer to device data structure
  * @base: PCIe host controller I/O register base
  * @resources: linked list of all PCI resources
  * @sysdata: Per PCI controller data
  * @root_bus: pointer to root bus
  * @phy: optional PHY device that controls the Serdes
- * @irqs: interrupt IDs
  * @need_ob_cfg: indicates SW needs to configure the outbound mapping window
  * @ob: outbound mapping parameters
  */
@@ -50,12 +50,13 @@ struct iproc_pcie {
 #endif
 	struct pci_bus *root_bus;
 	struct phy *phy;
-	int irqs[IPROC_PCIE_MAX_NUM_IRQS];
 	bool need_ob_cfg;
 	struct iproc_pcie_ob ob;
 };
 
 int iproc_pcie_setup(struct iproc_pcie *pcie);
 int iproc_pcie_remove(struct iproc_pcie *pcie);
+struct msi_controller *iproc_pcie_msi_init(struct iproc_pcie *pcie,
+					   struct device_node *node);
 
 #endif /* _PCIE_IPROC_H */
