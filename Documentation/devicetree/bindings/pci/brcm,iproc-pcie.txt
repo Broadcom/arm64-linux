@@ -31,6 +31,21 @@ effective:
   - brcm,pcie-ob-oarr-size: Some iProc SoCs need the OARR size bit to be set to
   increase the outbound window size
 
+MSI support (optional):
+- msi-parent: Link to the device node of the MSI controller. On newer iProc
+platforms, the MSI controller may be gicv2m or gicv3. On legacy iProc platforms
+without MSI support in its interrupt controller, one may use the event queue
+based MSI support integrated within the iProc PCIe core
+
+When the iProc event queue based MSI is used, one needs to define the
+following properties in the MSI child node:
+- msi-controller: claims itself as an MSI controller
+- interrupt-parent: Link to its parent interrupt device
+- interrupts: List of interrupt IDs from its parent interrupt device
+Optional:
+- brcm,pcie-msi-inten: Needs to be present for some older iProc platforms that
+requires the interrupt enable registers to be set explicitly to enable MSI
+
 Example:
 	pcie0: pcie@18012000 {
 		compatible = "brcm,iproc-pcie";
@@ -57,6 +72,20 @@ Example:
 		brcm,pcie-ob-oarr-size;
 		brcm,pcie-ob-axi-offset = <0x00000000>;
 		brcm,pcie-ob-window-size = <256>;
+
+		msi-parent = <&msi0>;
+
+		/* iProc event queue based MSI */
+		msi0: msi@18012000 {
+			msi-controller;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 96 IRQ_TYPE_NONE>,
+				     <GIC_SPI 97 IRQ_TYPE_NONE>,
+				     <GIC_SPI 98 IRQ_TYPE_NONE>,
+				     <GIC_SPI 99 IRQ_TYPE_NONE>,
+				     <GIC_SPI 100 IRQ_TYPE_NONE>,
+				     <GIC_SPI 101 IRQ_TYPE_NONE>;
+		};
 	};
 
 	pcie1: pcie@18013000 {
