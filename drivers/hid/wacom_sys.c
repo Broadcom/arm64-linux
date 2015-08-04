@@ -453,12 +453,11 @@ static void wacom_retrieve_hid_descriptor(struct hid_device *hdev,
 	 * interface number.
 	 */
 	if (features->type == WIRELESS) {
-		if (intf->cur_altsetting->desc.bInterfaceNumber == 0) {
+		if (intf->cur_altsetting->desc.bInterfaceNumber == 0)
+			features->device_type = WACOM_DEVICETYPE_WL_MONITOR;
+		else
 			features->device_type = WACOM_DEVICETYPE_NONE;
-		} else if (intf->cur_altsetting->desc.bInterfaceNumber == 2) {
-			features->device_type |= WACOM_DEVICETYPE_TOUCH;
-			features->pktlen = WACOM_PKGLEN_BBTOUCH3;
-		}
+		return;
 	}
 
 	wacom_parse_hid(hdev, features);
@@ -1534,11 +1533,9 @@ static int wacom_probe(struct hid_device *hdev,
 	mutex_init(&wacom->lock);
 	INIT_WORK(&wacom->work, wacom_wireless_work);
 
-	if (!(features->quirks & WACOM_QUIRK_NO_INPUT)) {
-		error = wacom_allocate_inputs(wacom);
-		if (error)
-			goto fail_allocate_inputs;
-	}
+	error = wacom_allocate_inputs(wacom);
+	if (error)
+		goto fail_allocate_inputs;
 
 	/*
 	 * Bamboo Pad has a generic hid handling for the Pen, and we switch it
@@ -1584,18 +1581,16 @@ static int wacom_probe(struct hid_device *hdev,
 	if (error)
 		goto fail_shared_data;
 
-	if (!(features->quirks & WACOM_QUIRK_MONITOR) &&
+	if (!(features->device_type & WACOM_DEVICETYPE_WL_MONITOR) &&
 	     (features->quirks & WACOM_QUIRK_BATTERY)) {
 		error = wacom_initialize_battery(wacom);
 		if (error)
 			goto fail_battery;
 	}
 
-	if (!(features->quirks & WACOM_QUIRK_NO_INPUT)) {
-		error = wacom_register_inputs(wacom);
-		if (error)
-			goto fail_register_inputs;
-	}
+	error = wacom_register_inputs(wacom);
+	if (error)
+		goto fail_register_inputs;
 
 	if (hdev->bus == BUS_BLUETOOTH) {
 		error = device_create_file(&hdev->dev, &dev_attr_speed);
@@ -1618,7 +1613,7 @@ static int wacom_probe(struct hid_device *hdev,
 	/* Note that if query fails it is not a hard failure */
 	wacom_query_tablet_data(hdev, features);
 
-	if (features->quirks & WACOM_QUIRK_MONITOR)
+	if (features->device_type & WACOM_DEVICETYPE_WL_MONITOR)
 		error = hid_hw_open(hdev);
 
 	if (wacom_wac->features.type == INTUOSHT && 
