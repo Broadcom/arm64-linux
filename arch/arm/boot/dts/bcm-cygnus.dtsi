@@ -145,6 +145,18 @@
 			  0x82000000 0 0x20000000 0x20000000 0 0x04000000>;
 
 		status = "disabled";
+
+		msi-parent = <&msi0>;
+		msi0: msi@18012000 {
+			msi-controller;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 96 IRQ_TYPE_NONE>,
+				     <GIC_SPI 97 IRQ_TYPE_NONE>,
+				     <GIC_SPI 98 IRQ_TYPE_NONE>,
+				     <GIC_SPI 99 IRQ_TYPE_NONE>,
+				     <GIC_SPI 100 IRQ_TYPE_NONE>,
+				     <GIC_SPI 101 IRQ_TYPE_NONE>;
+		};
 	};
 
 	pcie1: pcie@18013000 {
@@ -166,6 +178,18 @@
 			  0x82000000 0 0x40000000 0x40000000 0 0x04000000>;
 
 		status = "disabled";
+
+		msi-parent = <&msi1>;
+		msi1: msi@18013000 {
+			msi-controller;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 102 IRQ_TYPE_NONE>,
+				     <GIC_SPI 103 IRQ_TYPE_NONE>,
+				     <GIC_SPI 104 IRQ_TYPE_NONE>,
+				     <GIC_SPI 105 IRQ_TYPE_NONE>,
+				     <GIC_SPI 106 IRQ_TYPE_NONE>,
+				     <GIC_SPI 107 IRQ_TYPE_NONE>;
+		};
 	};
 
 	uart0: serial@18020000 {
