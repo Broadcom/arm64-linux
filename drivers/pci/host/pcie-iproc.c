@@ -60,6 +60,12 @@
 #define SYS_RC_INTX_EN               0x330
 #define SYS_RC_INTX_MASK             0xf
 
+#define PCIE_LINK_STATUS_OFFSET      0xf0c
+#define PCIE_PHYLINKUP_SHIFT         3
+#define PCIE_PHYLINKUP               BIT(PCIE_PHYLINKUP_SHIFT)
+#define PCIE_DL_ACTIVE_SHIFT         2
+#define PCIE_DL_ACTIVE               BIT(PCIE_DL_ACTIVE_SHIFT)
+
 #define OARR_VALID_SHIFT             0
 #define OARR_VALID                   BIT(OARR_VALID_SHIFT)
 #define OARR_SIZE_CFG_SHIFT          1
@@ -153,9 +159,15 @@ static void iproc_pcie_reset(struct iproc_pcie *pcie)
 static int iproc_pcie_check_link(struct iproc_pcie *pcie, struct pci_bus *bus)
 {
 	u8 hdr_type;
-	u32 link_ctrl, class;
+	u32 link_ctrl, class, val;
 	u16 pos, link_status;
-	int link_is_active = 0;
+	bool link_is_active = false;
+
+	val = readl(pcie->base + PCIE_LINK_STATUS_OFFSET);
+	if (!(val & PCIE_PHYLINKUP) || !(val & PCIE_DL_ACTIVE)) {
+		dev_err(pcie->dev, "PHY or data link is INACTIVE!\n");
+		return -ENODEV;
+	}
 
 	/* make sure we are not in EP mode */
 	pci_bus_read_config_byte(bus, 0, PCI_HEADER_TYPE, &hdr_type);
@@ -180,7 +192,7 @@ static int iproc_pcie_check_link(struct iproc_pcie *pcie, struct pci_bus *bus)
 	pos = pci_bus_find_capability(bus, 0, PCI_CAP_ID_EXP);
 	pci_bus_read_config_word(bus, 0, pos + PCI_EXP_LNKSTA, &link_status);
 	if (link_status & PCI_EXP_LNKSTA_NLW)
-		link_is_active = 1;
+		link_is_active = true;
 
 	if (!link_is_active) {
 		/* try GEN 1 link speed */
@@ -204,7 +216,7 @@ static int iproc_pcie_check_link(struct iproc_pcie *pcie, struct pci_bus *bus)
 			pci_bus_read_config_word(bus, 0, pos + PCI_EXP_LNKSTA,
 						 &link_status);
 			if (link_status & PCI_EXP_LNKSTA_NLW)
-				link_is_active = 1;
+				link_is_active = true;
 		}
 	}
 
