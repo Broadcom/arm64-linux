@@ -1222,12 +1222,41 @@ static const struct file_operations hid_debug_events_fops = {
 
 void hid_debug_register(struct hid_device *hdev, const char *name)
 {
+	if (!hid_debug_root)
+		goto debugfs_root_error;
+
 	hdev->debug_dir = debugfs_create_dir(name, hid_debug_root);
+
+	if (!hdev->debug_dir) {
+		printk(KERN_WARNING "Could not create '%s' debugfs directory\n",
+			name);
+		return;
+	}
+
 	hdev->debug_rdesc = debugfs_create_file("rdesc", 0400,
 			hdev->debug_dir, hdev, &hid_debug_rdesc_fops);
+	if (!hdev->debug_rdesc) {
+		printk(KERN_WARNING "Could not create rdesc debugfs file\n");
+		goto error;
+	}
+
 	hdev->debug_events = debugfs_create_file("events", 0400,
 			hdev->debug_dir, hdev, &hid_debug_events_fops);
+	if (!hdev->debug_events) {
+		printk(KERN_WARNING "Could not create events debugfs file\n");
+		goto error;
+	}
+
 	hdev->debug = 1;
+
+	return;
+
+error:
+	debugfs_remove_recursive(hdev->debug_dir);
+	return;
+
+debugfs_root_error:
+	return;
 }
 
 void hid_debug_unregister(struct hid_device *hdev)
@@ -1242,10 +1271,13 @@ void hid_debug_unregister(struct hid_device *hdev)
 void hid_debug_init(void)
 {
 	hid_debug_root = debugfs_create_dir("hid", NULL);
+	if (!hid_debug_root)
+		printk(KERN_WARNING "Could not create root 'hid' debugfs directory\n");
 }
 
 void hid_debug_exit(void)
 {
-	debugfs_remove_recursive(hid_debug_root);
+	if (hid_debug_root)
+		debugfs_remove_recursive(hid_debug_root);
 }
 
