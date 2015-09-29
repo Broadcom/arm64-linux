@@ -2628,10 +2628,8 @@ int hid_add_device(struct hid_device *hdev)
 	ret = device_add(&hdev->dev);
 	if (!ret)
 		hdev->status |= HID_STAT_ADDED;
-	else {
-		if (hdev->debug)
-			hid_debug_unregister(hdev);
-	}
+	else
+		hid_debug_unregister(hdev);
 
 	return ret;
 }
@@ -2675,8 +2673,7 @@ static void hid_remove_device(struct hid_device *hdev)
 {
 	if (hdev->status & HID_STAT_ADDED) {
 		device_del(&hdev->dev);
-		if (hdev->debug)
-			hid_debug_unregister(hdev);
+		hid_debug_unregister(hdev);
 		hdev->status &= ~HID_STAT_ADDED;
 	}
 	kfree(hdev->dev_rdesc);
