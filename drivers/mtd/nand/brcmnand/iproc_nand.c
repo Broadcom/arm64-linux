@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
@@ -34,6 +35,10 @@ struct iproc_nand_soc_priv {
 #define IPROC_NAND_IO_CTRL_OFFSET          0x00
 #define IPROC_NAND_APB_LE_MODE             BIT(24)
 #define IPROC_NAND_INT_CTRL_READ_ENABLE    BIT(6)
+
+#define IPROC_NAND_RESET_OFFSET            0x3f8
+#define IPROC_NAND_RESET_BIT_SHIFT         0
+#define IPROC_NAND_RESET_BIT               BIT(IPROC_NAND_RESET_BIT_SHIFT)
 
 static bool iproc_nand_intc_ack(struct brcmnand_soc *soc)
 {
@@ -93,6 +98,7 @@ static void iproc_nand_apb_access(struct brcmnand_soc *soc, bool prepare)
 
 static int iproc_nand_probe(struct platform_device *pdev)
 {
+	u32 reset;
 	struct device *dev = &pdev->dev;
 	struct iproc_nand_soc_priv *priv;
 	struct brcmnand_soc *soc;
@@ -123,6 +129,19 @@ static int iproc_nand_probe(struct platform_device *pdev)
 	soc->ctlrdy_ack = iproc_nand_intc_ack;
 	soc->ctlrdy_set_enabled = iproc_nand_intc_set;
 	soc->prepare_data_bus = iproc_nand_apb_access;
+
+	if (of_property_read_bool(dev->of_node, "brcm,nand-iproc-reset")) {
+		/* Put controller in reset and wait 10 usecs */
+		reset = readl(priv->idm_base + IPROC_NAND_RESET_OFFSET);
+		reset |= IPROC_NAND_RESET_BIT;
+		writel(reset, priv->idm_base + IPROC_NAND_RESET_OFFSET);
+		udelay(10);
+		/* Bring controller out of reset and wait 10 usecs */
+		reset = readl(priv->idm_base + IPROC_NAND_RESET_OFFSET);
+		reset &= ~IPROC_NAND_RESET_BIT;
+		writel(reset, priv->idm_base + IPROC_NAND_RESET_OFFSET);
+		udelay(10);
+	}
 
 	return brcmnand_probe(pdev, soc);
 }
