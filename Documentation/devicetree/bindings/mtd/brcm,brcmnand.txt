@@ -78,6 +78,10 @@ we define additional 'compatible' properties and associated register resources w
        for interrupt status/ack.
      - reg-names: (required) a list of the names corresponding to the previous
        register ranges. Should contain "iproc-idm" and "iproc-ext".
+     - brcm,nand-iproc-reset: (optional) Some of the Broadcom IPROC SoCs
+       require NAND controller to be resetted for cleanup of previously
+       configured NAND controller state. This optional flag resets the
+       NAND controller once before any NAND commands are issued.
 
 
 * NAND chip-select
