@@ -63,5 +63,17 @@
 		uart3: serial@66130000 {
 			status = "ok";
 		};
+
+		nand: nand@66460000 {
+			nandcs@0 {
+				compatible = "brcm,nandcs";
+				reg = <0>;
+				nand-ecc-mode = "hw";
+				nand-ecc-strength = <8>;
+				nand-ecc-step-size = <512>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+			};
+		};
 	};
 };
