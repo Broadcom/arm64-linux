@@ -319,32 +319,7 @@ static inline s64 timekeeping_get_ns(struct tk_read_base *tkr)
  * We want to use this from any context including NMI and tracing /
  * instrumenting the timekeeping code itself.
  *
- * So we handle this differently than the other timekeeping accessor
- * functions which retry when the sequence count has changed. The
- * update side does:
- *
- * smp_wmb();	<- Ensure that the last base[1] update is visible
- * tkf->seq++;
- * smp_wmb();	<- Ensure that the seqcount update is visible
- * update(tkf->base[0], tkr);
- * smp_wmb();	<- Ensure that the base[0] update is visible
- * tkf->seq++;
- * smp_wmb();	<- Ensure that the seqcount update is visible
- * update(tkf->base[1], tkr);
- *
- * The reader side does:
- *
- * do {
- *	seq = tkf->seq;
- *	smp_rmb();
- *	idx = seq & 0x01;
- *	now = now(tkf->base[idx]);
- *	smp_rmb();
- * } while (seq != tkf->seq)
- *
- * As long as we update base[0] readers are forced off to
- * base[1]. Once base[0] is updated readers are redirected to base[0]
- * and the base[1] update takes place.
+ * Employ the latch technique; see @raw_write_seqcount_latch.
  *
  * So if a NMI hits the update of base[0] then it will use base[1]
  * which is still consistent. In the worst case this can result is a
@@ -407,7 +382,7 @@ static __always_inline u64 __ktime_get_fast_ns(struct tk_fast *tkf)
 	u64 now;
 
 	do {
-		seq = raw_read_seqcount(&tkf->seq);
+		seq = raw_read_seqcount_latch(&tkf->seq);
 		tkr = tkf->base + (seq & 0x01);
 		now = ktime_to_ns(tkr->base) + timekeeping_get_ns(tkr);
 	} while (read_seqcount_retry(&tkf->seq, seq));
@@ -936,6 +911,7 @@ int do_settimeofday64(const struct timespec64 *ts)
 	struct timekeeper *tk = &tk_core.timekeeper;
 	struct timespec64 ts_delta, xt;
 	unsigned long flags;
+	int ret = 0;
 
 	if (!timespec64_valid_strict(ts))
 		return -EINVAL;
@@ -949,10 +925,15 @@ int do_settimeofday64(const struct timespec64 *ts)
 	ts_delta.tv_sec = ts->tv_sec - xt.tv_sec;
 	ts_delta.tv_nsec = ts->tv_nsec - xt.tv_nsec;
 
+	if (timespec64_compare(&tk->wall_to_monotonic, &ts_delta) > 0) {
+		ret = -EINVAL;
+		goto out;
+	}
+
 	tk_set_wall_to_mono(tk, timespec64_sub(tk->wall_to_monotonic, ts_delta));
 
 	tk_set_xtime(tk, ts);
-
+out:
 	timekeeping_update(tk, TK_CLEAR_NTP | TK_MIRROR | TK_CLOCK_WAS_SET);
 
 	write_seqcount_end(&tk_core.seq);
@@ -961,7 +942,7 @@ int do_settimeofday64(const struct timespec64 *ts)
 	/* signal hrtimers about time change */
 	clock_was_set();
 
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL(do_settimeofday64);
 
@@ -990,7 +971,8 @@ int timekeeping_inject_offset(struct timespec *ts)
 
 	/* Make sure the proposed value is valid */
 	tmp = timespec64_add(tk_xtime(tk),  ts64);
-	if (!timespec64_valid_strict(&tmp)) {
+	if (timespec64_compare(&tk->wall_to_monotonic, &ts64) > 0 ||
+	    !timespec64_valid_strict(&tmp)) {
 		ret = -EINVAL;
 		goto error;
 	}
@@ -1899,7 +1881,7 @@ struct timespec __current_kernel_time(void)
 	return timespec64_to_timespec(tk_xtime(tk));
 }
 
-struct timespec current_kernel_time(void)
+struct timespec64 current_kernel_time64(void)
 {
 	struct timekeeper *tk = &tk_core.timekeeper;
 	struct timespec64 now;
@@ -1911,9 +1893,9 @@ struct timespec current_kernel_time(void)
 		now = tk_xtime(tk);
 	} while (read_seqcount_retry(&tk_core.seq, seq));
 
-	return timespec64_to_timespec(now);
+	return now;
 }
-EXPORT_SYMBOL(current_kernel_time);
+EXPORT_SYMBOL(current_kernel_time64);
 
 struct timespec64 get_monotonic_coarse64(void)
 {

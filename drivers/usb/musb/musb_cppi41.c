@@ -614,7 +614,7 @@ static int cppi41_dma_controller_start(struct cppi41_dma_controller *controller)
 {
 	struct musb *musb = controller->musb;
 	struct device *dev = musb->controller;
-	struct device_node *np = dev->of_node;
+	struct device_node *np = dev->parent->of_node;
 	struct cppi41_dma_channel *cppi41_channel;
 	int count;
 	int i;
@@ -664,7 +664,7 @@ static int cppi41_dma_controller_start(struct cppi41_dma_controller *controller)
 		musb_dma->status = MUSB_DMA_STATUS_FREE;
 		musb_dma->max_len = SZ_4M;
 
-		dc = dma_request_slave_channel(dev, str);
+		dc = dma_request_slave_channel(dev->parent, str);
 		if (!dc) {
 			dev_err(dev, "Failed to request %s.\n", str);
 			ret = -EPROBE_DEFER;
@@ -678,7 +678,7 @@ err:
 	return ret;
 }
 
-void dma_controller_destroy(struct dma_controller *c)
+void cppi41_dma_controller_destroy(struct dma_controller *c)
 {
 	struct cppi41_dma_controller *controller = container_of(c,
 			struct cppi41_dma_controller, controller);
@@ -687,14 +687,15 @@ void dma_controller_destroy(struct dma_controller *c)
 	cppi41_dma_controller_stop(controller);
 	kfree(controller);
 }
+EXPORT_SYMBOL_GPL(cppi41_dma_controller_destroy);
 
-struct dma_controller *dma_controller_create(struct musb *musb,
-					void __iomem *base)
+struct dma_controller *
+cppi41_dma_controller_create(struct musb *musb, void __iomem *base)
 {
 	struct cppi41_dma_controller *controller;
 	int ret = 0;
 
-	if (!musb->controller->of_node) {
+	if (!musb->controller->parent->of_node) {
 		dev_err(musb->controller, "Need DT for the DMA engine.\n");
 		return NULL;
 	}
@@ -726,3 +727,4 @@ kzalloc_fail:
 		return ERR_PTR(ret);
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(cppi41_dma_controller_create);

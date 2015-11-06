@@ -841,9 +841,14 @@ config SCHED_DEBUG
 	  that can help debug the scheduler. The runtime overhead of this
 	  option is minimal.
 
+config SCHED_INFO
+	bool
+	default n
+
 config SCHEDSTATS
 	bool "Collect scheduler statistics"
 	depends on DEBUG_KERNEL && PROC_FS
+	select SCHED_INFO
 	help
 	  If you say Y here, additional code will be inserted into the
 	  scheduler and related routines to collect statistics about
@@ -1348,20 +1353,6 @@ config RCU_CPU_STALL_TIMEOUT
 	  RCU grace period persists, additional CPU stall warnings are
 	  printed at more widely spaced intervals.
 
-config RCU_CPU_STALL_INFO
-	bool "Print additional diagnostics on RCU CPU stall"
-	depends on (TREE_RCU || PREEMPT_RCU) && DEBUG_KERNEL
-	default y
-	help
-	  For each stalled CPU that is aware of the current RCU grace
-	  period, print out additional per-CPU diagnostic information
-	  regarding scheduling-clock ticks, idle state, and,
-	  for RCU_FAST_NO_HZ kernels, idle-entry state.
-
-	  Say N if you are unsure.
-
-	  Say Y if you want to enable such diagnostics.
-
 config RCU_TRACE
 	bool "Enable tracing for RCU"
 	depends on DEBUG_KERNEL
@@ -1374,7 +1365,7 @@ config RCU_TRACE
 	  Say N if you are unsure.
 
 config RCU_EQS_DEBUG
-	bool "Use this when adding any sort of NO_HZ support to your arch"
+	bool "Provide debugging asserts for adding NO_HZ support to an arch"
 	depends on DEBUG_KERNEL
 	help
 	  This option provides consistency checks in RCU's handling of

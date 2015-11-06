@@ -40,6 +40,7 @@
 #include "util/xyarray.h"
 #include "util/sort.h"
 #include "util/intlist.h"
+#include "util/parse-branch-options.h"
 #include "arch/common.h"
 
 #include "util/debug.h"
@@ -586,27 +587,9 @@ static void *display_thread_tui(void *arg)
 		hists->uid_filter_str = top->record_opts.target.uid_str;
 	}
 
-	while (true)  {
-		int key = perf_evlist__tui_browse_hists(top->evlist, help, &hbt,
-							top->min_percent,
-							&top->session->header.env);
-
-		if (key != 'f')
-			break;
-
-		perf_evlist__toggle_enable(top->evlist);
-		/*
-		 * No need to refresh, resort/decay histogram entries
-		 * if we are not collecting samples:
-		 */
-		if (top->evlist->enabled) {
-			hbt.refresh = top->delay_secs;
-			help = "Press 'f' to disable the events or 'h' to see other hotkeys";
-		} else {
-			help = "Press 'f' again to re-enable the events";
-			hbt.refresh = 0;
-		}
-	}
+	perf_evlist__tui_browse_hists(top->evlist, help, &hbt,
+				      top->min_percent,
+				      &top->session->header.env);
 
 	done = 1;
 	return NULL;
@@ -619,8 +602,8 @@ static void display_sig(int sig __maybe_unused)
 
 static void display_setup_sig(void)
 {
-	signal(SIGSEGV, display_sig);
-	signal(SIGFPE,  display_sig);
+	signal(SIGSEGV, sighandler_dump_stack);
+	signal(SIGFPE, sighandler_dump_stack);
 	signal(SIGINT,  display_sig);
 	signal(SIGQUIT, display_sig);
 	signal(SIGTERM, display_sig);
@@ -713,6 +696,8 @@ static int hist_iter__top_callback(struct hist_entry_iter *iter,
 		perf_top__record_precise_ip(top, he, evsel->idx, ip);
 	}
 
+	hist__account_cycles(iter->sample->branch_stack, al, iter->sample,
+		     !(top->record_opts.branch_stack & PERF_SAMPLE_BRANCH_ANY));
 	return 0;
 }
 
@@ -1189,6 +1174,12 @@ int cmd_top(int argc, const char **argv, const char *prefix __maybe_unused)
 		   "don't try to adjust column width, use these fixed values"),
 	OPT_UINTEGER(0, "proc-map-timeout", &opts->proc_map_timeout,
 			"per thread proc mmap processing timeout in ms"),
+	OPT_CALLBACK_NOOPT('b', "branch-any", &opts->branch_stack,
+		     "branch any", "sample any taken branches",
+		     parse_branch_stack),
+	OPT_CALLBACK('j', "branch-filter", &opts->branch_stack,
+		     "branch filter mask", "branch stack filter modes",
+		     parse_branch_stack),
 	OPT_END()
 	};
 	const char * const top_usage[] = {

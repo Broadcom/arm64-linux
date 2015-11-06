@@ -561,6 +561,7 @@ int cmd_inject(int argc, const char **argv, const char *prefix __maybe_unused)
 			.lost		= perf_event__repipe,
 			.aux		= perf_event__repipe,
 			.itrace_start	= perf_event__repipe,
+			.context_switch	= perf_event__repipe,
 			.read		= perf_event__repipe_sample,
 			.throttle	= perf_event__repipe,
 			.unthrottle	= perf_event__repipe,
@@ -630,12 +631,13 @@ int cmd_inject(int argc, const char **argv, const char *prefix __maybe_unused)
 	if (inject.session == NULL)
 		return -1;
 
-	if (symbol__init(&inject.session->header.env) < 0)
-		return -1;
+	ret = symbol__init(&inject.session->header.env);
+	if (ret < 0)
+		goto out_delete;
 
 	ret = __cmd_inject(&inject);
 
+out_delete:
 	perf_session__delete(inject.session);
-
 	return ret;
 }
