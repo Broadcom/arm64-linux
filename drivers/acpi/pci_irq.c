@@ -19,10 +19,6 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  *  General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
- *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 
@@ -376,6 +372,7 @@ static int acpi_isa_register_gsi(struct pci_dev *dev)
 
 	/* Interrupt Line values above 0xF are forbidden */
 	if (dev->irq > 0 && (dev->irq <= 0xF) &&
+	    acpi_isa_irq_available(dev->irq) &&
 	    (acpi_isa_irq_to_gsi(dev->irq, &dev_gsi) == 0)) {
 		dev_warn(&dev->dev, "PCI INT %c: no GSI - using ISA IRQ %d\n",
 			 pin_name(dev->pin), dev->irq);

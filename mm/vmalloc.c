@@ -358,7 +358,7 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
 	struct vmap_area *first;
 
 	BUG_ON(!size);
-	BUG_ON(size & ~PAGE_MASK);
+	BUG_ON(offset_in_page(size));
 	BUG_ON(!is_power_of_2(align));
 
 	va = kmalloc_node(sizeof(struct vmap_area),
@@ -936,7 +936,7 @@ static void *vb_alloc(unsigned long size, gfp_t gfp_mask)
 	void *vaddr = NULL;
 	unsigned int order;
 
-	BUG_ON(size & ~PAGE_MASK);
+	BUG_ON(offset_in_page(size));
 	BUG_ON(size > PAGE_SIZE*VMAP_MAX_ALLOC);
 	if (WARN_ON(size == 0)) {
 		/*
@@ -989,7 +989,7 @@ static void vb_free(const void *addr, unsigned long size)
 	unsigned int order;
 	struct vmap_block *vb;
 
-	BUG_ON(size & ~PAGE_MASK);
+	BUG_ON(offset_in_page(size));
 	BUG_ON(size > PAGE_SIZE*VMAP_MAX_ALLOC);
 
 	flush_cache_vunmap((unsigned long)addr, (unsigned long)addr + size);
@@ -1902,7 +1902,7 @@ static int aligned_vread(char *buf, char *addr, unsigned long count)
 	while (count) {
 		unsigned long offset, length;
 
-		offset = (unsigned long)addr & ~PAGE_MASK;
+		offset = offset_in_page(addr);
 		length = PAGE_SIZE - offset;
 		if (length > count)
 			length = count;
@@ -1941,7 +1941,7 @@ static int aligned_vwrite(char *buf, char *addr, unsigned long count)
 	while (count) {
 		unsigned long offset, length;
 
-		offset = (unsigned long)addr & ~PAGE_MASK;
+		offset = offset_in_page(addr);
 		length = PAGE_SIZE - offset;
 		if (length > count)
 			length = count;
@@ -2392,7 +2392,7 @@ struct vm_struct **pcpu_get_vm_areas(const unsigned long *offsets,
 	bool purged = false;
 
 	/* verify parameters and allocate data structures */
-	BUG_ON(align & ~PAGE_MASK || !is_power_of_2(align));
+	BUG_ON(offset_in_page(align) || !is_power_of_2(align));
 	for (last_area = 0, area = 0; area < nr_vms; area++) {
 		start = offsets[area];
 		end = start + sizes[area];
@@ -2688,52 +2688,5 @@ static int __init proc_vmalloc_init(void)
 }
 module_init(proc_vmalloc_init);
 
-void get_vmalloc_info(struct vmalloc_info *vmi)
-{
-	struct vmap_area *va;
-	unsigned long free_area_size;
-	unsigned long prev_end;
-
-	vmi->used = 0;
-	vmi->largest_chunk = 0;
-
-	prev_end = VMALLOC_START;
-
-	rcu_read_lock();
-
-	if (list_empty(&vmap_area_list)) {
-		vmi->largest_chunk = VMALLOC_TOTAL;
-		goto out;
-	}
-
-	list_for_each_entry_rcu(va, &vmap_area_list, list) {
-		unsigned long addr = va->va_start;
-
-		/*
-		 * Some archs keep another range for modules in vmalloc space
-		 */
-		if (addr < VMALLOC_START)
-			continue;
-		if (addr >= VMALLOC_END)
-			break;
-
-		if (va->flags & (VM_LAZY_FREE | VM_LAZY_FREEING))
-			continue;
-
-		vmi->used += (va->va_end - va->va_start);
-
-		free_area_size = addr - prev_end;
-		if (vmi->largest_chunk < free_area_size)
-			vmi->largest_chunk = free_area_size;
-
-		prev_end = va->va_end;
-	}
-
-	if (VMALLOC_END - prev_end > vmi->largest_chunk)
-		vmi->largest_chunk = VMALLOC_END - prev_end;
-
-out:
-	rcu_read_unlock();
-}
 #endif
 

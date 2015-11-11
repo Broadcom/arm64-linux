@@ -20,6 +20,7 @@
  */
 
 #include <linux/uuid.h>
+#include <linux/io.h>
 
 #include "version.h"
 #include "visorbus.h"
@@ -35,7 +36,7 @@ static const uuid_le spar_video_guid = SPAR_CONSOLEVIDEO_CHANNEL_PROTOCOL_GUID;
 struct visorchannel {
 	u64 physaddr;
 	ulong nbytes;
-	void __iomem *mapped;
+	void *mapped;
 	bool requested;
 	struct channel_header chan_hdr;
 	uuid_le guid;
@@ -92,7 +93,7 @@ visorchannel_create_guts(u64 physaddr, unsigned long channel_bytes,
 		}
 	}
 
-	channel->mapped = ioremap_cache(physaddr, size);
+	channel->mapped = memremap(physaddr, size, MEMREMAP_WB);
 	if (!channel->mapped) {
 		release_mem_region(physaddr, size);
 		goto cleanup;
@@ -112,7 +113,7 @@ visorchannel_create_guts(u64 physaddr, unsigned long channel_bytes,
 	if (uuid_le_cmp(guid, NULL_UUID_LE) == 0)
 		guid = channel->chan_hdr.chtype;
 
-	iounmap(channel->mapped);
+	memunmap(channel->mapped);
 	if (channel->requested)
 		release_mem_region(channel->physaddr, channel->nbytes);
 	channel->mapped = NULL;
@@ -125,7 +126,8 @@ visorchannel_create_guts(u64 physaddr, unsigned long channel_bytes,
 		}
 	}
 
-	channel->mapped = ioremap_cache(channel->physaddr, channel_bytes);
+	channel->mapped = memremap(channel->physaddr, channel_bytes,
+			MEMREMAP_WB);
 	if (!channel->mapped) {
 		release_mem_region(channel->physaddr, channel_bytes);
 		goto cleanup;
@@ -166,7 +168,7 @@ visorchannel_destroy(struct visorchannel *channel)
 	if (!channel)
 		return;
 	if (channel->mapped) {
-		iounmap(channel->mapped);
+		memunmap(channel->mapped);
 		if (channel->requested)
 			release_mem_region(channel->physaddr, channel->nbytes);
 	}
@@ -240,7 +242,7 @@ visorchannel_read(struct visorchannel *channel, ulong offset,
 	if (offset + nbytes > channel->nbytes)
 		return -EIO;
 
-	memcpy_fromio(local, channel->mapped + offset, nbytes);
+	memcpy(local, channel->mapped + offset, nbytes);
 
 	return 0;
 }
@@ -262,7 +264,7 @@ visorchannel_write(struct visorchannel *channel, ulong offset,
 		       local, copy_size);
 	}
 
-	memcpy_toio(channel->mapped + offset, local, nbytes);
+	memcpy(channel->mapped + offset, local, nbytes);
 
 	return 0;
 }
@@ -277,7 +279,7 @@ visorchannel_clear(struct visorchannel *channel, ulong offset, u8 ch,
 	int written = 0;
 	u8 *buf;
 
-	buf = (u8 *) __get_free_page(GFP_KERNEL);
+	buf = (u8 *)__get_free_page(GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
@@ -299,7 +301,7 @@ visorchannel_clear(struct visorchannel *channel, ulong offset, u8 ch,
 	err = 0;
 
 cleanup:
-	free_page((unsigned long) buf);
+	free_page((unsigned long)buf);
 	return err;
 }
 EXPORT_SYMBOL_GPL(visorchannel_clear);
@@ -330,7 +332,7 @@ EXPORT_SYMBOL_GPL(visorchannel_get_header);
  */
 #define SIG_WRITE_FIELD(channel, queue, sig_hdr, FIELD)			 \
 	(visorchannel_write(channel,					 \
-			    SIG_QUEUE_OFFSET(&channel->chan_hdr, queue)+ \
+			    SIG_QUEUE_OFFSET(&channel->chan_hdr, queue) +\
 			    offsetof(struct signal_queue_header, FIELD), \
 			    &((sig_hdr)->FIELD),			 \
 			    sizeof((sig_hdr)->FIELD)) >= 0)
@@ -466,7 +468,7 @@ signalinsert_inner(struct visorchannel *channel, u32 queue, void *msg)
 				   SIG_QUEUE_OFFSET(&channel->chan_hdr, queue) +
 				   offsetof(struct signal_queue_header,
 					    num_overflows),
-				   &(sig_hdr.num_overflows),
+				   &sig_hdr.num_overflows,
 				   sizeof(sig_hdr.num_overflows));
 		return false;
 	}

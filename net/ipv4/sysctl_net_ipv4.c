@@ -29,6 +29,7 @@
 static int zero;
 static int one = 1;
 static int four = 4;
+static int thousand = 1000;
 static int gso_max_segs = GSO_MAX_SEGS;
 static int tcp_retr1_max = 255;
 static int ip_local_port_range_min[] = { 1, 1 };
@@ -495,6 +496,13 @@ static struct ctl_table ipv4_table[] = {
 		.proc_handler	= proc_dointvec
 	},
 	{
+		.procname	= "tcp_recovery",
+		.data		= &sysctl_tcp_recovery,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+	{
 		.procname	= "tcp_reordering",
 		.data		= &sysctl_tcp_reordering,
 		.maxlen		= sizeof(int),
@@ -571,6 +579,13 @@ static struct ctl_table ipv4_table[] = {
 	{
 		.procname	= "tcp_frto",
 		.data		= &sysctl_tcp_frto,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec
+	},
+	{
+		.procname	= "tcp_min_rtt_wlen",
+		.data		= &sysctl_tcp_min_rtt_wlen,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
@@ -710,6 +725,24 @@ static struct ctl_table ipv4_table[] = {
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= &one,
 		.extra2		= &gso_max_segs,
+	},
+	{
+		.procname	= "tcp_pacing_ss_ratio",
+		.data		= &sysctl_tcp_pacing_ss_ratio,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &thousand,
+	},
+	{
+		.procname	= "tcp_pacing_ca_ratio",
+		.data		= &sysctl_tcp_pacing_ca_ratio,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= &zero,
+		.extra2		= &thousand,
 	},
 	{
 		.procname	= "tcp_autocorking",
@@ -909,6 +942,13 @@ static struct ctl_table ipv4_net_table[] = {
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,
+	},
+	{
+		.procname	= "igmp_link_local_mcast_reports",
+		.data		= &sysctl_igmp_llm_reports,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec
 	},
 	{ }
 };

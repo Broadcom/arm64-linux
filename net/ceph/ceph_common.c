@@ -318,7 +318,7 @@ static int get_secret(struct ceph_crypto_key *dst, const char *name) {
 		goto out;
 	}
 
-	ckey = ukey->payload.data;
+	ckey = ukey->payload.data[0];
 	err = ceph_crypto_key_clone(dst, ckey);
 	if (err)
 		goto out_key;
@@ -357,6 +357,7 @@ ceph_parse_options(char *options, const char *dev_name,
 	opt->osd_keepalive_timeout = CEPH_OSD_KEEPALIVE_DEFAULT;
 	opt->mount_timeout = CEPH_MOUNT_TIMEOUT_DEFAULT;
 	opt->osd_idle_ttl = CEPH_OSD_IDLE_TTL_DEFAULT;
+	opt->monc_ping_timeout = CEPH_MONC_PING_TIMEOUT_DEFAULT;
 
 	/* get mon ip(s) */
 	/* ip1[:port1][,ip2[:port2]...] */
@@ -517,8 +518,11 @@ int ceph_print_client_options(struct seq_file *m, struct ceph_client *client)
 	struct ceph_options *opt = client->options;
 	size_t pos = m->count;
 
-	if (opt->name)
-		seq_printf(m, "name=%s,", opt->name);
+	if (opt->name) {
+		seq_puts(m, "name=");
+		seq_escape(m, opt->name, ", \t\n\\");
+		seq_putc(m, ',');
+	}
 	if (opt->key)
 		seq_puts(m, "secret=<hidden>,");
 

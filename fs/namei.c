@@ -560,6 +560,24 @@ static int __nd_alloc_stack(struct nameidata *nd)
 	return 0;
 }
 
+/**
+ * path_connected - Verify that a path->dentry is below path->mnt.mnt_root
+ * @path: nameidate to verify
+ *
+ * Rename can sometimes move a file or directory outside of a bind
+ * mount, path_connected allows those cases to be detected.
+ */
+static bool path_connected(const struct path *path)
+{
+	struct vfsmount *mnt = path->mnt;
+
+	/* Only bind mounts can have disconnected paths */
+	if (mnt->mnt_root == mnt->mnt_sb->s_root)
+		return true;
+
+	return is_subdir(path->dentry, mnt->mnt_root);
+}
+
 static inline int nd_alloc_stack(struct nameidata *nd)
 {
 	if (likely(nd->depth != EMBEDDED_LEVELS))
@@ -937,26 +955,23 @@ static bool safe_hardlink_source(struct inode *inode)
  *  - sysctl_protected_hardlinks enabled
  *  - fsuid does not match inode
  *  - hardlink source is unsafe (see safe_hardlink_source() above)
- *  - not CAP_FOWNER
+ *  - not CAP_FOWNER in a namespace with the inode owner uid mapped
  *
  * Returns 0 if successful, -ve on error.
  */
 static int may_linkat(struct path *link)
 {
-	const struct cred *cred;
 	struct inode *inode;
 
 	if (!sysctl_protected_hardlinks)
 		return 0;
 
-	cred = current_cred();
 	inode = link->dentry->d_inode;
 
 	/* Source inode owner (or CAP_FOWNER) can hardlink all they like,
 	 * otherwise, it must be a safe source.
 	 */
-	if (uid_eq(cred->fsuid, inode->i_uid) || safe_hardlink_source(inode) ||
-	    capable(CAP_FOWNER))
+	if (inode_owner_or_capable(inode) || safe_hardlink_source(inode))
 		return 0;
 
 	audit_log_link_denied("linkat", link);
@@ -1296,6 +1311,8 @@ static int follow_dotdot_rcu(struct nameidata *nd)
 				return -ECHILD;
 			nd->path.dentry = parent;
 			nd->seq = seq;
+			if (unlikely(!path_connected(&nd->path)))
+				return -ENOENT;
 			break;
 		} else {
 			struct mount *mnt = real_mount(nd->path.mnt);
@@ -1396,7 +1413,7 @@ static void follow_mount(struct path *path)
 	}
 }
 
-static void follow_dotdot(struct nameidata *nd)
+static int follow_dotdot(struct nameidata *nd)
 {
 	if (!nd->root.mnt)
 		set_root(nd);
@@ -1412,6 +1429,8 @@ static void follow_dotdot(struct nameidata *nd)
 			/* rare case of legitimate dget_parent()... */
 			nd->path.dentry = dget_parent(nd->path.dentry);
 			dput(old);
+			if (unlikely(!path_connected(&nd->path)))
+				return -ENOENT;
 			break;
 		}
 		if (!follow_up(&nd->path))
@@ -1419,6 +1438,7 @@ static void follow_dotdot(struct nameidata *nd)
 	}
 	follow_mount(&nd->path);
 	nd->inode = nd->path.dentry->d_inode;
+	return 0;
 }
 
 /*
@@ -1535,8 +1555,6 @@ static int lookup_fast(struct nameidata *nd,
 		negative = d_is_negative(dentry);
 		if (read_seqcount_retry(&dentry->d_seq, seq))
 			return -ECHILD;
-		if (negative)
-			return -ENOENT;
 
 		/*
 		 * This sequence count validates that the parent had no
@@ -1557,6 +1575,12 @@ static int lookup_fast(struct nameidata *nd,
 				goto unlazy;
 			}
 		}
+		/*
+		 * Note: do negative dentry check after revalidation in
+		 * case that drops it.
+		 */
+		if (negative)
+			return -ENOENT;
 		path->mnt = mnt;
 		path->dentry = dentry;
 		if (likely(__follow_mount_rcu(nd, path, inode, seqp)))
@@ -1634,7 +1658,7 @@ static inline int handle_dots(struct nameidata *nd, int type)
 		if (nd->flags & LOOKUP_RCU) {
 			return follow_dotdot_rcu(nd);
 		} else
-			follow_dotdot(nd);
+			return follow_dotdot(nd);
 	}
 	return 0;
 }
@@ -2415,7 +2439,7 @@ done:
 
 /**
  * path_mountpoint - look up a path to be umounted
- * @nameidata:	lookup context
+ * @nd:		lookup context
  * @flags:	lookup flags
  * @path:	pointer to container for result
  *
