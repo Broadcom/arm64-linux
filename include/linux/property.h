@@ -40,6 +40,8 @@ int device_property_read_string_array(struct device *dev, const char *propname,
 				      const char **val, size_t nval);
 int device_property_read_string(struct device *dev, const char *propname,
 				const char **val);
+int device_property_match_string(struct device *dev,
+				 const char *propname, const char *string);
 
 bool fwnode_property_present(struct fwnode_handle *fwnode, const char *propname);
 int fwnode_property_read_u8_array(struct fwnode_handle *fwnode,
@@ -59,6 +61,8 @@ int fwnode_property_read_string_array(struct fwnode_handle *fwnode,
 				      size_t nval);
 int fwnode_property_read_string(struct fwnode_handle *fwnode,
 				const char *propname, const char **val);
+int fwnode_property_match_string(struct fwnode_handle *fwnode,
+				 const char *propname, const char *string);
 
 struct fwnode_handle *device_get_next_child_node(struct device *dev,
 						 struct fwnode_handle *child);
@@ -165,5 +169,9 @@ struct property_set {
 void device_add_property_set(struct device *dev, struct property_set *pset);
 
 bool device_dma_is_coherent(struct device *dev);
+
+int device_get_phy_mode(struct device *dev);
+
+void *device_get_mac_address(struct device *dev, char *addr, int alen);
 
 #endif /* _LINUX_PROPERTY_H_ */

@@ -63,6 +63,7 @@ struct kvm_stats_debugfs_item debugfs_entries[] = {
 	{ "exit_program_interruption", VCPU_STAT(exit_program_interruption) },
 	{ "exit_instr_and_program_int", VCPU_STAT(exit_instr_and_program) },
 	{ "halt_successful_poll", VCPU_STAT(halt_successful_poll) },
+	{ "halt_attempted_poll", VCPU_STAT(halt_attempted_poll) },
 	{ "halt_wakeup", VCPU_STAT(halt_wakeup) },
 	{ "instruction_lctlg", VCPU_STAT(instruction_lctlg) },
 	{ "instruction_lctl", VCPU_STAT(instruction_lctl) },
@@ -513,35 +514,20 @@ static int kvm_s390_set_tod_high(struct kvm *kvm, struct kvm_device_attr *attr)
 
 	if (gtod_high != 0)
 		return -EINVAL;
-	VM_EVENT(kvm, 3, "SET: TOD extension: 0x%x\n", gtod_high);
+	VM_EVENT(kvm, 3, "SET: TOD extension: 0x%x", gtod_high);
 
 	return 0;
 }
 
 static int kvm_s390_set_tod_low(struct kvm *kvm, struct kvm_device_attr *attr)
 {
-	struct kvm_vcpu *cur_vcpu;
-	unsigned int vcpu_idx;
-	u64 host_tod, gtod;
-	int r;
+	u64 gtod;
 
 	if (copy_from_user(&gtod, (void __user *)attr->addr, sizeof(gtod)))
 		return -EFAULT;
 
-	r = store_tod_clock(&host_tod);
-	if (r)
-		return r;
-
-	mutex_lock(&kvm->lock);
-	preempt_disable();
-	kvm->arch.epoch = gtod - host_tod;
-	kvm_s390_vcpu_block_all(kvm);
-	kvm_for_each_vcpu(vcpu_idx, cur_vcpu, kvm)
-		cur_vcpu->arch.sie_block->epoch = kvm->arch.epoch;
-	kvm_s390_vcpu_unblock_all(kvm);
-	preempt_enable();
-	mutex_unlock(&kvm->lock);
-	VM_EVENT(kvm, 3, "SET: TOD base: 0x%llx\n", gtod);
+	kvm_s390_set_tod_clock(kvm, gtod);
+	VM_EVENT(kvm, 3, "SET: TOD base: 0x%llx", gtod);
 	return 0;
 }
 
@@ -573,26 +559,19 @@ static int kvm_s390_get_tod_high(struct kvm *kvm, struct kvm_device_attr *attr)
 	if (copy_to_user((void __user *)attr->addr, &gtod_high,
 					 sizeof(gtod_high)))
 		return -EFAULT;
-	VM_EVENT(kvm, 3, "QUERY: TOD extension: 0x%x\n", gtod_high);
+	VM_EVENT(kvm, 3, "QUERY: TOD extension: 0x%x", gtod_high);
 
 	return 0;
 }
 
 static int kvm_s390_get_tod_low(struct kvm *kvm, struct kvm_device_attr *attr)
 {
-	u64 host_tod, gtod;
-	int r;
+	u64 gtod;
 
-	r = store_tod_clock(&host_tod);
-	if (r)
-		return r;
-
-	preempt_disable();
-	gtod = host_tod + kvm->arch.epoch;
-	preempt_enable();
+	gtod = kvm_s390_get_tod_clock_fast(kvm);
 	if (copy_to_user((void __user *)attr->addr, &gtod, sizeof(gtod)))
 		return -EFAULT;
-	VM_EVENT(kvm, 3, "QUERY: TOD base: 0x%llx\n", gtod);
+	VM_EVENT(kvm, 3, "QUERY: TOD base: 0x%llx", gtod);
 
 	return 0;
 }
@@ -1119,7 +1098,9 @@ int kvm_arch_init_vm(struct kvm *kvm, unsigned long type)
 	if (!kvm->arch.sca)
 		goto out_err;
 	spin_lock(&kvm_lock);
-	sca_offset = (sca_offset + 16) & 0x7f0;
+	sca_offset += 16;
+	if (sca_offset + sizeof(struct sca_block) > PAGE_SIZE)
+		sca_offset = 0;
 	kvm->arch.sca = (struct sca_block *) ((char *) kvm->arch.sca + sca_offset);
 	spin_unlock(&kvm_lock);
 
@@ -1291,7 +1272,6 @@ int kvm_arch_vcpu_init(struct kvm_vcpu *vcpu)
 static inline void save_fpu_to(struct fpu *dst)
 {
 	dst->fpc = current->thread.fpu.fpc;
-	dst->flags = current->thread.fpu.flags;
 	dst->regs = current->thread.fpu.regs;
 }
 
@@ -1302,7 +1282,6 @@ static inline void save_fpu_to(struct fpu *dst)
 static inline void load_fpu_from(struct fpu *from)
 {
 	current->thread.fpu.fpc = from->fpc;
-	current->thread.fpu.flags = from->flags;
 	current->thread.fpu.regs = from->regs;
 }
 
@@ -1314,15 +1293,12 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 
 	if (test_kvm_facility(vcpu->kvm, 129)) {
 		current->thread.fpu.fpc = vcpu->run->s.regs.fpc;
-		current->thread.fpu.flags = FPU_USE_VX;
 		/*
 		 * Use the register save area in the SIE-control block
 		 * for register restore and save in kvm_arch_vcpu_put()
 		 */
 		current->thread.fpu.vxrs =
 			(__vector128 *)&vcpu->run->s.regs.vrs;
-		/* Always enable the vector extension for KVM */
-		__ctl_set_vx();
 	} else
 		load_fpu_from(&vcpu->arch.guest_fpregs);
 
@@ -1333,12 +1309,12 @@ void kvm_arch_vcpu_load(struct kvm_vcpu *vcpu, int cpu)
 	save_access_regs(vcpu->arch.host_acrs);
 	restore_access_regs(vcpu->run->s.regs.acrs);
 	gmap_enable(vcpu->arch.gmap);
-	atomic_set_mask(CPUSTAT_RUNNING, &vcpu->arch.sie_block->cpuflags);
+	atomic_or(CPUSTAT_RUNNING, &vcpu->arch.sie_block->cpuflags);
 }
 
 void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 {
-	atomic_clear_mask(CPUSTAT_RUNNING, &vcpu->arch.sie_block->cpuflags);
+	atomic_andnot(CPUSTAT_RUNNING, &vcpu->arch.sie_block->cpuflags);
 	gmap_disable(vcpu->arch.gmap);
 
 	save_fpu_regs();
@@ -1443,9 +1419,9 @@ int kvm_arch_vcpu_setup(struct kvm_vcpu *vcpu)
 						    CPUSTAT_STOPPED);
 
 	if (test_kvm_facility(vcpu->kvm, 78))
-		atomic_set_mask(CPUSTAT_GED2, &vcpu->arch.sie_block->cpuflags);
+		atomic_or(CPUSTAT_GED2, &vcpu->arch.sie_block->cpuflags);
 	else if (test_kvm_facility(vcpu->kvm, 8))
-		atomic_set_mask(CPUSTAT_GED, &vcpu->arch.sie_block->cpuflags);
+		atomic_or(CPUSTAT_GED, &vcpu->arch.sie_block->cpuflags);
 
 	kvm_s390_vcpu_setup_model(vcpu);
 
@@ -1557,24 +1533,24 @@ int kvm_arch_vcpu_runnable(struct kvm_vcpu *vcpu)
 
 void kvm_s390_vcpu_block(struct kvm_vcpu *vcpu)
 {
-	atomic_set_mask(PROG_BLOCK_SIE, &vcpu->arch.sie_block->prog20);
+	atomic_or(PROG_BLOCK_SIE, &vcpu->arch.sie_block->prog20);
 	exit_sie(vcpu);
 }
 
 void kvm_s390_vcpu_unblock(struct kvm_vcpu *vcpu)
 {
-	atomic_clear_mask(PROG_BLOCK_SIE, &vcpu->arch.sie_block->prog20);
+	atomic_andnot(PROG_BLOCK_SIE, &vcpu->arch.sie_block->prog20);
 }
 
 static void kvm_s390_vcpu_request(struct kvm_vcpu *vcpu)
 {
-	atomic_set_mask(PROG_REQUEST, &vcpu->arch.sie_block->prog20);
+	atomic_or(PROG_REQUEST, &vcpu->arch.sie_block->prog20);
 	exit_sie(vcpu);
 }
 
 static void kvm_s390_vcpu_request_handled(struct kvm_vcpu *vcpu)
 {
-	atomic_clear_mask(PROG_REQUEST, &vcpu->arch.sie_block->prog20);
+	atomic_andnot(PROG_REQUEST, &vcpu->arch.sie_block->prog20);
 }
 
 /*
@@ -1583,7 +1559,7 @@ static void kvm_s390_vcpu_request_handled(struct kvm_vcpu *vcpu)
  * return immediately. */
 void exit_sie(struct kvm_vcpu *vcpu)
 {
-	atomic_set_mask(CPUSTAT_STOP_INT, &vcpu->arch.sie_block->cpuflags);
+	atomic_or(CPUSTAT_STOP_INT, &vcpu->arch.sie_block->cpuflags);
 	while (vcpu->arch.sie_block->prog0c & PROG_IN_SIE)
 		cpu_relax();
 }
@@ -1807,19 +1783,19 @@ int kvm_arch_vcpu_ioctl_set_guest_debug(struct kvm_vcpu *vcpu,
 	if (dbg->control & KVM_GUESTDBG_ENABLE) {
 		vcpu->guest_debug = dbg->control;
 		/* enforce guest PER */
-		atomic_set_mask(CPUSTAT_P, &vcpu->arch.sie_block->cpuflags);
+		atomic_or(CPUSTAT_P, &vcpu->arch.sie_block->cpuflags);
 
 		if (dbg->control & KVM_GUESTDBG_USE_HW_BP)
 			rc = kvm_s390_import_bp_data(vcpu, dbg);
 	} else {
-		atomic_clear_mask(CPUSTAT_P, &vcpu->arch.sie_block->cpuflags);
+		atomic_andnot(CPUSTAT_P, &vcpu->arch.sie_block->cpuflags);
 		vcpu->arch.guestdbg.last_bp = 0;
 	}
 
 	if (rc) {
 		vcpu->guest_debug = 0;
 		kvm_s390_clear_bp_data(vcpu);
-		atomic_clear_mask(CPUSTAT_P, &vcpu->arch.sie_block->cpuflags);
+		atomic_andnot(CPUSTAT_P, &vcpu->arch.sie_block->cpuflags);
 	}
 
 	return rc;
@@ -1894,7 +1870,7 @@ retry:
 	if (kvm_check_request(KVM_REQ_ENABLE_IBS, vcpu)) {
 		if (!ibs_enabled(vcpu)) {
 			trace_kvm_s390_enable_disable_ibs(vcpu->vcpu_id, 1);
-			atomic_set_mask(CPUSTAT_IBS,
+			atomic_or(CPUSTAT_IBS,
 					&vcpu->arch.sie_block->cpuflags);
 		}
 		goto retry;
@@ -1903,7 +1879,7 @@ retry:
 	if (kvm_check_request(KVM_REQ_DISABLE_IBS, vcpu)) {
 		if (ibs_enabled(vcpu)) {
 			trace_kvm_s390_enable_disable_ibs(vcpu->vcpu_id, 0);
-			atomic_clear_mask(CPUSTAT_IBS,
+			atomic_andnot(CPUSTAT_IBS,
 					  &vcpu->arch.sie_block->cpuflags);
 		}
 		goto retry;
@@ -1913,6 +1889,22 @@ retry:
 	clear_bit(KVM_REQ_UNHALT, &vcpu->requests);
 
 	return 0;
+}
+
+void kvm_s390_set_tod_clock(struct kvm *kvm, u64 tod)
+{
+	struct kvm_vcpu *vcpu;
+	int i;
+
+	mutex_lock(&kvm->lock);
+	preempt_disable();
+	kvm->arch.epoch = tod - get_tod_clock();
+	kvm_s390_vcpu_block_all(kvm);
+	kvm_for_each_vcpu(i, vcpu, kvm)
+		vcpu->arch.sie_block->epoch = kvm->arch.epoch;
+	kvm_s390_vcpu_unblock_all(kvm);
+	preempt_enable();
+	mutex_unlock(&kvm->lock);
 }
 
 /**
@@ -2325,7 +2317,6 @@ int kvm_s390_vcpu_store_status(struct kvm_vcpu *vcpu, unsigned long addr)
 		 * registers and the FPC value and store them in the
 		 * guest_fpregs structure.
 		 */
-		WARN_ON(!is_vx_task(current));	  /* XXX remove later */
 		vcpu->arch.guest_fpregs.fpc = current->thread.fpu.fpc;
 		convert_vx_to_fp(vcpu->arch.guest_fpregs.fprs,
 				 current->thread.fpu.vxrs);
@@ -2419,7 +2410,7 @@ void kvm_s390_vcpu_start(struct kvm_vcpu *vcpu)
 		__disable_ibs_on_all_vcpus(vcpu->kvm);
 	}
 
-	atomic_clear_mask(CPUSTAT_STOPPED, &vcpu->arch.sie_block->cpuflags);
+	atomic_andnot(CPUSTAT_STOPPED, &vcpu->arch.sie_block->cpuflags);
 	/*
 	 * Another VCPU might have used IBS while we were offline.
 	 * Let's play safe and flush the VCPU at startup.
@@ -2445,7 +2436,7 @@ void kvm_s390_vcpu_stop(struct kvm_vcpu *vcpu)
 	/* SIGP STOP and SIGP STOP AND STORE STATUS has been fully processed */
 	kvm_s390_clear_stop_irq(vcpu);
 
-	atomic_set_mask(CPUSTAT_STOPPED, &vcpu->arch.sie_block->cpuflags);
+	atomic_or(CPUSTAT_STOPPED, &vcpu->arch.sie_block->cpuflags);
 	__disable_ibs_on_vcpu(vcpu);
 
 	for (i = 0; i < online_vcpus; i++) {

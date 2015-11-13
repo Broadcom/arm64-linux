@@ -42,7 +42,7 @@ void nft_meta_get_eval(const struct nft_expr *expr,
 		*(__be16 *)dest = skb->protocol;
 		break;
 	case NFT_META_NFPROTO:
-		*dest = pkt->ops->pf;
+		*dest = pkt->pf;
 		break;
 	case NFT_META_L4PROTO:
 		*dest = pkt->tprot;
@@ -135,7 +135,7 @@ void nft_meta_get_eval(const struct nft_expr *expr,
 			break;
 		}
 
-		switch (pkt->ops->pf) {
+		switch (pkt->pf) {
 		case NFPROTO_IPV4:
 			if (ipv4_is_multicast(ip_hdr(skb)->daddr))
 				*dest = PACKET_MULTICAST;
@@ -166,11 +166,13 @@ void nft_meta_get_eval(const struct nft_expr *expr,
 			goto err;
 		*dest = out->group;
 		break;
+#ifdef CONFIG_CGROUP_NET_CLASSID
 	case NFT_META_CGROUP:
 		if (skb->sk == NULL || !sk_fullsock(skb->sk))
 			goto err;
 		*dest = skb->sk->sk_classid;
 		break;
+#endif
 	default:
 		WARN_ON(1);
 		goto err;
@@ -246,7 +248,9 @@ int nft_meta_get_init(const struct nft_ctx *ctx,
 	case NFT_META_CPU:
 	case NFT_META_IIFGROUP:
 	case NFT_META_OIFGROUP:
+#ifdef CONFIG_CGROUP_NET_CLASSID
 	case NFT_META_CGROUP:
+#endif
 		len = sizeof(u32);
 		break;
 	case NFT_META_IIFNAME:

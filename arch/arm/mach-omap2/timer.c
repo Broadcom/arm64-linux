@@ -297,12 +297,8 @@ static int __init omap_dm_timer_init_one(struct omap_dm_timer *timer,
 	if (IS_ERR(src))
 		return PTR_ERR(src);
 
-	r = clk_set_parent(timer->fclk, src);
-	if (r < 0) {
-		pr_warn("%s: %s cannot set source\n", __func__, oh->name);
-		clk_put(src);
-		return r;
-	}
+	WARN(clk_set_parent(timer->fclk, src) < 0,
+	     "Cannot set timer parent clock, no PLL clock driver?");
 
 	clk_put(src);
 
@@ -651,7 +647,7 @@ static OMAP_SYS_32K_TIMER_INIT(4, 1, "timer_32k_ck", "ti,timer-alwon",
 void __init omap4_local_timer_init(void)
 {
 	omap4_sync32k_timer_init();
-	clocksource_of_init();
+	clocksource_probe();
 }
 #else
 void __init omap4_local_timer_init(void)
@@ -667,7 +663,7 @@ void __init omap5_realtime_timer_init(void)
 	omap4_sync32k_timer_init();
 	realtime_counter_init();
 
-	clocksource_of_init();
+	clocksource_probe();
 }
 #endif /* CONFIG_SOC_OMAP5 || CONFIG_SOC_DRA7XX */
 

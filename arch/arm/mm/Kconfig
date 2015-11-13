@@ -419,28 +419,24 @@ config CPU_THUMBONLY
 config CPU_32v3
 	bool
 	select CPU_USE_DOMAINS if MMU
-	select NEEDS_SYSCALL_FOR_CMPXCHG if SMP
 	select NEED_KUSER_HELPERS
 	select TLS_REG_EMUL if SMP || !MMU
 
 config CPU_32v4
 	bool
 	select CPU_USE_DOMAINS if MMU
-	select NEEDS_SYSCALL_FOR_CMPXCHG if SMP
 	select NEED_KUSER_HELPERS
 	select TLS_REG_EMUL if SMP || !MMU
 
 config CPU_32v4T
 	bool
 	select CPU_USE_DOMAINS if MMU
-	select NEEDS_SYSCALL_FOR_CMPXCHG if SMP
 	select NEED_KUSER_HELPERS
 	select TLS_REG_EMUL if SMP || !MMU
 
 config CPU_32v5
 	bool
 	select CPU_USE_DOMAINS if MMU
-	select NEEDS_SYSCALL_FOR_CMPXCHG if SMP
 	select NEED_KUSER_HELPERS
 	select TLS_REG_EMUL if SMP || !MMU
 
@@ -805,14 +801,6 @@ config TLS_REG_EMUL
 	  a few prototypes like that in existence) and therefore access to
 	  that required register must be emulated.
 
-config NEEDS_SYSCALL_FOR_CMPXCHG
-	bool
-	select NEED_KUSER_HELPERS
-	help
-	  SMP on a pre-ARMv6 processor?  Well OK then.
-	  Forget about fast user space cmpxchg support.
-	  It is just not possible.
-
 config NEED_KUSER_HELPERS
 	bool
 
@@ -883,6 +871,7 @@ config OUTER_CACHE
 
 config OUTER_CACHE_SYNC
 	bool
+	select ARM_HEAVY_MB
 	help
 	  The outer cache has a outer_cache_fns.sync function pointer
 	  that can be used to drain the write buffer of the outer cache.
@@ -1030,6 +1019,9 @@ config ARCH_HAS_BARRIERS
 	help
 	  This option allows the use of custom mandatory barriers
 	  included via the mach/barriers.h file.
+
+config ARM_HEAVY_MB
+	bool
 
 config ARCH_SUPPORTS_BIG_ENDIAN
 	bool

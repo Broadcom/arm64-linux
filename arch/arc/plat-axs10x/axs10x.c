@@ -402,6 +402,8 @@ static void __init axs103_early_init(void)
 	unsigned int num_cores = (read_aux_reg(ARC_REG_MCIP_BCR) >> 16) & 0x3F;
 	if (num_cores > 2)
 		arc_set_core_freq(50 * 1000000);
+	else if (num_cores == 2)
+		arc_set_core_freq(75 * 1000000);
 #endif
 
 	switch (arc_get_core_freq()/1000000) {
@@ -453,11 +455,6 @@ static void __init axs103_early_init(void)
 	axs10x_print_board_ver(AXC003_CREG + 4088, "AXC003 CPU Card");
 
 	axs10x_early_init();
-
-#ifdef CONFIG_ARC_MCIP
-	/* No Hardware init, but filling the smp ops callbacks */
-	mcip_init_early_smp();
-#endif
 }
 #endif
 
@@ -485,9 +482,6 @@ static const char *axs103_compat[] __initconst = {
 MACHINE_START(AXS103, "axs103")
 	.dt_compat	= axs103_compat,
 	.init_early	= axs103_early_init,
-#ifdef CONFIG_ARC_MCIP
-	.init_smp	= mcip_init_smp,
-#endif
 MACHINE_END
 
 /*
