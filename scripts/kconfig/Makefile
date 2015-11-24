@@ -126,6 +126,14 @@ PHONY += tinyconfig
 tinyconfig:
 	$(Q)$(MAKE) -f $(srctree)/Makefile allnoconfig tiny.config
 
+PHONY += beconfig
+beconfig: be.config
+	@:
+
+PHONY += leconfig
+leconfig: le.config
+	@:
+
 # Help text used by make help
 help:
 	@echo  '  config	  - Update current config utilising a line-oriented program'
@@ -151,6 +159,8 @@ help:
 	@echo  '  kvmconfig	  - Enable additional options for kvm guest kernel support'
 	@echo  '  xenconfig       - Enable additional options for xen dom0 and guest kernel support'
 	@echo  '  tinyconfig	  - Configure the tiniest possible kernel'
+	@echo  '  beconfig	  - Update current config to use big endian CPU'
+	@echo  '  leconfig	  - Update current config to use little endian CPU'
 
 # lxdialog stuff
 check-lxdialog  := $(srctree)/$(src)/lxdialog/check-lxdialog.sh
