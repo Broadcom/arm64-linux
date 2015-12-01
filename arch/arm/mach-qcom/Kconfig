@@ -23,16 +23,4 @@ config ARCH_QCOM_A_FAMILY
 	  B-family includes all Snapdragon 2xx/4xx/6xx/8xx models starting
 	  in 2013 with the MSM8x74 SoC.
 
-config ARCH_MSM8X60
-	bool "Enable support for MSM8X60"
-	select CLKSRC_QCOM
-
-config ARCH_MSM8960
-	bool "Enable support for MSM8960"
-	select CLKSRC_QCOM
-
-config ARCH_MSM8974
-	bool "Enable support for MSM8974"
-	select HAVE_ARM_ARCH_TIMER
-
 endif
