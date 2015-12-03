@@ -106,7 +106,7 @@ static void pids_uncharge(struct pids_cgroup *pids, int num)
 {
 	struct pids_cgroup *p;
 
-	for (p = pids; p; p = parent_pids(p))
+	for (p = pids; parent_pids(p); p = parent_pids(p))
 		pids_cancel(p, num);
 }
 
@@ -123,7 +123,7 @@ static void pids_charge(struct pids_cgroup *pids, int num)
 {
 	struct pids_cgroup *p;
 
-	for (p = pids; p; p = parent_pids(p))
+	for (p = pids; parent_pids(p); p = parent_pids(p))
 		atomic64_add(num, &p->counter);
 }
 
@@ -140,7 +140,7 @@ static int pids_try_charge(struct pids_cgroup *pids, int num)
 {
 	struct pids_cgroup *p, *q;
 
-	for (p = pids; p; p = parent_pids(p)) {
+	for (p = pids; parent_pids(p); p = parent_pids(p)) {
 		int64_t new = atomic64_add_return(num, &p->counter);
 
 		/*
@@ -162,13 +162,13 @@ revert:
 	return -EAGAIN;
 }
 
-static int pids_can_attach(struct cgroup_subsys_state *css,
-			   struct cgroup_taskset *tset)
+static int pids_can_attach(struct cgroup_taskset *tset)
 {
-	struct pids_cgroup *pids = css_pids(css);
 	struct task_struct *task;
+	struct cgroup_subsys_state *dst_css;
 
-	cgroup_taskset_for_each(task, tset) {
+	cgroup_taskset_for_each(task, dst_css, tset) {
+		struct pids_cgroup *pids = css_pids(dst_css);
 		struct cgroup_subsys_state *old_css;
 		struct pids_cgroup *old_pids;
 
@@ -187,13 +187,13 @@ static int pids_can_attach(struct cgroup_subsys_state *css,
 	return 0;
 }
 
-static void pids_cancel_attach(struct cgroup_subsys_state *css,
-			       struct cgroup_taskset *tset)
+static void pids_cancel_attach(struct cgroup_taskset *tset)
 {
-	struct pids_cgroup *pids = css_pids(css);
 	struct task_struct *task;
+	struct cgroup_subsys_state *dst_css;
 
-	cgroup_taskset_for_each(task, tset) {
+	cgroup_taskset_for_each(task, dst_css, tset) {
+		struct pids_cgroup *pids = css_pids(dst_css);
 		struct cgroup_subsys_state *old_css;
 		struct pids_cgroup *old_pids;
 
@@ -298,6 +298,7 @@ static struct cftype pids_files[] = {
 	{
 		.name = "current",
 		.read_s64 = pids_current_read,
+		.flags = CFTYPE_NOT_ON_ROOT,
 	},
 	{ }	/* terminate */
 };
