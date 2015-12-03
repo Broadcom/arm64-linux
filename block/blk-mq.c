@@ -1790,7 +1790,7 @@ static void blk_mq_init_cpu_queues(struct request_queue *q,
 		 * not, we remain on the home node of the device
 		 */
 		if (nr_hw_queues > 1 && hctx->numa_node == NUMA_NO_NODE)
-			hctx->numa_node = cpu_to_node(i);
+			hctx->numa_node = local_memory_node(cpu_to_node(i));
 	}
 }
 
@@ -1850,6 +1850,7 @@ static void blk_mq_map_swqueue(struct request_queue *q,
 		hctx->tags = set->tags[i];
 		WARN_ON(!hctx->tags);
 
+		cpumask_copy(hctx->tags->cpumask, hctx->cpumask);
 		/*
 		 * Set the map size to the number of mapped software queues.
 		 * This is more accurate and more efficient than looping
@@ -1862,14 +1863,6 @@ static void blk_mq_map_swqueue(struct request_queue *q,
 		 */
 		hctx->next_cpu = cpumask_first(hctx->cpumask);
 		hctx->next_cpu_batch = BLK_MQ_CPU_WORK_BATCH;
-	}
-
-	queue_for_each_ctx(q, ctx, i) {
-		if (!cpumask_test_cpu(i, online_mask))
-			continue;
-
-		hctx = q->mq_ops->map_queue(q, i);
-		cpumask_set_cpu(i, hctx->tags->cpumask);
 	}
 }
 
