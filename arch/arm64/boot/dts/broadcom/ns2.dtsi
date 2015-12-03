@@ -308,6 +308,13 @@
 					     "chimp", "port", "sdio";
 		};
 
+		pinctrl: pinctrl@6501d130 {
+			compatible = "brcm,ns2-pinmux";
+			reg = <0x6501d130 0x08>,
+			      <0x660a0028 0x04>,
+			      <0x660009b0 0x40>;
+		};
+
 		crmu: crmu@65024000 {
 			compatible = "syscon";
 			reg = <0x65024000 0x100>;
