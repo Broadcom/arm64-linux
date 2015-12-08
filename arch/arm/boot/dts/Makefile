@@ -480,17 +480,21 @@ dtb-$(CONFIG_ARCH_OMAP4) += \
 	omap4-var-stk-om44.dtb
 dtb-$(CONFIG_SOC_AM43XX) += \
 	am43x-epos-evm.dtb \
-	am437x-sk-evm.dtb \
+	am437x-cm-t43.dtb \
+	am437x-gp-evm.dtb \
 	am437x-idk-evm.dtb \
-	am437x-gp-evm.dtb
+	am437x-sbc-t43.dtb \
+	am437x-sk-evm.dtb
 dtb-$(CONFIG_SOC_OMAP5) += \
 	omap5-cm-t54.dtb \
 	omap5-igep0050.dtb \
 	omap5-sbc-t54.dtb \
 	omap5-uevm.dtb
 dtb-$(CONFIG_SOC_DRA7XX) += \
-	dra7-evm.dtb \
 	am57xx-beagle-x15.dtb \
+	am57xx-cl-som-am57x.dtb \
+	am57xx-sbc-am57x.dtb \
+	dra7-evm.dtb \
 	dra72-evm.dtb
 dtb-$(CONFIG_ARCH_ORION5X) += \
 	orion5x-lacie-d2-network.dtb \
