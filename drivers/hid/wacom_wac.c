@@ -516,7 +516,7 @@ static int wacom_intuos_pad(struct wacom_wac *wacom)
 		 * d-pad down   -> data[4] & 0x80
 		 * d-pad center -> data[3] & 0x01
 		 */
-		buttons = ((data[2] & 0xF0) << 7) |
+		buttons = ((data[2] >> 4) << 7) |
 		          ((data[1] & 0x04) << 6) |
 		          ((data[2] & 0x0F) << 2) |
 		          (data[1] & 0x03);
@@ -545,12 +545,12 @@ static int wacom_intuos_pad(struct wacom_wac *wacom)
 			          ((data[6] & 0x0F) << 4)  |
 			          (data[5] & 0x0F);
 		}
-		strip1 = (data[1] << 8) || data[2];
-		strip2 = (data[3] << 8) || data[4];
+		strip1 = ((data[1] & 0x1f) << 8) | data[2];
+		strip2 = ((data[3] & 0x1f) << 8) | data[4];
 	}
 
-	prox = (buttons & ~(~0 << nbuttons)) || (keys & ~(~0 << nkeys)) ||
-	       (ring1 & 0x80) || (ring2 & 0x80) || strip1 || strip2;
+	prox = (buttons & ~(~0 << nbuttons)) | (keys & ~(~0 << nkeys)) |
+	       (ring1 & 0x80) | (ring2 & 0x80) | strip1 | strip2;
 
 	wacom_report_numbered_buttons(input, nbuttons, buttons);
 
@@ -558,10 +558,10 @@ static int wacom_intuos_pad(struct wacom_wac *wacom)
 		input_report_key(input, KEY_PROG1 + i, keys & (1 << i));
 
 	input_report_abs(input, ABS_RX, strip1);
-	input_report_abs(input, ABS_RX, strip2);
+	input_report_abs(input, ABS_RY, strip2);
 
-	input_report_abs(input, ABS_WHEEL,    ring1 & 0x7f ? ring1 : 0);
-	input_report_abs(input, ABS_THROTTLE, ring2 & 0x07 ? ring2 : 0);
+	input_report_abs(input, ABS_WHEEL,    (ring1 & 0x80) ? (ring1 & 0x7f) : 0);
+	input_report_abs(input, ABS_THROTTLE, (ring2 & 0x80) ? (ring2 & 0x7f) : 0);
 
 	input_report_key(input, wacom->tool[1], prox ? 1 : 0);
 	input_report_abs(input, ABS_MISC, prox ? PAD_DEVICE_ID : 0);
