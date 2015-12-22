@@ -19,6 +19,16 @@
 #include <linux/kref.h>
 #include <linux/blk-mq.h>
 
+enum {
+	/*
+	 * Driver internal status code for commands that were cancelled due
+	 * to timeouts or controller shutdown.  The value is negative so
+	 * that it a) doesn't overlap with the unsigned hardware error codes,
+	 * and b) can easily be tested for.
+	 */
+	NVME_SC_CANCELLED		= -EINTR,
+};
+
 extern unsigned char nvme_io_timeout;
 #define NVME_IO_TIMEOUT	(nvme_io_timeout * HZ)
 
@@ -43,6 +53,12 @@ enum nvme_quirks {
 	 * specific Identify field.
 	 */
 	NVME_QUIRK_STRIPE_SIZE			= (1 << 0),
+
+	/*
+	 * The controller doesn't handle Identify value others than 0 or 1
+	 * correctly.
+	 */
+	NVME_QUIRK_IDENTIFY_CNS			= (1 << 1),
 };
 
 struct nvme_ctrl {
@@ -67,7 +83,7 @@ struct nvme_ctrl {
 	u32 max_hw_sectors;
 	u32 stripe_size;
 	u16 oncs;
-	u16 abort_limit;
+	atomic_t abort_limit;
 	u8 event_limit;
 	u8 vwc;
 	u32 vs;
@@ -85,6 +101,9 @@ struct nvme_ns {
 	struct request_queue *queue;
 	struct gendisk *disk;
 	struct kref kref;
+
+	u8 eui[8];
+	u8 uuid[16];
 
 	unsigned ns_id;
 	int lba_shift;
@@ -200,11 +219,18 @@ static inline int nvme_error_status(u16 status)
 	}
 }
 
+static inline bool nvme_req_needs_retry(struct request *req, u16 status)
+{
+	return !(status & NVME_SC_DNR || blk_noretry_request(req)) &&
+		(jiffies - req->start_time) < req->timeout;
+}
+
 int nvme_disable_ctrl(struct nvme_ctrl *ctrl, u64 cap);
 int nvme_enable_ctrl(struct nvme_ctrl *ctrl, u64 cap);
 int nvme_shutdown_ctrl(struct nvme_ctrl *ctrl);
 int nvme_init_ctrl(struct nvme_ctrl *ctrl, struct device *dev,
 		const struct nvme_ctrl_ops *ops, unsigned long quirks);
+void nvme_uninit_ctrl(struct nvme_ctrl *ctrl);
 void nvme_put_ctrl(struct nvme_ctrl *ctrl);
 int nvme_init_identify(struct nvme_ctrl *ctrl);
 
@@ -213,6 +239,7 @@ void nvme_remove_namespaces(struct nvme_ctrl *ctrl);
 
 struct request *nvme_alloc_request(struct request_queue *q,
 		struct nvme_command *cmd, unsigned int flags);
+void nvme_requeue_req(struct request *req);
 int nvme_submit_sync_cmd(struct request_queue *q, struct nvme_command *cmd,
 		void *buf, unsigned bufflen);
 int __nvme_submit_sync_cmd(struct request_queue *q, struct nvme_command *cmd,
