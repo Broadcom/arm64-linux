@@ -1269,6 +1269,8 @@ static long read_events(struct kioctx *ctx, long min_nr, long nr,
 
 		if (unlikely(copy_from_user(&ts, timeout, sizeof(ts))))
 			return -EFAULT;
+		if (!timespec_valid(&ts))
+			return -EINVAL;
 
 		until = timespec_to_ktime(ts);
 	}
