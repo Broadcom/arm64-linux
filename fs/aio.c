@@ -154,6 +154,7 @@ struct kioctx {
 	struct file		*aio_ring_file;
 
 	unsigned		id;
+	struct mm_struct	*mm;
 };
 
 /*
@@ -201,6 +202,8 @@ static struct vfsmount *aio_mnt;
 
 static const struct file_operations aio_ring_fops;
 static const struct address_space_operations aio_ctx_aops;
+
+static void aio_complete(struct kiocb *kiocb, long res, long res2);
 
 static struct file *aio_private_file(struct kioctx *ctx, loff_t nr_pages)
 {
@@ -568,6 +571,16 @@ static int kiocb_cancel(struct aio_kiocb *kiocb)
 	return cancel(&kiocb->common);
 }
 
+struct mm_struct *aio_get_mm(struct kiocb *req)
+{
+	if (req->ki_complete == aio_complete) {
+		struct aio_kiocb *iocb;
+		iocb = container_of(req, struct aio_kiocb, common);
+		return iocb->ki_ctx->mm;
+	}
+	return NULL;
+}
+
 static void free_ioctx(struct work_struct *work)
 {
 	struct kioctx *ctx = container_of(work, struct kioctx, free_work);
@@ -719,6 +732,7 @@ static struct kioctx *ioctx_alloc(unsigned nr_events)
 		return ERR_PTR(-ENOMEM);
 
 	ctx->max_reqs = nr_events;
+	ctx->mm = mm;
 
 	spin_lock_init(&ctx->ctx_lock);
 	spin_lock_init(&ctx->completion_lock);
