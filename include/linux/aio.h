@@ -19,6 +19,9 @@ extern long do_io_submit(aio_context_t ctx_id, long nr,
 void kiocb_set_cancel_fn(struct kiocb *req, kiocb_cancel_fn *cancel);
 struct mm_struct *aio_get_mm(struct kiocb *req);
 struct task_struct *aio_get_task(struct kiocb *req);
+struct iov_iter;
+ssize_t generic_async_read_iter(struct kiocb *iocb, struct iov_iter *iter);
+ssize_t generic_async_write_iter(struct kiocb *iocb, struct iov_iter *iter);
 #else
 static inline void exit_aio(struct mm_struct *mm) { }
 static inline long do_io_submit(aio_context_t ctx_id, long nr,
@@ -33,5 +36,6 @@ static inline struct task_struct *aio_get_task(struct kiocb *req) { return curre
 /* for sysctl: */
 extern unsigned long aio_nr;
 extern unsigned long aio_max_nr;
+extern unsigned long aio_auto_threads;
 
 #endif /* __LINUX__AIO_H */
