@@ -83,7 +83,7 @@ int drm_legacy_lock(struct drm_device *dev, void *data,
 		__set_current_state(TASK_INTERRUPTIBLE);
 		if (!master->lock.hw_lock) {
 			/* Device has been unregistered */
-			send_sig(SIGTERM, current, 0);
+			io_send_sig(SIGTERM);
 			ret = -EINTR;
 			break;
 		}

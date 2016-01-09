@@ -1539,7 +1539,7 @@ static int irda_sendmsg_dgram(struct socket *sock, struct msghdr *msg,
 	lock_sock(sk);
 
 	if (sk->sk_shutdown & SEND_SHUTDOWN) {
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		err = -EPIPE;
 		goto out;
 	}
@@ -1622,7 +1622,7 @@ static int irda_sendmsg_ultra(struct socket *sock, struct msghdr *msg,
 
 	err = -EPIPE;
 	if (sk->sk_shutdown & SEND_SHUTDOWN) {
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		goto out;
 	}
 

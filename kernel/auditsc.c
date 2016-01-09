@@ -1025,7 +1025,7 @@ static int audit_log_single_execve_arg(struct audit_context *context,
 	 * any.
 	 */
 	if (WARN_ON_ONCE(len < 0 || len > MAX_ARG_STRLEN - 1)) {
-		send_sig(SIGKILL, current, 0);
+		io_send_sig(SIGKILL);
 		return -1;
 	}
 
@@ -1043,7 +1043,7 @@ static int audit_log_single_execve_arg(struct audit_context *context,
 		 */
 		if (ret) {
 			WARN_ON(1);
-			send_sig(SIGKILL, current, 0);
+			io_send_sig(SIGKILL);
 			return -1;
 		}
 		buf[to_send] = '\0';
@@ -1107,7 +1107,7 @@ static int audit_log_single_execve_arg(struct audit_context *context,
 			ret = 0;
 		if (ret) {
 			WARN_ON(1);
-			send_sig(SIGKILL, current, 0);
+			io_send_sig(SIGKILL);
 			return -1;
 		}
 		buf[to_send] = '\0';

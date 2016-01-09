@@ -1909,7 +1909,7 @@ pipe_err_free:
 	kfree_skb(skb);
 pipe_err:
 	if (sent == 0 && !(msg->msg_flags&MSG_NOSIGNAL))
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 	err = -EPIPE;
 out_err:
 	scm_destroy(&scm);
@@ -2026,7 +2026,7 @@ err_unlock:
 err:
 	kfree_skb(newskb);
 	if (send_sigpipe && !(flags & MSG_NOSIGNAL))
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 	if (!init_scm)
 		scm_destroy(&scm);
 	return err;

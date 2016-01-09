@@ -1954,7 +1954,7 @@ static int dn_sendmsg(struct socket *sock, struct msghdr *msg, size_t size)
 	if (sk->sk_shutdown & SEND_SHUTDOWN) {
 		err = -EPIPE;
 		if (!(flags & MSG_NOSIGNAL))
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 		goto out_err;
 	}
 

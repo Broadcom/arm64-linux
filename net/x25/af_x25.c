@@ -1103,7 +1103,7 @@ static int x25_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
 
 	rc = -EPIPE;
 	if (sk->sk_shutdown & SEND_SHUTDOWN) {
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		goto out;
 	}
 

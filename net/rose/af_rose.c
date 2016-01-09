@@ -1065,7 +1065,7 @@ static int rose_sendmsg(struct socket *sock, struct msghdr *msg, size_t len)
 		return -EADDRNOTAVAIL;
 
 	if (sk->sk_shutdown & SEND_SHUTDOWN) {
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		return -EPIPE;
 	}
 

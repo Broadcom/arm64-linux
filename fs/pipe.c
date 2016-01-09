@@ -351,7 +351,7 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 	__pipe_lock(pipe);
 
 	if (!pipe->readers) {
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		ret = -EPIPE;
 		goto out;
 	}
@@ -386,7 +386,7 @@ pipe_write(struct kiocb *iocb, struct iov_iter *from)
 		int bufs;
 
 		if (!pipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			if (!ret)
 				ret = -EPIPE;
 			break;

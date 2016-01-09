@@ -68,7 +68,7 @@ static bool __ttm_read_lock(struct ttm_lock *lock)
 
 	spin_lock(&lock->lock);
 	if (unlikely(lock->kill_takers)) {
-		send_sig(lock->signal, current, 0);
+		io_send_sig(lock->signal);
 		spin_unlock(&lock->lock);
 		return false;
 	}
@@ -101,7 +101,7 @@ static bool __ttm_read_trylock(struct ttm_lock *lock, bool *locked)
 
 	spin_lock(&lock->lock);
 	if (unlikely(lock->kill_takers)) {
-		send_sig(lock->signal, current, 0);
+		io_send_sig(lock->signal);
 		spin_unlock(&lock->lock);
 		return false;
 	}
@@ -151,7 +151,7 @@ static bool __ttm_write_lock(struct ttm_lock *lock)
 
 	spin_lock(&lock->lock);
 	if (unlikely(lock->kill_takers)) {
-		send_sig(lock->signal, current, 0);
+		io_send_sig(lock->signal);
 		spin_unlock(&lock->lock);
 		return false;
 	}
