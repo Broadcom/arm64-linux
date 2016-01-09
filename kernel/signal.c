@@ -34,6 +34,7 @@
 #include <linux/compat.h>
 #include <linux/cn_proc.h>
 #include <linux/compiler.h>
+#include <linux/aio.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/signal.h>
@@ -1432,7 +1433,12 @@ int send_sig_info(int sig, struct siginfo *info, struct task_struct *p)
  */
 int io_send_sig(int sig)
 {
-	return send_sig(sig, current, 0);
+	struct task_struct *task = current;
+#if IS_ENABLED(CONFIG_AIO)
+	if (task->kiocb)
+		task = aio_get_task(task->kiocb);
+#endif
+	return send_sig(sig, task, 0);
 }
 EXPORT_SYMBOL(io_send_sig);
 

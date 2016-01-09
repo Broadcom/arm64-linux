@@ -191,6 +191,9 @@ struct aio_kiocb {
 	struct iov_iter		ki_iter;
 	struct iovec		*ki_iovec;
 	struct iovec		ki_inline_vecs[UIO_FASTIOV];
+
+	// Fields used for threaded aio helper.
+	struct task_struct	*ki_submit_task;
 };
 
 /*------ sysctl variables----*/
@@ -583,6 +586,16 @@ struct mm_struct *aio_get_mm(struct kiocb *req)
 		return iocb->ki_ctx->mm;
 	}
 	return NULL;
+}
+
+struct task_struct *aio_get_task(struct kiocb *req)
+{
+	if (req->ki_complete == aio_complete) {
+		struct aio_kiocb *iocb;
+		iocb = container_of(req, struct aio_kiocb, common);
+		return iocb->ki_submit_task;
+	}
+	return current;
 }
 
 static void free_ioctx(struct work_struct *work)
@@ -1044,6 +1057,8 @@ static void kiocb_free(struct aio_kiocb *req)
 		eventfd_ctx_put(req->ki_eventfd);
 	if (req->ki_iovec != req->ki_inline_vecs)
 		kfree(req->ki_iovec);
+	if (req->ki_submit_task)
+		put_task_struct(req->ki_submit_task);
 	kmem_cache_free(kiocb_cachep, req);
 }
 

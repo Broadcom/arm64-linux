@@ -1633,6 +1633,11 @@ struct task_struct {
 /* journalling filesystem info */
 	void *journal_info;
 
+/* threaded aio info */
+#if IS_ENABLED(CONFIG_AIO)
+	struct kiocb *kiocb;
+#endif
+
 /* stacked block device info */
 	struct bio_list *bio_list;
 
