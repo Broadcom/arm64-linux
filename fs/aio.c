@@ -200,6 +200,7 @@ struct aio_kiocb {
 	struct task_struct	*ki_submit_task;
 #if IS_ENABLED(CONFIG_AIO_THREAD)
 	struct task_struct	*ki_cancel_task;
+	unsigned long		ki_data;
 	unsigned long		ki_rlimit_fsize;
 	aio_thread_work_fn_t	ki_work_fn;
 	struct work_struct	ki_work;
@@ -1662,6 +1663,40 @@ ssize_t generic_async_fsync(struct kiocb *iocb, int datasync)
 						   : aio_thread_op_fsync, 0);
 }
 EXPORT_SYMBOL(generic_async_fsync);
+
+static long aio_thread_op_poll(struct aio_kiocb *iocb)
+{
+	struct file *file = iocb->common.ki_filp;
+	short events = iocb->ki_data;
+	struct poll_wqueues table;
+	unsigned int mask;
+	ssize_t ret = 0;
+
+	poll_initwait(&table);
+	events |= POLLERR | POLLHUP;
+
+	for (;;) {
+		mask = DEFAULT_POLLMASK;
+		if (file->f_op && file->f_op->poll) {
+			table.pt._key = events;
+			mask = file->f_op->poll(file, &table.pt);
+		}
+		/* Mask out unneeded events. */
+		mask &= events;
+		ret = mask;
+		if (mask)
+			break;
+
+		ret = -EINTR;
+		if (signal_pending(current))
+			break;
+
+		poll_schedule_timeout(&table, TASK_INTERRUPTIBLE, NULL, 0);
+	}
+
+	poll_freewait(&table);
+	return ret;
+}
 #endif /* IS_ENABLED(CONFIG_AIO_THREAD) */
 
 /*
@@ -1756,6 +1791,13 @@ rw_common:
 #if IS_ENABLED(CONFIG_AIO_THREAD)
 		else if (file->f_op->fsync && (aio_auto_threads & 1))
 			ret = generic_async_fsync(&req->common, 0);
+#endif
+		break;
+
+	case IOCB_CMD_POLL:
+#if IS_ENABLED(CONFIG_AIO_THREAD)
+		if (aio_auto_threads & 1)
+			ret = aio_thread_queue_iocb(req, aio_thread_op_poll, 0);
 #endif
 		break;
 
