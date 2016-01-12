@@ -1017,7 +1017,7 @@ static void nvme_cancel_queue_ios(struct request *req, void *data, bool reserved
 	dev_warn(nvmeq->q_dmadev,
 		 "Cancelling I/O %d QID %d\n", req->tag, nvmeq->qid);
 
-	status = NVME_SC_CANCELLED;
+	status = NVME_SC_ABORT_REQ;
 	if (blk_queue_dying(req->q))
 		status |= NVME_SC_DNR;
 	blk_mq_complete_request(req, status);
@@ -1064,7 +1064,7 @@ static int nvme_suspend_queue(struct nvme_queue *nvmeq)
 	spin_unlock_irq(&nvmeq->q_lock);
 
 	if (!nvmeq->qid && nvmeq->dev->ctrl.admin_q)
-		blk_mq_freeze_queue_start(nvmeq->dev->ctrl.admin_q);
+		blk_mq_stop_hw_queues(nvmeq->dev->ctrl.admin_q);
 
 	irq_set_affinity_hint(vector, NULL);
 	free_irq(vector, nvmeq);
@@ -1271,7 +1271,12 @@ static int nvme_alloc_admin_tags(struct nvme_dev *dev)
 	if (!dev->ctrl.admin_q) {
 		dev->admin_tagset.ops = &nvme_mq_admin_ops;
 		dev->admin_tagset.nr_hw_queues = 1;
-		dev->admin_tagset.queue_depth = NVME_AQ_BLKMQ_DEPTH;
+
+		/*
+		 * Subtract one to leave an empty queue entry for 'Full Queue'
+		 * condition. See NVM-Express 1.2 specification, section 4.1.2.
+		 */
+		dev->admin_tagset.queue_depth = NVME_AQ_BLKMQ_DEPTH - 1;
 		dev->admin_tagset.timeout = ADMIN_TIMEOUT;
 		dev->admin_tagset.numa_node = dev_to_node(dev->dev);
 		dev->admin_tagset.cmd_size = nvme_cmd_size(dev);
@@ -1291,7 +1296,7 @@ static int nvme_alloc_admin_tags(struct nvme_dev *dev)
 			return -ENODEV;
 		}
 	} else
-		blk_mq_unfreeze_queue(dev->ctrl.admin_q);
+		blk_mq_start_stopped_hw_queues(dev->ctrl.admin_q, true);
 
 	return 0;
 }
@@ -1903,34 +1908,6 @@ static void nvme_dev_list_remove(struct nvme_dev *dev)
 		kthread_stop(tmp);
 }
 
-static void nvme_freeze_queues(struct nvme_dev *dev)
-{
-	struct nvme_ns *ns;
-
-	list_for_each_entry(ns, &dev->ctrl.namespaces, list) {
-		blk_mq_freeze_queue_start(ns->queue);
-
-		spin_lock_irq(ns->queue->queue_lock);
-		queue_flag_set(QUEUE_FLAG_STOPPED, ns->queue);
-		spin_unlock_irq(ns->queue->queue_lock);
-
-		blk_mq_cancel_requeue_work(ns->queue);
-		blk_mq_stop_hw_queues(ns->queue);
-	}
-}
-
-static void nvme_unfreeze_queues(struct nvme_dev *dev)
-{
-	struct nvme_ns *ns;
-
-	list_for_each_entry(ns, &dev->ctrl.namespaces, list) {
-		queue_flag_clear_unlocked(QUEUE_FLAG_STOPPED, ns->queue);
-		blk_mq_unfreeze_queue(ns->queue);
-		blk_mq_start_stopped_hw_queues(ns->queue, true);
-		blk_mq_kick_requeue_list(ns->queue);
-	}
-}
-
 static void nvme_dev_shutdown(struct nvme_dev *dev)
 {
 	int i;
@@ -1940,7 +1917,7 @@ static void nvme_dev_shutdown(struct nvme_dev *dev)
 
 	mutex_lock(&dev->shutdown_lock);
 	if (dev->bar) {
-		nvme_freeze_queues(dev);
+		nvme_stop_queues(&dev->ctrl);
 		csts = readl(dev->bar + NVME_REG_CSTS);
 	}
 	if (csts & NVME_CSTS_CFS || !(csts & NVME_CSTS_RDY)) {
@@ -2049,7 +2026,7 @@ static void nvme_reset_work(struct work_struct *work)
 		dev_warn(dev->dev, "IO queues not created\n");
 		nvme_remove_namespaces(&dev->ctrl);
 	} else {
-		nvme_unfreeze_queues(dev);
+		nvme_start_queues(&dev->ctrl);
 		nvme_dev_add(dev);
 	}
 

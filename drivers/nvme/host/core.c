@@ -467,10 +467,12 @@ static int nvme_ioctl(struct block_device *bdev, fmode_t mode,
 		return nvme_user_cmd(ns->ctrl, ns, (void __user *)arg);
 	case NVME_IOCTL_SUBMIT_IO:
 		return nvme_submit_io(ns, (void __user *)arg);
+#ifdef CONFIG_BLK_DEV_NVME_SCSI
 	case SG_GET_VERSION_NUM:
 		return nvme_sg_get_version_num((void __user *)arg);
 	case SG_IO:
 		return nvme_sg_io(ns, (void __user *)arg);
+#endif
 	default:
 		return -ENOTTY;
 	}
@@ -922,21 +924,50 @@ static int nvme_dev_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static int nvme_dev_user_cmd(struct nvme_ctrl *ctrl, void __user *argp)
+{
+	struct nvme_ns *ns;
+	int ret;
+
+	mutex_lock(&ctrl->namespaces_mutex);
+	if (list_empty(&ctrl->namespaces)) {
+		ret = -ENOTTY;
+		goto out_unlock;
+	}
+
+	ns = list_first_entry(&ctrl->namespaces, struct nvme_ns, list);
+	if (ns != list_last_entry(&ctrl->namespaces, struct nvme_ns, list)) {
+		dev_warn(ctrl->dev,
+			"NVME_IOCTL_IO_CMD not supported when multiple namespaces present!\n");
+		ret = -EINVAL;
+		goto out_unlock;
+	}
+
+	dev_warn(ctrl->dev,
+		"using deprecated NVME_IOCTL_IO_CMD ioctl on the char device!\n");
+	kref_get(&ns->kref);
+	mutex_unlock(&ctrl->namespaces_mutex);
+
+	ret = nvme_user_cmd(ctrl, ns, argp);
+	nvme_put_ns(ns);
+	return ret;
+
+out_unlock:
+	mutex_unlock(&ctrl->namespaces_mutex);
+	return ret;
+}
+
 static long nvme_dev_ioctl(struct file *file, unsigned int cmd,
 		unsigned long arg)
 {
 	struct nvme_ctrl *ctrl = file->private_data;
 	void __user *argp = (void __user *)arg;
-	struct nvme_ns *ns;
 
 	switch (cmd) {
 	case NVME_IOCTL_ADMIN_CMD:
 		return nvme_user_cmd(ctrl, NULL, argp);
 	case NVME_IOCTL_IO_CMD:
-		if (list_empty(&ctrl->namespaces))
-			return -ENOTTY;
-		ns = list_first_entry(&ctrl->namespaces, struct nvme_ns, list);
-		return nvme_user_cmd(ctrl, ns, argp);
+		return nvme_dev_user_cmd(ctrl, argp);
 	case NVME_IOCTL_RESET:
 		dev_warn(ctrl->dev, "resetting controller\n");
 		return ctrl->ops->reset_ctrl(ctrl);
@@ -1034,6 +1065,8 @@ static struct nvme_ns *nvme_find_ns(struct nvme_ctrl *ctrl, unsigned nsid)
 {
 	struct nvme_ns *ns;
 
+	lockdep_assert_held(&ctrl->namespaces_mutex);
+
 	list_for_each_entry(ns, &ctrl->namespaces, list) {
 		if (ns->ns_id == nsid)
 			return ns;
@@ -1048,6 +1081,8 @@ static void nvme_alloc_ns(struct nvme_ctrl *ctrl, unsigned nsid)
 	struct nvme_ns *ns;
 	struct gendisk *disk;
 	int node = dev_to_node(ctrl->dev);
+
+	lockdep_assert_held(&ctrl->namespaces_mutex);
 
 	ns = kzalloc_node(sizeof(*ns), GFP_KERNEL, node);
 	if (!ns)
@@ -1117,6 +1152,8 @@ static void nvme_ns_remove(struct nvme_ns *ns)
 {
 	bool kill = nvme_io_incapable(ns->ctrl) &&
 			!blk_queue_dying(ns->queue);
+
+	lockdep_assert_held(&ns->ctrl->namespaces_mutex);
 
 	if (kill)
 		blk_set_queue_dying(ns->queue);
@@ -1188,6 +1225,8 @@ static void __nvme_scan_namespaces(struct nvme_ctrl *ctrl, unsigned nn)
 	struct nvme_ns *ns, *next;
 	unsigned i;
 
+	lockdep_assert_held(&ctrl->namespaces_mutex);
+
 	for (i = 1; i <= nn; i++)
 		nvme_validate_ns(ctrl, i);
 
@@ -1205,6 +1244,7 @@ void nvme_scan_namespaces(struct nvme_ctrl *ctrl)
 	if (nvme_identify_ctrl(ctrl, &id))
 		return;
 
+	mutex_lock(&ctrl->namespaces_mutex);
 	nn = le32_to_cpu(id->nn);
 	if (ctrl->vs >= NVME_VS(1, 1) &&
 	    !(ctrl->quirks & NVME_QUIRK_IDENTIFY_CNS)) {
@@ -1214,6 +1254,7 @@ void nvme_scan_namespaces(struct nvme_ctrl *ctrl)
 	__nvme_scan_namespaces(ctrl, le32_to_cpup(&id->nn));
  done:
 	list_sort(NULL, &ctrl->namespaces, ns_cmp);
+	mutex_unlock(&ctrl->namespaces_mutex);
 	kfree(id);
 }
 
@@ -1221,8 +1262,10 @@ void nvme_remove_namespaces(struct nvme_ctrl *ctrl)
 {
 	struct nvme_ns *ns, *next;
 
+	mutex_lock(&ctrl->namespaces_mutex);
 	list_for_each_entry_safe(ns, next, &ctrl->namespaces, list)
 		nvme_ns_remove(ns);
+	mutex_unlock(&ctrl->namespaces_mutex);
 }
 
 static DEFINE_IDA(nvme_instance_ida);
@@ -1290,6 +1333,7 @@ int nvme_init_ctrl(struct nvme_ctrl *ctrl, struct device *dev,
 	int ret;
 
 	INIT_LIST_HEAD(&ctrl->namespaces);
+	mutex_init(&ctrl->namespaces_mutex);
 	kref_init(&ctrl->kref);
 	ctrl->dev = dev;
 	ctrl->ops = ops;
@@ -1326,6 +1370,35 @@ out_release_instance:
 	nvme_release_instance(ctrl);
 out:
 	return ret;
+}
+
+void nvme_stop_queues(struct nvme_ctrl *ctrl)
+{
+	struct nvme_ns *ns;
+
+	mutex_lock(&ctrl->namespaces_mutex);
+	list_for_each_entry(ns, &ctrl->namespaces, list) {
+		spin_lock_irq(ns->queue->queue_lock);
+		queue_flag_set(QUEUE_FLAG_STOPPED, ns->queue);
+		spin_unlock_irq(ns->queue->queue_lock);
+
+		blk_mq_cancel_requeue_work(ns->queue);
+		blk_mq_stop_hw_queues(ns->queue);
+	}
+	mutex_unlock(&ctrl->namespaces_mutex);
+}
+
+void nvme_start_queues(struct nvme_ctrl *ctrl)
+{
+	struct nvme_ns *ns;
+
+	mutex_lock(&ctrl->namespaces_mutex);
+	list_for_each_entry(ns, &ctrl->namespaces, list) {
+		queue_flag_clear_unlocked(QUEUE_FLAG_STOPPED, ns->queue);
+		blk_mq_start_stopped_hw_queues(ns->queue, true);
+		blk_mq_kick_requeue_list(ns->queue);
+	}
+	mutex_unlock(&ctrl->namespaces_mutex);
 }
 
 int __init nvme_core_init(void)
