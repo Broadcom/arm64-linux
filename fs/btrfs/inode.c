@@ -3550,10 +3550,10 @@ static noinline int acls_after_inode_item(struct extent_buffer *leaf,
 	int scanned = 0;
 
 	if (!xattr_access) {
-		xattr_access = btrfs_name_hash(POSIX_ACL_XATTR_ACCESS,
-					strlen(POSIX_ACL_XATTR_ACCESS));
-		xattr_default = btrfs_name_hash(POSIX_ACL_XATTR_DEFAULT,
-					strlen(POSIX_ACL_XATTR_DEFAULT));
+		xattr_access = btrfs_name_hash(XATTR_NAME_POSIX_ACL_ACCESS,
+					strlen(XATTR_NAME_POSIX_ACL_ACCESS));
+		xattr_default = btrfs_name_hash(XATTR_NAME_POSIX_ACL_DEFAULT,
+					strlen(XATTR_NAME_POSIX_ACL_DEFAULT));
 	}
 
 	slot++;
@@ -3774,6 +3774,7 @@ cache_acl:
 		break;
 	case S_IFLNK:
 		inode->i_op = &btrfs_symlink_inode_operations;
+		inode_nohighmem(inode);
 		inode->i_mapping->a_ops = &btrfs_symlink_aops;
 		break;
 	default:
@@ -4046,9 +4047,7 @@ int btrfs_unlink_inode(struct btrfs_trans_handle *trans,
  */
 static struct btrfs_trans_handle *__unlink_start_trans(struct inode *dir)
 {
-	struct btrfs_trans_handle *trans;
 	struct btrfs_root *root = BTRFS_I(dir)->root;
-	int ret;
 
 	/*
 	 * 1 for the possible orphan item
@@ -4057,27 +4056,7 @@ static struct btrfs_trans_handle *__unlink_start_trans(struct inode *dir)
 	 * 1 for the inode ref
 	 * 1 for the inode
 	 */
-	trans = btrfs_start_transaction(root, 5);
-	if (!IS_ERR(trans) || PTR_ERR(trans) != -ENOSPC)
-		return trans;
-
-	if (PTR_ERR(trans) == -ENOSPC) {
-		u64 num_bytes = btrfs_calc_trans_metadata_size(root, 5);
-
-		trans = btrfs_start_transaction(root, 0);
-		if (IS_ERR(trans))
-			return trans;
-		ret = btrfs_cond_migrate_bytes(root->fs_info,
-					       &root->fs_info->trans_block_rsv,
-					       num_bytes, 5);
-		if (ret) {
-			btrfs_end_transaction(trans, root);
-			return ERR_PTR(ret);
-		}
-		trans->block_rsv = &root->fs_info->trans_block_rsv;
-		trans->bytes_reserved = num_bytes;
-	}
-	return trans;
+	return btrfs_start_transaction_fallback_global_rsv(root, 5, 5);
 }
 
 static int btrfs_unlink(struct inode *dir, struct dentry *dentry)
@@ -9727,6 +9706,7 @@ static int btrfs_symlink(struct inode *dir, struct dentry *dentry,
 	btrfs_free_path(path);
 
 	inode->i_op = &btrfs_symlink_inode_operations;
+	inode_nohighmem(inode);
 	inode->i_mapping->a_ops = &btrfs_symlink_aops;
 	inode_set_bytes(inode, name_len);
 	btrfs_i_size_write(inode, name_len);
@@ -10016,7 +9996,7 @@ static const struct inode_operations btrfs_dir_inode_operations = {
 	.setattr	= btrfs_setattr,
 	.mknod		= btrfs_mknod,
 	.setxattr	= btrfs_setxattr,
-	.getxattr	= btrfs_getxattr,
+	.getxattr	= generic_getxattr,
 	.listxattr	= btrfs_listxattr,
 	.removexattr	= btrfs_removexattr,
 	.permission	= btrfs_permission,
@@ -10093,7 +10073,7 @@ static const struct inode_operations btrfs_file_inode_operations = {
 	.getattr	= btrfs_getattr,
 	.setattr	= btrfs_setattr,
 	.setxattr	= btrfs_setxattr,
-	.getxattr	= btrfs_getxattr,
+	.getxattr	= generic_getxattr,
 	.listxattr      = btrfs_listxattr,
 	.removexattr	= btrfs_removexattr,
 	.permission	= btrfs_permission,
@@ -10107,7 +10087,7 @@ static const struct inode_operations btrfs_special_inode_operations = {
 	.setattr	= btrfs_setattr,
 	.permission	= btrfs_permission,
 	.setxattr	= btrfs_setxattr,
-	.getxattr	= btrfs_getxattr,
+	.getxattr	= generic_getxattr,
 	.listxattr	= btrfs_listxattr,
 	.removexattr	= btrfs_removexattr,
 	.get_acl	= btrfs_get_acl,
@@ -10116,13 +10096,12 @@ static const struct inode_operations btrfs_special_inode_operations = {
 };
 static const struct inode_operations btrfs_symlink_inode_operations = {
 	.readlink	= generic_readlink,
-	.follow_link	= page_follow_link_light,
-	.put_link	= page_put_link,
+	.get_link	= page_get_link,
 	.getattr	= btrfs_getattr,
 	.setattr	= btrfs_setattr,
 	.permission	= btrfs_permission,
 	.setxattr	= btrfs_setxattr,
-	.getxattr	= btrfs_getxattr,
+	.getxattr	= generic_getxattr,
 	.listxattr	= btrfs_listxattr,
 	.removexattr	= btrfs_removexattr,
 	.update_time	= btrfs_update_time,
