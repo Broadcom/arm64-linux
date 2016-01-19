@@ -539,6 +539,7 @@ struct amdgpu_bo {
 	/* Constant after initialization */
 	struct amdgpu_device		*adev;
 	struct drm_gem_object		gem_base;
+	struct amdgpu_bo		*parent;
 
 	struct ttm_bo_kmap_obj		dma_buf_vmap;
 	pid_t				pid;
@@ -955,6 +956,8 @@ struct amdgpu_vm {
 	struct amdgpu_vm_id	ids[AMDGPU_MAX_RINGS];
 	/* for interval tree */
 	spinlock_t		it_lock;
+	/* protecting freed */
+	spinlock_t		freed_lock;
 };
 
 struct amdgpu_vm_manager {
@@ -1261,7 +1264,8 @@ struct amdgpu_cs_parser {
 	struct ww_acquire_ctx	ticket;
 
 	/* user fence */
-	struct amdgpu_user_fence uf;
+	struct amdgpu_user_fence	uf;
+	struct amdgpu_bo_list_entry	uf_entry;
 };
 
 struct amdgpu_job {
