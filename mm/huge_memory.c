@@ -2450,9 +2450,9 @@ static void collapse_huge_page(struct mm_struct *mm,
 		goto out;
 	}
 
-	anon_vma_lock_write(vma->anon_vma);
-
 	__collapse_huge_page_swapin(mm, vma, address, pmd);
+
+	anon_vma_lock_write(vma->anon_vma);
 
 	pte = pte_offset_map(pmd, address);
 	pte_ptl = pte_lockptr(mm, pmd);
