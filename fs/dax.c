@@ -331,7 +331,7 @@ static int dax_radix_entry(struct address_space *mapping, pgoff_t index,
 		sector_t sector, bool pmd_entry, bool dirty)
 {
 	struct radix_tree_root *page_tree = &mapping->page_tree;
-	int error = 0;
+	int type, error = 0;
 	void *entry;
 
 	__mark_inode_dirty(mapping->host, I_DIRTY_PAGES);
@@ -340,7 +340,14 @@ static int dax_radix_entry(struct address_space *mapping, pgoff_t index,
 	entry = radix_tree_lookup(page_tree, index);
 
 	if (entry) {
-		if (!pmd_entry || RADIX_DAX_TYPE(entry) == RADIX_DAX_PMD)
+		type = RADIX_DAX_TYPE(entry);
+		if (WARN_ON_ONCE(type != RADIX_DAX_PTE &&
+					type != RADIX_DAX_PMD)) {
+			error = -EIO;
+			goto unlock;
+		}
+
+		if (!pmd_entry || type == RADIX_DAX_PMD)
 			goto dirty;
 		radix_tree_delete(&mapping->page_tree, index);
 		mapping->nrexceptional--;
