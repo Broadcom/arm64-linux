@@ -557,7 +557,7 @@ static struct stable_node *alloc_stable_node_chain(struct stable_node *dup,
 		INIT_HLIST_HEAD(&chain->hlist);
 		chain->chain_prune_time = jiffies;
 		chain->rmap_hlist_len = STABLE_NODE_CHAIN;
-#ifdef CONFIG_DEBUG_VM
+#if defined (CONFIG_DEBUG_VM) && defined(CONFIG_NUMA)
 		chain->nid = -1; /* debug */
 #endif
 		ksm_stable_node_chains++;
