@@ -325,8 +325,10 @@ static int copy_user_bh(struct page *to, struct inode *inode,
 	return 0;
 }
 
+#define NO_SECTOR -1
+
 static int dax_radix_entry(struct address_space *mapping, pgoff_t index,
-		void __pmem *addr, bool pmd_entry, bool dirty)
+		sector_t sector, bool pmd_entry, bool dirty)
 {
 	struct radix_tree_root *page_tree = &mapping->page_tree;
 	int error = 0;
@@ -341,10 +343,10 @@ static int dax_radix_entry(struct address_space *mapping, pgoff_t index,
 		if (!pmd_entry || RADIX_DAX_TYPE(entry) == RADIX_DAX_PMD)
 			goto dirty;
 		radix_tree_delete(&mapping->page_tree, index);
-		mapping->nrdax--;
+		mapping->nrexceptional--;
 	}
 
-	if (!addr) {
+	if (sector == NO_SECTOR) {
 		/*
 		 * This can happen during correct operation if our pfn_mkwrite
 		 * fault raced against a hole punch operation.  If this
@@ -356,17 +358,14 @@ static int dax_radix_entry(struct address_space *mapping, pgoff_t index,
 		 * to be retried by the CPU.
 		 */
 		goto unlock;
-	} else if (RADIX_DAX_TYPE(addr)) {
-		WARN_ONCE(1, "%s: invalid address %p\n", __func__, addr);
-		goto unlock;
 	}
 
 	error = radix_tree_insert(page_tree, index,
-			RADIX_DAX_ENTRY(addr, pmd_entry));
+			RADIX_DAX_ENTRY(sector, pmd_entry));
 	if (error)
 		goto unlock;
 
-	mapping->nrdax++;
+	mapping->nrexceptional++;
  dirty:
 	if (dirty)
 		radix_tree_tag_set(page_tree, index, PAGECACHE_TAG_DIRTY);
@@ -375,18 +374,15 @@ static int dax_radix_entry(struct address_space *mapping, pgoff_t index,
 	return error;
 }
 
-static void dax_writeback_one(struct address_space *mapping, pgoff_t index,
-		void *entry)
+static int dax_writeback_one(struct block_device *bdev,
+		struct address_space *mapping, pgoff_t index, void *entry)
 {
 	struct radix_tree_root *page_tree = &mapping->page_tree;
 	int type = RADIX_DAX_TYPE(entry);
 	struct radix_tree_node *node;
+	struct blk_dax_ctl dax;
 	void **slot;
-
-	if (type != RADIX_DAX_PTE && type != RADIX_DAX_PMD) {
-		WARN_ON_ONCE(1);
-		return;
-	}
+	int ret = 0;
 
 	spin_lock_irq(&mapping->tree_lock);
 	/*
@@ -405,12 +401,45 @@ static void dax_writeback_one(struct address_space *mapping, pgoff_t index,
 
 	radix_tree_tag_clear(page_tree, index, PAGECACHE_TAG_TOWRITE);
 
-	if (type == RADIX_DAX_PMD)
-		wb_cache_pmem(RADIX_DAX_ADDR(entry), PMD_SIZE);
-	else
-		wb_cache_pmem(RADIX_DAX_ADDR(entry), PAGE_SIZE);
+	if (WARN_ON_ONCE(type != RADIX_DAX_PTE && type != RADIX_DAX_PMD)) {
+		ret = -EIO;
+		goto unlock;
+	}
+
+	dax.sector = RADIX_DAX_SECTOR(entry);
+	dax.size = (type == RADIX_DAX_PMD ? PMD_SIZE : PAGE_SIZE);
+	spin_unlock_irq(&mapping->tree_lock);
+
+	/*
+	 * We cannot hold tree_lock while calling dax_map_atomic() because it
+	 * eventually calls cond_resched().
+	 */
+	ret = dax_map_atomic(bdev, &dax);
+	if (ret < 0)
+		return ret;
+
+	if (WARN_ON_ONCE(ret < dax.size)) {
+		ret = -EIO;
+		dax_unmap_atomic(bdev, &dax);
+		return ret;
+	}
+
+	spin_lock_irq(&mapping->tree_lock);
+	/*
+	 * We need to revalidate our radix entry while holding tree_lock
+	 * before we do the writeback.
+	 */
+	if (!__radix_tree_lookup(page_tree, index, &node, &slot))
+		goto unmap;
+	if (*slot != entry)
+		goto unmap;
+
+	wb_cache_pmem(dax.addr, dax.size);
+ unmap:
+	dax_unmap_atomic(bdev, &dax);
  unlock:
 	spin_unlock_irq(&mapping->tree_lock);
+	return ret;
 }
 
 /*
@@ -418,20 +447,19 @@ static void dax_writeback_one(struct address_space *mapping, pgoff_t index,
  * end]. This is required by data integrity operations to ensure file data is
  * on persistent storage prior to completion of the operation.
  */
-void dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
+int dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
 		loff_t end)
 {
 	struct inode *inode = mapping->host;
+	struct block_device *bdev = inode->i_sb->s_bdev;
 	pgoff_t indices[PAGEVEC_SIZE];
 	pgoff_t start_page, end_page;
 	struct pagevec pvec;
 	void *entry;
-	int i;
+	int i, ret = 0;
 
-	if (inode->i_blkbits != PAGE_SHIFT) {
-		WARN_ON_ONCE(1);
-		return;
-	}
+	if (WARN_ON_ONCE(inode->i_blkbits != PAGE_SHIFT))
+		return -EIO;
 
 	rcu_read_lock();
 	entry = radix_tree_lookup(&mapping->page_tree, start & PMD_MASK);
@@ -455,10 +483,15 @@ void dax_writeback_mapping_range(struct address_space *mapping, loff_t start,
 		if (pvec.nr == 0)
 			break;
 
-		for (i = 0; i < pvec.nr; i++)
-			dax_writeback_one(mapping, indices[i], pvec.pages[i]);
+		for (i = 0; i < pvec.nr; i++) {
+			ret = dax_writeback_one(bdev, mapping, indices[i],
+					pvec.pages[i]);
+			if (ret < 0)
+				return ret;
+		}
 	}
 	wmb_pmem();
+	return 0;
 }
 EXPORT_SYMBOL_GPL(dax_writeback_mapping_range);
 
@@ -501,12 +534,13 @@ static int dax_insert_mapping(struct inode *inode, struct buffer_head *bh,
 	}
 	dax_unmap_atomic(bdev, &dax);
 
-	error = vm_insert_mixed(vma, vaddr, dax.pfn);
+	error = dax_radix_entry(mapping, vmf->pgoff, dax.sector, false,
+			vmf->flags & FAULT_FLAG_WRITE);
 	if (error)
 		goto out;
 
-	error = dax_radix_entry(mapping, vmf->pgoff, addr, false,
-			vmf->flags & FAULT_FLAG_WRITE);
+	error = vm_insert_mixed(vma, vaddr, dax.pfn);
+
  out:
 	i_mmap_unlock_read(mapping);
 
@@ -876,6 +910,16 @@ int __dax_pmd_fault(struct vm_area_struct *vma, unsigned long address,
 		}
 		dax_unmap_atomic(bdev, &dax);
 
+		if (write) {
+			error = dax_radix_entry(mapping, pgoff, dax.sector,
+					true, true);
+			if (error) {
+				dax_pmd_dbg(bdev, address,
+						"PMD radix insertion failed");
+				goto fallback;
+			}
+		}
+
 		dev_dbg(part_to_dev(bdev->bd_part),
 				"%s: %s addr: %lx pfn: %lx sect: %llx\n",
 				__func__, current->comm, address,
@@ -883,12 +927,6 @@ int __dax_pmd_fault(struct vm_area_struct *vma, unsigned long address,
 				(unsigned long long) dax.sector);
 		result |= vmf_insert_pfn_pmd(vma, address, pmd,
 				dax.pfn, write);
-		if (write) {
-			error = dax_radix_entry(mapping, pgoff, kaddr, true,
-					true);
-			if (error)
-				goto fallback;
-		}
 	}
 
  out:
@@ -945,7 +983,7 @@ int dax_pfn_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct file *file = vma->vm_file;
 
-	dax_radix_entry(file->f_mapping, vmf->pgoff, NULL, false, true);
+	dax_radix_entry(file->f_mapping, vmf->pgoff, NO_SECTOR, false, true);
 	return VM_FAULT_NOPAGE;
 }
 EXPORT_SYMBOL_GPL(dax_pfn_mkwrite);
