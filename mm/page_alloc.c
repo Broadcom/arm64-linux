@@ -2989,7 +2989,8 @@ static inline bool is_thp_gfp_mask(gfp_t gfp_mask)
  * the last reclaim round), pages_reclaimed (cumulative number of reclaimed
  * pages) and no_progress_loops (number of reclaim rounds without any progress
  * in a row) is considered as well as the reclaimable pages on the applicable
- * zone list (with a backoff mechanism which is a function of no_progress_loops).
+ * zone list (with a backoff mechanism which is a function of
+ * no_progress_loops).
  *
  * Returns true if a retry is viable or false to enter the oom path.
  */
@@ -3019,24 +3020,27 @@ should_reclaim_retry(gfp_t gfp_mask, unsigned order,
 	}
 
 	/*
-	 * Keep reclaiming pages while there is a chance this will lead somewhere.
-	 * If none of the target zones can satisfy our allocation request even
-	 * if all reclaimable pages are considered then we are screwed and have
-	 * to go OOM.
+	 * Keep reclaiming pages while there is a chance this will lead
+	 * somewhere.  If none of the target zones can satisfy our allocation
+	 * request even if all reclaimable pages are considered then we are
+	 * screwed and have to go OOM.
 	 */
-	for_each_zone_zonelist_nodemask(zone, z, ac->zonelist, ac->high_zoneidx, ac->nodemask) {
+	for_each_zone_zonelist_nodemask(zone, z, ac->zonelist,
+			ac->high_zoneidx, ac->nodemask) {
 		unsigned long available;
 
 		available = zone_reclaimable_pages(zone);
-		available -= DIV_ROUND_UP(no_progress_loops * available, MAX_RECLAIM_RETRIES);
+		available -= DIV_ROUND_UP(no_progress_loops * available,
+					  MAX_RECLAIM_RETRIES);
 		available += zone_page_state_snapshot(zone, NR_FREE_PAGES);
 
 		/*
-		 * Would the allocation succeed if we reclaimed the whole available?
+		 * Would the allocation succeed if we reclaimed the whole
+		 * available?
 		 */
 		if (__zone_watermark_ok(zone, order, min_wmark_pages(zone),
 				ac->high_zoneidx, alloc_flags, available)) {
-			/* Wait for some write requests to complete then retry */
+			/* Wait for some writes to complete then retry */
 			wait_iff_congested(zone, BLK_RW_ASYNC, HZ/50);
 			return true;
 		}
