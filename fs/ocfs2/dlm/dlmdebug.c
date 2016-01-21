@@ -77,7 +77,7 @@ static void __dlm_print_lock(struct dlm_lock *lock)
 
 	printk("    type=%d, conv=%d, node=%u, cookie=%u:%llu, "
 	       "ref=%u, ast=(empty=%c,pend=%c), bast=(empty=%c,pend=%c), "
-	       "pending=(lock=%c,cancel=%c,unlock=%c)\n",
+	       "pending=(conv=%c,lock=%c,cancel=%c,unlock=%c)\n",
 	       lock->ml.type, lock->ml.convert_type, lock->ml.node,
 	       dlm_get_lock_cookie_node(be64_to_cpu(lock->ml.cookie)),
 	       dlm_get_lock_cookie_seq(be64_to_cpu(lock->ml.cookie)),
@@ -86,6 +86,7 @@ static void __dlm_print_lock(struct dlm_lock *lock)
 	       (lock->ast_pending ? 'y' : 'n'),
 	       (list_empty(&lock->bast_list) ? 'y' : 'n'),
 	       (lock->bast_pending ? 'y' : 'n'),
+	       (lock->convert_pending ? 'y' : 'n'),
 	       (lock->lock_pending ? 'y' : 'n'),
 	       (lock->cancel_pending ? 'y' : 'n'),
 	       (lock->unlock_pending ? 'y' : 'n'));
@@ -501,7 +502,7 @@ static int dump_lock(struct dlm_lock *lock, int list_type, char *buf, int len)
 
 #define DEBUG_LOCK_VERSION	1
 	spin_lock(&lock->spinlock);
-	out = snprintf(buf, len, "LOCK:%d,%d,%d,%d,%d,%d:%lld,%d,%d,%d,%d,"
+	out = snprintf(buf, len, "LOCK:%d,%d,%d,%d,%d,%d:%lld,%d,%d,%d,%d,%d,"
 		       "%d,%d,%d,%d\n",
 		       DEBUG_LOCK_VERSION,
 		       list_type, lock->ml.type, lock->ml.convert_type,
@@ -511,7 +512,7 @@ static int dump_lock(struct dlm_lock *lock, int list_type, char *buf, int len)
 		       !list_empty(&lock->ast_list),
 		       !list_empty(&lock->bast_list),
 		       lock->ast_pending, lock->bast_pending,
-		       lock->lock_pending,
+		       lock->convert_pending, lock->lock_pending,
 		       lock->cancel_pending, lock->unlock_pending,
 		       atomic_read(&lock->lock_refs.refcount));
 	spin_unlock(&lock->spinlock);

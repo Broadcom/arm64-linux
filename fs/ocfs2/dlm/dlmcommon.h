@@ -369,6 +369,7 @@ struct dlm_lock
 	struct dlm_lockstatus *lksb;
 	unsigned ast_pending:1,
 		 bast_pending:1,
+		 convert_pending:1,
 		 lock_pending:1,
 		 cancel_pending:1,
 		 unlock_pending:1,
