@@ -2986,10 +2986,9 @@ static inline bool is_thp_gfp_mask(gfp_t gfp_mask)
  * Checks whether it makes sense to retry the reclaim to make a forward progress
  * for the given allocation request.
  * The reclaim feedback represented by did_some_progress (any progress during
- * the last reclaim round), pages_reclaimed (cumulative number of reclaimed
- * pages) and no_progress_loops (number of reclaim rounds without any progress
- * in a row) is considered as well as the reclaimable pages on the applicable
- * zone list (with a backoff mechanism which is a function of
+ * the last reclaim round) and no_progress_loops (number of reclaim rounds without
+ * any progress in a row) is considered as well as the reclaimable pages on the
+ * applicable zone list (with a backoff mechanism which is a function of
  * no_progress_loops).
  *
  * Returns true if a retry is viable or false to enter the oom path.
@@ -2997,7 +2996,7 @@ static inline bool is_thp_gfp_mask(gfp_t gfp_mask)
 static inline bool
 should_reclaim_retry(gfp_t gfp_mask, unsigned order,
 		     struct alloc_context *ac, int alloc_flags,
-		     bool did_some_progress, unsigned long pages_reclaimed,
+		     bool did_some_progress,
 		     int no_progress_loops)
 {
 	struct zone *zone;
@@ -3011,13 +3010,8 @@ should_reclaim_retry(gfp_t gfp_mask, unsigned order,
 		return false;
 
 	/* Do not retry high order allocations unless they are __GFP_REPEAT */
-	if (order > PAGE_ALLOC_COSTLY_ORDER) {
-		if (!(gfp_mask & __GFP_REPEAT) || pages_reclaimed >= (1<<order))
-			return false;
-
-		if (did_some_progress)
-			return true;
-	}
+	if (order > PAGE_ALLOC_COSTLY_ORDER && !(gfp_mask & __GFP_REPEAT))
+		return false;
 
 	/*
 	 * Keep reclaiming pages while there is a chance this will lead
@@ -3086,7 +3080,6 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 	bool can_direct_reclaim = gfp_mask & __GFP_DIRECT_RECLAIM;
 	struct page *page = NULL;
 	int alloc_flags;
-	unsigned long pages_reclaimed = 0;
 	unsigned long did_some_progress;
 	enum migrate_mode migration_mode = MIGRATE_ASYNC;
 	bool deferred_compaction = false;
@@ -3251,16 +3244,18 @@ retry:
 	if (gfp_mask & __GFP_NORETRY)
 		goto noretry;
 
-	if (did_some_progress) {
+	/*
+	 * Costly allocations might have made a progress but this doesn't mean
+	 * their order will become available due to high fragmentation so do
+	 * not reset the no progress counter for them
+	 */
+	if (did_some_progress && order <= PAGE_ALLOC_COSTLY_ORDER)
 		no_progress_loops = 0;
-		pages_reclaimed += did_some_progress;
-	} else {
+	else
 		no_progress_loops++;
-	}
 
 	if (should_reclaim_retry(gfp_mask, order, ac, alloc_flags,
-				 did_some_progress > 0, pages_reclaimed,
-				 no_progress_loops))
+				 did_some_progress > 0, no_progress_loops))
 		goto retry;
 
 	/* Reclaim has failed us, start killing things */
