@@ -61,3 +61,28 @@ int __qcom_scm_hdcp_req(struct qcom_scm_hdcp_req *req, u32 req_cnt, u32 *resp)
 {
 	return -ENOTSUPP;
 }
+
+bool __qcom_scm_pas_supported(u32 peripheral)
+{
+	return false;
+}
+
+int __qcom_scm_pas_init_image(u32 peripheral, dma_addr_t metadata_phys)
+{
+	return -ENOTSUPP;
+}
+
+int __qcom_scm_pas_mem_setup(u32 peripheral, phys_addr_t addr, phys_addr_t size)
+{
+	return -ENOTSUPP;
+}
+
+int __qcom_scm_pas_auth_and_reset(u32 peripheral)
+{
+	return -ENOTSUPP;
+}
+
+int __qcom_scm_pas_shutdown(u32 peripheral)
+{
+	return -ENOTSUPP;
+}

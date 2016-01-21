@@ -11,16 +11,17 @@ menuconfig ARCH_QCOM
 
 if ARCH_QCOM
 
-config ARCH_MSM8X60
-	bool "Enable support for MSM8X60"
+config ARCH_QCOM_A_FAMILY
+	bool "Support a-family chipsets (msm8660, msm8960, apq8064)"
+	default y
 	select CLKSRC_QCOM
+	help
+	  Select this option if you want to support a-family platforms.
 
-config ARCH_MSM8960
-	bool "Enable support for MSM8960"
-	select CLKSRC_QCOM
+	  A-family includes all Snapdragon S1/S2/S3/S4 chips before 2013,
+	  up to the MSM8x60 and APQ8064 SoCs.
 
-config ARCH_MSM8974
-	bool "Enable support for MSM8974"
-	select HAVE_ARM_ARCH_TIMER
+	  B-family includes all Snapdragon 2xx/4xx/6xx/8xx models starting
+	  in 2013 with the MSM8x74 SoC.
 
 endif
