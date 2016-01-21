@@ -32,12 +32,11 @@
 #include <linux/mempolicy.h>
 #include <linux/security.h>
 #include <linux/ptrace.h>
-#include <linux/delay.h>
 #include <linux/freezer.h>
 #include <linux/ftrace.h>
 #include <linux/ratelimit.h>
 #include <linux/kthread.h>
-#include <linux/module.h>
+#include <linux/init.h>
 
 #include <asm/tlb.h>
 #include "internal.h"
@@ -542,7 +541,7 @@ static int __init oom_init(void)
 	}
 	return 0;
 }
-module_init(oom_init)
+subsys_initcall(oom_init)
 #else
 static void wake_oom_reaper(struct mm_struct *mm)
 {
