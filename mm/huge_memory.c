@@ -2383,8 +2383,6 @@ static void __collapse_huge_page_swapin(struct mm_struct *mm,
 	trace_mm_collapse_huge_page_swapin(mm, swapped_in, 1);
 }
 
-
-
 static void collapse_huge_page(struct mm_struct *mm,
 				   unsigned long address,
 				   struct page **hpage,
@@ -2531,9 +2529,6 @@ static void collapse_huge_page(struct mm_struct *mm,
 	result = SCAN_SUCCEED;
 out_up_write:
 	up_write(&mm->mmap_sem);
-	trace_mm_collapse_huge_page(mm, isolated, result);
-	return;
-
 out_nolock:
 	trace_mm_collapse_huge_page(mm, isolated, result);
 	return;
