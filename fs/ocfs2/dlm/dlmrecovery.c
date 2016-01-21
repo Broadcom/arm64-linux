@@ -2069,15 +2069,7 @@ void dlm_move_lockres_to_recovery_list(struct dlm_ctxt *dlm,
 		queue = dlm_list_idx_to_ptr(res, i);
 		list_for_each_entry_safe(lock, next, queue, list) {
 			dlm_lock_get(lock);
-			if (lock->convert_pending) {
-				/* move converting lock back to granted */
-				BUG_ON(i != DLM_CONVERTING_LIST);
-				mlog(0, "node died with convert pending "
-				     "on %.*s. move back to granted list.\n",
-				     res->lockname.len, res->lockname.name);
-				dlm_revert_pending_convert(res, lock);
-				lock->convert_pending = 0;
-			} else if (lock->lock_pending) {
+			if (lock->lock_pending) {
 				/* remove pending lock requests completely */
 				BUG_ON(i != DLM_BLOCKED_LIST);
 				mlog(0, "node died with lock pending "
