@@ -291,7 +291,6 @@ enum dlm_status dlmconvert_remote(struct dlm_ctxt *dlm,
 	/* move lock to local convert queue */
 	/* do not alter lock refcount.  switching lists. */
 	list_move_tail(&lock->list, &res->converting);
-	lock->convert_pending = 1;
 	lock->ml.convert_type = type;
 
 	if (flags & LKM_VALBLK) {
@@ -315,7 +314,6 @@ enum dlm_status dlmconvert_remote(struct dlm_ctxt *dlm,
 
 	spin_lock(&res->spinlock);
 	res->state &= ~DLM_LOCK_RES_IN_PROGRESS;
-	lock->convert_pending = 0;
 	/* if it failed, move it back to granted queue */
 	if (status != DLM_NORMAL) {
 		if (status != DLM_NOTQUEUED)

@@ -411,7 +411,6 @@ static void dlm_init_lock(struct dlm_lock *newlock, int type,
 	newlock->ml.cookie = cpu_to_be64(cookie);
 	newlock->ast_pending = 0;
 	newlock->bast_pending = 0;
-	newlock->convert_pending = 0;
 	newlock->lock_pending = 0;
 	newlock->unlock_pending = 0;
 	newlock->cancel_pending = 0;
