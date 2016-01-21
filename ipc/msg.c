@@ -675,7 +675,7 @@ long do_msgsnd(int msqid, long mtype, void __user *mtext,
 
 		ipc_unlock_object(&msq->q_perm);
 		rcu_read_unlock();
-		schedule();
+		freezable_schedule();
 
 		rcu_read_lock();
 		ipc_lock_object(&msq->q_perm);
