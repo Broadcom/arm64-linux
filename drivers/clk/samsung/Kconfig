@@ -2,6 +2,7 @@ config COMMON_CLK_SAMSUNG
 	bool
 	select COMMON_CLK
 
+# ARM SoCs:
 config S3C2410_COMMON_CLK
 	bool
 	select COMMON_CLK_SAMSUNG
@@ -24,3 +25,8 @@ config S3C2443_COMMON_CLK
 	bool
 	select COMMON_CLK_SAMSUNG
 
+# ARM64 SoCs (e.g. Exynos5433, Exynos7):
+config EXYNOS_ARM64_COMMON_CLK
+	def_bool ARCH_EXYNOS
+	depends on ARM64 || COMPILE_TEST
+	select COMMON_CLK_SAMSUNG
