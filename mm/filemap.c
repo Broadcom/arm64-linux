@@ -124,9 +124,9 @@ static void page_cache_tree_delete(struct address_space *mapping,
 	__radix_tree_lookup(&mapping->page_tree, page->index, &node, &slot);
 
 	if (shadow) {
-		mapping->nrshadows++;
+		mapping->nrexceptional++;
 		/*
-		 * Make sure the nrshadows update is committed before
+		 * Make sure the nrexceptional update is committed before
 		 * the nrpages update so that final truncate racing
 		 * with reclaim does not see both counters 0 at the
 		 * same time and miss a shadow entry.
@@ -581,14 +581,12 @@ static int page_cache_tree_insert(struct address_space *mapping,
 		if (!radix_tree_exceptional_entry(p))
 			return -EEXIST;
 
-		if (dax_mapping(mapping)) {
-			WARN_ON(1);
+		if (WARN_ON(dax_mapping(mapping)))
 			return -EINVAL;
-		}
 
 		if (shadowp)
 			*shadowp = p;
-		mapping->nrshadows--;
+		mapping->nrexceptional--;
 		if (node)
 			workingset_node_shadows_dec(node);
 	}

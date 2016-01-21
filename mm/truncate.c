@@ -38,7 +38,7 @@ static void clear_exceptional_entry(struct address_space *mapping,
 
 	if (dax_mapping(mapping)) {
 		if (radix_tree_delete_item(&mapping->page_tree, index, entry))
-			mapping->nrdax--;
+			mapping->nrexceptional--;
 	} else {
 		/*
 		 * Regular page slots are stabilized by the page lock even
@@ -51,7 +51,7 @@ static void clear_exceptional_entry(struct address_space *mapping,
 		if (*slot != entry)
 			goto unlock;
 		radix_tree_replace_slot(slot, NULL);
-		mapping->nrshadows--;
+		mapping->nrexceptional--;
 		if (!node)
 			goto unlock;
 		workingset_node_shadows_dec(node);
@@ -237,8 +237,7 @@ void truncate_inode_pages_range(struct address_space *mapping,
 	int		i;
 
 	cleancache_invalidate_inode(mapping);
-	if (mapping->nrpages == 0 && mapping->nrshadows == 0 &&
-			mapping->nrdax == 0)
+	if (mapping->nrpages == 0 && mapping->nrexceptional == 0)
 		return;
 
 	/* Offsets within partial pages */
@@ -412,7 +411,7 @@ EXPORT_SYMBOL(truncate_inode_pages);
  */
 void truncate_inode_pages_final(struct address_space *mapping)
 {
-	unsigned long nrshadows;
+	unsigned long nrexceptional;
 	unsigned long nrpages;
 
 	/*
@@ -426,14 +425,14 @@ void truncate_inode_pages_final(struct address_space *mapping)
 
 	/*
 	 * When reclaim installs eviction entries, it increases
-	 * nrshadows first, then decreases nrpages.  Make sure we see
+	 * nrexceptional first, then decreases nrpages.  Make sure we see
 	 * this in the right order or we might miss an entry.
 	 */
 	nrpages = mapping->nrpages;
 	smp_rmb();
-	nrshadows = mapping->nrshadows;
+	nrexceptional = mapping->nrexceptional;
 
-	if (nrpages || nrshadows || mapping->nrdax) {
+	if (nrpages || nrexceptional) {
 		/*
 		 * As truncation uses a lockless tree lookup, cycle
 		 * the tree lock to make sure any ongoing tree
