@@ -126,6 +126,7 @@ unsigned long task_statm(struct mm_struct *mm,
 static int is_stack(struct proc_maps_private *priv,
 		    struct vm_area_struct *vma, int is_pid)
 {
+	struct mm_struct *mm = vma->vm_mm;
 	int stack = 0;
 
 	if (is_pid) {
