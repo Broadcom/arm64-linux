@@ -2530,7 +2530,7 @@ static int khugepaged_scan_pmd(struct mm_struct *mm,
 			if (++unmapped <= khugepaged_max_ptes_swap) {
 				continue;
 			} else {
-				ret = SCAN_EXCEED_SWAP_PTE;
+				result = SCAN_EXCEED_SWAP_PTE;
 				goto out_unmap;
 			}
 		}
