@@ -84,7 +84,6 @@ static inline void ocfs2_iocb_set_rw_locked(struct kiocb *iocb, int level)
 enum ocfs2_iocb_lock_bits {
 	OCFS2_IOCB_RW_LOCK = 0,
 	OCFS2_IOCB_RW_LOCK_LEVEL,
-	OCFS2_IOCB_UNALIGNED_IO,
 	OCFS2_IOCB_NUM_LOCKS
 };
 
