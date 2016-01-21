@@ -2354,11 +2354,10 @@ static bool hugepage_vma_check(struct vm_area_struct *vma)
 
 static void __collapse_huge_page_swapin(struct mm_struct *mm,
 					struct vm_area_struct *vma,
-					unsigned long address, pmd_t *pmd,
-					pte_t *pte)
+					unsigned long address, pmd_t *pmd)
 {
 	unsigned long _address;
-	pte_t pteval = *pte;
+	pte_t *pte, pteval;
 	int swapped_in = 0, ret = 0;
 
 	pte = pte_offset_map(pmd, address);
@@ -2453,7 +2452,7 @@ static void collapse_huge_page(struct mm_struct *mm,
 
 	anon_vma_lock_write(vma->anon_vma);
 
-	__collapse_huge_page_swapin(mm, vma, address, pmd, pte);
+	__collapse_huge_page_swapin(mm, vma, address, pmd);
 
 	pte = pte_offset_map(pmd, address);
 	pte_ptl = pte_lockptr(mm, pmd);
