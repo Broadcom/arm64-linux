@@ -615,8 +615,10 @@ static void remove_node_from_stable_tree(struct stable_node *stable_node)
 	 * from &migrate_nodes. This will verify that future list.h changes
 	 * don't break STABLE_NODE_DUP_HEAD.
 	 */
+#if GCC_VERSION >= 40903 /* only recent gcc can handle it */
 	BUILD_BUG_ON(STABLE_NODE_DUP_HEAD <= &migrate_nodes);
 	BUILD_BUG_ON(STABLE_NODE_DUP_HEAD >= &migrate_nodes + 1);
+#endif
 
 	if (stable_node->head == &migrate_nodes)
 		list_del(&stable_node->list);
