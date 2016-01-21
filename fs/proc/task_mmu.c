@@ -1523,6 +1523,7 @@ static int gather_pte_stats(pmd_t *pmd, unsigned long addr,
 	pte_t *pte;
 
 	ptl = pmd_trans_huge_lock(pmd, vma);
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	if (ptl) {
 		pte_t huge_pte = huge_ptep_get((pte_t *)pmd);
 		struct page *page;
@@ -1534,6 +1535,7 @@ static int gather_pte_stats(pmd_t *pmd, unsigned long addr,
 		spin_unlock(ptl);
 		return 0;
 	}
+#endif
 
 	if (pmd_trans_unstable(pmd))
 		return 0;
