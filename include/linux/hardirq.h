@@ -67,10 +67,12 @@ extern void irq_exit(void);
 		preempt_count_add(NMI_OFFSET + HARDIRQ_OFFSET);	\
 		rcu_nmi_enter();				\
 		trace_hardirq_enter();				\
+		printk_nmi_enter();				\
 	} while (0)
 
 #define nmi_exit()						\
 	do {							\
+		printk_nmi_exit();				\
 		trace_hardirq_exit();				\
 		rcu_nmi_exit();					\
 		BUG_ON(!in_nmi());				\
