@@ -420,23 +420,14 @@ static int dax_writeback_one(struct block_device *bdev,
 
 	if (WARN_ON_ONCE(ret < dax.size)) {
 		ret = -EIO;
-		dax_unmap_atomic(bdev, &dax);
-		return ret;
+		goto unmap;
 	}
-
-	spin_lock_irq(&mapping->tree_lock);
-	/*
-	 * We need to revalidate our radix entry while holding tree_lock
-	 * before we do the writeback.
-	 */
-	if (!__radix_tree_lookup(page_tree, index, &node, &slot))
-		goto unmap;
-	if (*slot != entry)
-		goto unmap;
 
 	wb_cache_pmem(dax.addr, dax.size);
  unmap:
 	dax_unmap_atomic(bdev, &dax);
+	return ret;
+
  unlock:
 	spin_unlock_irq(&mapping->tree_lock);
 	return ret;
