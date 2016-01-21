@@ -2986,9 +2986,9 @@ static inline bool is_thp_gfp_mask(gfp_t gfp_mask)
  * Checks whether it makes sense to retry the reclaim to make a forward progress
  * for the given allocation request.
  * The reclaim feedback represented by did_some_progress (any progress during
- * the last reclaim round) and no_progress_loops (number of reclaim rounds without
- * any progress in a row) is considered as well as the reclaimable pages on the
- * applicable zone list (with a backoff mechanism which is a function of
+ * the last reclaim round) and no_progress_loops (number of reclaim rounds
+ * without any progress in a row) is considered as well as the reclaimable pages
+ * on the applicable zone list (with a backoff mechanism which is a function of
  * no_progress_loops).
  *
  * Returns true if a retry is viable or false to enter the oom path.
