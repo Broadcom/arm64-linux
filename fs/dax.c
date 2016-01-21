@@ -914,7 +914,7 @@ int __dax_pmd_fault(struct vm_area_struct *vma, unsigned long address,
 			error = dax_radix_entry(mapping, pgoff, dax.sector,
 					true, true);
 			if (error) {
-				dax_pmd_dbg(bdev, address,
+				dax_pmd_dbg(&bh, address,
 						"PMD radix insertion failed");
 				goto fallback;
 			}
