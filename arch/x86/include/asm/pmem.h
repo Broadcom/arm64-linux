@@ -134,7 +134,7 @@ static inline void arch_clear_pmem(void __pmem *addr, size_t size)
 	void *vaddr = (void __force *)addr;
 
 	memset(vaddr, 0, size);
-	arch_wb_cache_pmem(vaddr, size);
+	arch_wb_cache_pmem(addr, size);
 }
 
 static inline bool __arch_has_wmb_pmem(void)
