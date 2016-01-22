@@ -1,6 +1,9 @@
 /*
  * VHT handling
  *
+ * Portions of this file
+ * Copyright(c) 2015 Intel Deutschland GmbH
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -278,6 +281,23 @@ ieee80211_vht_cap_ie_to_sta_vht_cap(struct ieee80211_sub_if_data *sdata,
 	}
 
 	sta->sta.bandwidth = ieee80211_sta_cur_vht_bw(sta);
+
+	/* If HT IE reported 3839 bytes only, stay with that size. */
+	if (sta->sta.max_amsdu_len == IEEE80211_MAX_MPDU_LEN_HT_3839)
+		return;
+
+	switch (vht_cap->cap & IEEE80211_VHT_CAP_MAX_MPDU_MASK) {
+	case IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454:
+		sta->sta.max_amsdu_len = IEEE80211_MAX_MPDU_LEN_VHT_11454;
+		break;
+	case IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_7991:
+		sta->sta.max_amsdu_len = IEEE80211_MAX_MPDU_LEN_VHT_7991;
+		break;
+	case IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_3895:
+	default:
+		sta->sta.max_amsdu_len = IEEE80211_MAX_MPDU_LEN_VHT_3895;
+		break;
+	}
 }
 
 enum ieee80211_sta_rx_bandwidth ieee80211_sta_cap_rx_bw(struct sta_info *sta)
@@ -423,6 +443,28 @@ u32 __ieee80211_vht_handle_opmode(struct ieee80211_sub_if_data *sdata,
 	}
 
 	return changed;
+}
+
+void ieee80211_process_mu_groups(struct ieee80211_sub_if_data *sdata,
+				 struct ieee80211_mgmt *mgmt)
+{
+	struct ieee80211_bss_conf *bss_conf = &sdata->vif.bss_conf;
+
+	if (!(sdata->flags & IEEE80211_SDATA_MU_MIMO_OWNER))
+		return;
+
+	if (!memcmp(mgmt->u.action.u.vht_group_notif.position,
+		    bss_conf->mu_group.position, WLAN_USER_POSITION_LEN) &&
+	    !memcmp(mgmt->u.action.u.vht_group_notif.membership,
+		    bss_conf->mu_group.membership, WLAN_MEMBERSHIP_LEN))
+		return;
+
+	memcpy(mgmt->u.action.u.vht_group_notif.membership,
+	       bss_conf->mu_group.membership, WLAN_MEMBERSHIP_LEN);
+	memcpy(mgmt->u.action.u.vht_group_notif.position,
+	       bss_conf->mu_group.position, WLAN_USER_POSITION_LEN);
+
+	ieee80211_bss_info_change_notify(sdata, BSS_CHANGED_MU_GROUPS);
 }
 
 void ieee80211_vht_handle_opmode(struct ieee80211_sub_if_data *sdata,
