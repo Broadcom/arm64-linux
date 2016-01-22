@@ -645,7 +645,9 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 
 	case IPI_CPU_BACKTRACE:
 		irq_enter();
+		printk_nmi_enter();
 		nmi_cpu_backtrace(regs);
+		printk_nmi_exit();
 		irq_exit();
 		break;
 

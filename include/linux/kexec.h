@@ -258,6 +258,8 @@ unsigned long paddr_vmcoreinfo_note(void);
 	vmcoreinfo_append_str("NUMBER(%s)=%ld\n", #name, (long)name)
 #define VMCOREINFO_CONFIG(name) \
 	vmcoreinfo_append_str("CONFIG_%s=y\n", #name)
+#define VMCOREINFO_PHYS_BASE(value) \
+	vmcoreinfo_append_str("PHYS_BASE=%lx\n", (unsigned long)value)
 
 extern struct kimage *kexec_image;
 extern struct kimage *kexec_crash_image;
@@ -317,6 +319,8 @@ int __weak arch_kexec_apply_relocations_add(const Elf_Ehdr *ehdr,
 					Elf_Shdr *sechdrs, unsigned int relsec);
 int __weak arch_kexec_apply_relocations(const Elf_Ehdr *ehdr, Elf_Shdr *sechdrs,
 					unsigned int relsec);
+void arch_kexec_protect_crashkres(void);
+void arch_kexec_unprotect_crashkres(void);
 
 #else /* !CONFIG_KEXEC_CORE */
 struct pt_regs;

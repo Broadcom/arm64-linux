@@ -30,7 +30,8 @@
 	EM( SCAN_SWAP_CACHE_PAGE,	"page_swap_cache")		\
 	EM( SCAN_DEL_PAGE_LRU,		"could_not_delete_page_from_lru")\
 	EM( SCAN_ALLOC_HUGE_PAGE_FAIL,	"alloc_huge_page_failed")	\
-	EMe( SCAN_CGROUP_CHARGE_FAIL,	"ccgroup_charge_failed")
+	EM( SCAN_CGROUP_CHARGE_FAIL,	"ccgroup_charge_failed")	\
+	EMe( SCAN_EXCEED_SWAP_PTE,	"exceed_swap_pte")
 
 #undef EM
 #undef EMe
@@ -46,10 +47,10 @@ SCAN_STATUS
 
 TRACE_EVENT(mm_khugepaged_scan_pmd,
 
-	TP_PROTO(struct mm_struct *mm, unsigned long pfn, bool writable,
-		 bool referenced, int none_or_zero, int status),
+	TP_PROTO(struct mm_struct *mm, struct page *page, bool writable,
+		 bool referenced, int none_or_zero, int status, int unmapped),
 
-	TP_ARGS(mm, pfn, writable, referenced, none_or_zero, status),
+	TP_ARGS(mm, page, writable, referenced, none_or_zero, status, unmapped),
 
 	TP_STRUCT__entry(
 		__field(struct mm_struct *, mm)
@@ -58,24 +59,27 @@ TRACE_EVENT(mm_khugepaged_scan_pmd,
 		__field(bool, referenced)
 		__field(int, none_or_zero)
 		__field(int, status)
+		__field(int, unmapped)
 	),
 
 	TP_fast_assign(
 		__entry->mm = mm;
-		__entry->pfn = pfn;
+		__entry->pfn = page ? page_to_pfn(page) : -1;
 		__entry->writable = writable;
 		__entry->referenced = referenced;
 		__entry->none_or_zero = none_or_zero;
 		__entry->status = status;
+		__entry->unmapped = unmapped;
 	),
 
-	TP_printk("mm=%p, scan_pfn=0x%lx, writable=%d, referenced=%d, none_or_zero=%d, status=%s",
+	TP_printk("mm=%p, scan_pfn=0x%lx, writable=%d, referenced=%d, none_or_zero=%d, status=%s, unmapped=%d",
 		__entry->mm,
 		__entry->pfn,
 		__entry->writable,
 		__entry->referenced,
 		__entry->none_or_zero,
-		__print_symbolic(__entry->status, SCAN_STATUS))
+		__print_symbolic(__entry->status, SCAN_STATUS),
+		__entry->unmapped)
 );
 
 TRACE_EVENT(mm_collapse_huge_page,
@@ -104,10 +108,10 @@ TRACE_EVENT(mm_collapse_huge_page,
 
 TRACE_EVENT(mm_collapse_huge_page_isolate,
 
-	TP_PROTO(unsigned long pfn, int none_or_zero,
+	TP_PROTO(struct page *page, int none_or_zero,
 		 bool referenced, bool  writable, int status),
 
-	TP_ARGS(pfn, none_or_zero, referenced, writable, status),
+	TP_ARGS(page, none_or_zero, referenced, writable, status),
 
 	TP_STRUCT__entry(
 		__field(unsigned long, pfn)
@@ -118,7 +122,7 @@ TRACE_EVENT(mm_collapse_huge_page_isolate,
 	),
 
 	TP_fast_assign(
-		__entry->pfn = pfn;
+		__entry->pfn = page ? page_to_pfn(page) : -1;
 		__entry->none_or_zero = none_or_zero;
 		__entry->referenced = referenced;
 		__entry->writable = writable;
@@ -131,6 +135,30 @@ TRACE_EVENT(mm_collapse_huge_page_isolate,
 		__entry->referenced,
 		__entry->writable,
 		__print_symbolic(__entry->status, SCAN_STATUS))
+);
+
+TRACE_EVENT(mm_collapse_huge_page_swapin,
+
+	TP_PROTO(struct mm_struct *mm, int swapped_in, int ret),
+
+	TP_ARGS(mm, swapped_in, ret),
+
+	TP_STRUCT__entry(
+		__field(struct mm_struct *, mm)
+		__field(int, swapped_in)
+		__field(int, ret)
+	),
+
+	TP_fast_assign(
+		__entry->mm = mm;
+		__entry->swapped_in = swapped_in;
+		__entry->ret = ret;
+	),
+
+	TP_printk("mm=%p, swapped_in=%d, ret=%d",
+		__entry->mm,
+		__entry->swapped_in,
+		__entry->ret)
 );
 
 #endif /* __HUGE_MEMORY_H */

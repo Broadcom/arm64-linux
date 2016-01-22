@@ -3,6 +3,7 @@
 #include <linux/string.h>
 #include <linux/compiler.h>
 #include <linux/export.h>
+#include <linux/ctype.h>
 #include <linux/err.h>
 #include <linux/sched.h>
 #include <linux/security.h>
@@ -98,6 +99,35 @@ char *kstrndup(const char *s, size_t max, gfp_t gfp)
 	return buf;
 }
 EXPORT_SYMBOL(kstrndup);
+
+/**
+ * kstrimdup - Trim and copy a %NUL terminated string.
+ * @s: the string to trim and duplicate
+ * @gfp: the GFP mask used in the kmalloc() call when allocating memory
+ *
+ * Returns an address, which the caller must kfree, containing
+ * a duplicate of the passed string with leading and/or trailing
+ * whitespace (as defined by isspace) removed.
+ */
+char *kstrimdup(const char *s, gfp_t gfp)
+{
+	char *buf;
+	char *begin = skip_spaces(s);
+	size_t len = strlen(begin);
+
+	while (len && isspace(begin[len - 1]))
+		len--;
+
+	buf = kmalloc_track_caller(len + 1, gfp);
+	if (!buf)
+		return NULL;
+
+	memcpy(buf, begin, len);
+	buf[len] = '\0';
+
+	return buf;
+}
+EXPORT_SYMBOL(kstrimdup);
 
 /**
  * kmemdup - duplicate region of memory
@@ -230,34 +260,9 @@ void __vma_link_list(struct mm_struct *mm, struct vm_area_struct *vma,
 }
 
 /* Check if the vma is being used as a stack by this task */
-static int vm_is_stack_for_task(struct task_struct *t,
-				struct vm_area_struct *vma)
+int vma_is_stack_for_task(struct vm_area_struct *vma, struct task_struct *t)
 {
 	return (vma->vm_start <= KSTK_ESP(t) && vma->vm_end >= KSTK_ESP(t));
-}
-
-/*
- * Check if the vma is being used as a stack.
- * If is_group is non-zero, check in the entire thread group or else
- * just check in the current task. Returns the task_struct of the task
- * that the vma is stack for. Must be called under rcu_read_lock().
- */
-struct task_struct *task_of_stack(struct task_struct *task,
-				struct vm_area_struct *vma, bool in_group)
-{
-	if (vm_is_stack_for_task(task, vma))
-		return task;
-
-	if (in_group) {
-		struct task_struct *t;
-
-		for_each_thread(task, t) {
-			if (vm_is_stack_for_task(t, vma))
-				return t;
-		}
-	}
-
-	return NULL;
 }
 
 #if defined(CONFIG_MMU) && !defined(HAVE_ARCH_PICK_MMAP_LAYOUT)
