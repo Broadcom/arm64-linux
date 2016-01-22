@@ -115,6 +115,11 @@ enum {
 	MLX5_REG_HOST_ENDIANNESS = 0x7004,
 };
 
+enum {
+	MLX5_ATOMIC_OPS_CMP_SWAP	= 1 << 0,
+	MLX5_ATOMIC_OPS_FETCH_ADD	= 1 << 1,
+};
+
 enum mlx5_page_fault_resume_flags {
 	MLX5_PAGE_FAULT_RESUME_REQUESTOR = 1 << 0,
 	MLX5_PAGE_FAULT_RESUME_WRITE	 = 1 << 1,
@@ -650,13 +655,6 @@ extern struct workqueue_struct *mlx5_core_wq;
 #define STRUCT_FIELD(header, field) \
 	.struct_offset_bytes = offsetof(struct ib_unpacked_ ## header, field),      \
 	.struct_size_bytes   = sizeof((struct ib_unpacked_ ## header *)0)->field
-
-struct ib_field {
-	size_t struct_offset_bytes;
-	size_t struct_size_bytes;
-	int    offset_bits;
-	int    size_bits;
-};
 
 static inline struct mlx5_core_dev *pci2mlx5_core_dev(struct pci_dev *pdev)
 {

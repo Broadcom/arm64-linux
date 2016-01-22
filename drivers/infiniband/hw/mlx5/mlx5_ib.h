@@ -55,6 +55,9 @@ pr_err("%s:%s:%d:(pid %d): " format, (dev)->ib_dev.name, __func__,	\
 pr_warn("%s:%s:%d:(pid %d): " format, (dev)->ib_dev.name, __func__,	\
 	__LINE__, current->pid, ##arg)
 
+#define field_avail(type, fld, sz) (offsetof(type, fld) +		\
+				    sizeof(((type *)0)->fld) <= (sz))
+
 enum {
 	MLX5_IB_MMAP_CMD_SHIFT	= 8,
 	MLX5_IB_MMAP_CMD_MASK	= 0xff,
@@ -62,7 +65,9 @@ enum {
 
 enum mlx5_ib_mmap_cmd {
 	MLX5_IB_MMAP_REGULAR_PAGE		= 0,
-	MLX5_IB_MMAP_GET_CONTIGUOUS_PAGES	= 1, /* always last */
+	MLX5_IB_MMAP_GET_CONTIGUOUS_PAGES	= 1,
+	/* 5 is chosen in order to be compatible with old versions of libmlx5 */
+	MLX5_IB_MMAP_CORE_CLOCK			= 5,
 };
 
 enum {
@@ -83,6 +88,10 @@ enum mlx5_ib_mad_ifc_flags {
 	MLX5_MAD_IFC_IGNORE_MKEY	= 1,
 	MLX5_MAD_IFC_IGNORE_BKEY	= 2,
 	MLX5_MAD_IFC_NET_VIEW		= 4,
+};
+
+enum {
+	MLX5_CROSS_CHANNEL_UUAR         = 0,
 };
 
 struct mlx5_ib_ucontext {
@@ -284,6 +293,9 @@ struct mlx5_ib_cq_buf {
 enum mlx5_ib_qp_flags {
 	MLX5_IB_QP_BLOCK_MULTICAST_LOOPBACK     = 1 << 0,
 	MLX5_IB_QP_SIGNATURE_HANDLING           = 1 << 1,
+	MLX5_IB_QP_CROSS_CHANNEL		= 1 << 2,
+	MLX5_IB_QP_MANAGED_SEND			= 1 << 3,
+	MLX5_IB_QP_MANAGED_RECV			= 1 << 4,
 };
 
 struct mlx5_umr_wr {
@@ -326,6 +338,7 @@ struct mlx5_ib_cq {
 	struct mlx5_ib_cq_buf  *resize_buf;
 	struct ib_umem	       *resize_umem;
 	int			cqe_size;
+	u32			create_flags;
 };
 
 struct mlx5_ib_srq {
@@ -449,9 +462,19 @@ struct mlx5_ib_resources {
 	struct ib_srq	*s1;
 };
 
+struct mlx5_roce {
+	/* Protect mlx5_ib_get_netdev from invoking dev_hold() with a NULL
+	 * netdev pointer
+	 */
+	rwlock_t		netdev_lock;
+	struct net_device	*netdev;
+	struct notifier_block	nb;
+};
+
 struct mlx5_ib_dev {
 	struct ib_device		ib_dev;
 	struct mlx5_core_dev		*mdev;
+	struct mlx5_roce		roce;
 	MLX5_DECLARE_DOORBELL_LOCK(uar_lock);
 	int				num_ports;
 	/* serialize update of capability mask
@@ -550,8 +573,6 @@ void mlx5_ib_free_srq_wqe(struct mlx5_ib_srq *srq, int wqe_index);
 int mlx5_MAD_IFC(struct mlx5_ib_dev *dev, int ignore_mkey, int ignore_bkey,
 		 u8 port, const struct ib_wc *in_wc, const struct ib_grh *in_grh,
 		 const void *in_mad, void *response_mad);
-struct ib_ah *create_ib_ah(struct ib_ah_attr *ah_attr,
-			   struct mlx5_ib_ah *ah);
 struct ib_ah *mlx5_ib_create_ah(struct ib_pd *pd, struct ib_ah_attr *ah_attr);
 int mlx5_ib_query_ah(struct ib_ah *ibah, struct ib_ah_attr *ah_attr);
 int mlx5_ib_destroy_ah(struct ib_ah *ah);
@@ -680,6 +701,9 @@ static inline void mlx5_ib_qp_enable_pagefaults(struct mlx5_ib_qp *qp)  {}
 
 #endif /* CONFIG_INFINIBAND_ON_DEMAND_PAGING */
 
+__be16 mlx5_get_roce_udp_sport(struct mlx5_ib_dev *dev, u8 port_num,
+			       int index);
+
 static inline void init_query_mad(struct ib_smp *mad)
 {
 	mad->base_version  = 1;
@@ -705,4 +729,12 @@ static inline int is_qp1(enum ib_qp_type qp_type)
 #define MLX5_MAX_UMR_SHIFT 16
 #define MLX5_MAX_UMR_PAGES (1 << MLX5_MAX_UMR_SHIFT)
 
+static inline u32 check_cq_create_flags(u32 flags)
+{
+	/*
+	 * It returns non-zero value for unsupported CQ
+	 * create flags, otherwise it returns zero.
+	 */
+	return (flags & ~IB_CQ_FLAGS_IGNORE_OVERRUN);
+}
 #endif /* MLX5_IB_H */
