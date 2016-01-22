@@ -2345,7 +2345,7 @@ inline ssize_t generic_write_checks(struct kiocb *iocb, struct iov_iter *from)
 
 	if (limit != RLIM_INFINITY) {
 		if (iocb->ki_pos >= limit) {
-			send_sig(SIGXFSZ, current, 0);
+			io_send_sig(SIGXFSZ);
 			return -EFBIG;
 		}
 		iov_iter_truncate(from, limit - (unsigned long)pos);
@@ -2356,8 +2356,10 @@ inline ssize_t generic_write_checks(struct kiocb *iocb, struct iov_iter *from)
 	 */
 	if (unlikely(pos + iov_iter_count(from) > MAX_NON_LFS &&
 				!(file->f_flags & O_LARGEFILE))) {
-		if (pos >= MAX_NON_LFS)
+		if (pos >= MAX_NON_LFS) {
+			io_send_sig(SIGXFSZ);
 			return -EFBIG;
+		}
 		iov_iter_truncate(from, MAX_NON_LFS - (unsigned long)pos);
 	}
 

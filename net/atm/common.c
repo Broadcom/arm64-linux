@@ -591,7 +591,7 @@ int vcc_sendmsg(struct socket *sock, struct msghdr *m, size_t size)
 	    test_bit(ATM_VF_CLOSE, &vcc->flags) ||
 	    !test_bit(ATM_VF_READY, &vcc->flags)) {
 		error = -EPIPE;
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		goto out;
 	}
 	if (!size) {
@@ -620,7 +620,7 @@ int vcc_sendmsg(struct socket *sock, struct msghdr *m, size_t size)
 		    test_bit(ATM_VF_CLOSE, &vcc->flags) ||
 		    !test_bit(ATM_VF_READY, &vcc->flags)) {
 			error = -EPIPE;
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			break;
 		}
 		prepare_to_wait(sk_sleep(sk), &wait, TASK_INTERRUPTIBLE);

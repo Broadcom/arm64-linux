@@ -663,7 +663,7 @@ static int caif_stream_sendmsg(struct socket *sock, struct msghdr *msg,
 
 pipe_err:
 	if (sent == 0 && !(msg->msg_flags&MSG_NOSIGNAL))
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 	err = -EPIPE;
 out_err:
 	return sent ? : err;

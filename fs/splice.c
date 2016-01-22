@@ -193,7 +193,7 @@ ssize_t splice_to_pipe(struct pipe_inode_info *pipe,
 
 	for (;;) {
 		if (!pipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			if (!ret)
 				ret = -EPIPE;
 			break;
@@ -1767,7 +1767,7 @@ static int opipe_prep(struct pipe_inode_info *pipe, unsigned int flags)
 
 	while (pipe->nrbufs >= pipe->buffers) {
 		if (!pipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			ret = -EPIPE;
 			break;
 		}
@@ -1818,7 +1818,7 @@ retry:
 
 	do {
 		if (!opipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			if (!ret)
 				ret = -EPIPE;
 			break;
@@ -1922,7 +1922,7 @@ static int link_pipe(struct pipe_inode_info *ipipe,
 
 	do {
 		if (!opipe->readers) {
-			send_sig(SIGPIPE, current, 0);
+			io_send_sig(SIGPIPE);
 			if (!ret)
 				ret = -EPIPE;
 			break;

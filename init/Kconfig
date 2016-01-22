@@ -1621,6 +1621,19 @@ config AIO
 	  by some high performance threaded applications. Disabling
 	  this option saves about 7k.
 
+config AIO_THREAD
+	bool "Support kernel thread based AIO" if EXPERT
+	depends on AIO
+	default y
+	help
+	   This option enables using kernel thread based AIO which implements
+	   asynchronous operations using the kernel's queue_work() mechanism.
+	   The automatic use of threads for async operations is currently
+	   disabled by default until the security implications for usage
+	   are completely understood.  This functionality can be enabled at
+	   runtime if this option is enabled by setting the fs.aio-auto-threads
+	   to one.
+
 config ADVISE_SYSCALLS
 	bool "Enable madvise/fadvise syscalls" if EXPERT
 	default y

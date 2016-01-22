@@ -16,6 +16,9 @@ struct path;
 struct mount;
 struct shrink_control;
 
+typedef ssize_t (*io_fn_t)(struct file *, char __user *, size_t, loff_t *);
+typedef ssize_t (*iter_fn_t)(struct kiocb *, struct iov_iter *);
+
 /*
  * block_dev.c
  */
@@ -135,6 +138,9 @@ extern long prune_dcache_sb(struct super_block *sb, struct shrink_control *sc);
  * read_write.c
  */
 extern int rw_verify_area(int, struct file *, const loff_t *, size_t);
+extern ssize_t do_loop_readv_writev(struct file *filp, struct iov_iter *iter,
+                loff_t *ppos, io_fn_t fn);
+
 
 /*
  * pipe.c

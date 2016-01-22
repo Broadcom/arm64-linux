@@ -1699,6 +1699,15 @@ static struct ctl_table fs_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_doulongvec_minmax,
 	},
+#if IS_ENABLED(CONFIG_AIO_THREAD)
+	{
+		.procname	= "aio-auto-threads",
+		.data		= &aio_auto_threads,
+		.maxlen		= sizeof(aio_auto_threads),
+		.mode		= 0644,
+		.proc_handler	= proc_doulongvec_minmax,
+	},
+#endif
 #endif /* CONFIG_AIO */
 #ifdef CONFIG_INOTIFY_USER
 	{

@@ -373,7 +373,7 @@ calc_reloc(unsigned long r, struct lib_info *p, int curid, int internalp)
 
 failed:
 	printk(", killing %s!\n", current->comm);
-	send_sig(SIGSEGV, current, 0);
+	io_send_sig(SIGSEGV);
 
 	return RELOC_FAILED;
 }

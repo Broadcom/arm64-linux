@@ -34,6 +34,7 @@
 #include <linux/compat.h>
 #include <linux/cn_proc.h>
 #include <linux/compiler.h>
+#include <linux/aio.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/signal.h>
@@ -1421,6 +1422,25 @@ int send_sig_info(int sig, struct siginfo *info, struct task_struct *p)
 
 	return do_send_sig_info(sig, info, p, false);
 }
+
+/* io_send_sig: send a signal caused by an i/o operation
+ *
+ * Use this helper when a signal is being sent to the task that is responsible
+ * for aer initiated operation.  Most commonly this is used to send signals
+ * like SIGPIPE or SIGXFS that are the result of attempting a read or write
+ * operation.  This is used by aio to direct a signal to the correct task in
+ * the case of async operations.
+ */
+int io_send_sig(int sig)
+{
+	struct task_struct *task = current;
+#if IS_ENABLED(CONFIG_AIO)
+	if (task->kiocb)
+		task = aio_get_task(task->kiocb);
+#endif
+	return send_sig(sig, task, 0);
+}
+EXPORT_SYMBOL(io_send_sig);
 
 #define __si_special(priv) \
 	((priv) ? SEND_SIG_PRIV : SEND_SIG_NOINFO)

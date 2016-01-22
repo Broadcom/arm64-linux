@@ -118,7 +118,7 @@ int inode_newsize_ok(const struct inode *inode, loff_t offset)
 
 	return 0;
 out_sig:
-	send_sig(SIGXFSZ, current, 0);
+	io_send_sig(SIGXFSZ);
 out_big:
 	return -EFBIG;
 }

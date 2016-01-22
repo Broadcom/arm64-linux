@@ -1391,7 +1391,7 @@ static ssize_t fuse_dev_splice_read(struct file *in, loff_t *ppos,
 	pipe_lock(pipe);
 
 	if (!pipe->readers) {
-		send_sig(SIGPIPE, current, 0);
+		io_send_sig(SIGPIPE);
 		if (!ret)
 			ret = -EPIPE;
 		goto out_unlock;
