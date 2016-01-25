@@ -39,6 +39,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_iommu.h>
+#include <linux/of_platform.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
@@ -1915,9 +1916,14 @@ static int __init arm_smmu_init(void)
 
 static int __init arm_smmu_of_setup(struct device_node *np)
 {
+	struct platform_device *pdev;
 
 	if (!init_done)
 		arm_smmu_init();
+
+	pdev = of_platform_device_create(np, NULL, NULL);
+	if (IS_ERR(pdev))
+		return PTR_ERR(pdev);
 
 	of_iommu_set_ops(np, &arm_smmu_ops);
 
