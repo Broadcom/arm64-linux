@@ -1398,6 +1398,16 @@ static int arm_smmu_init_platform_device(struct device *dev,
 	return 0;
 }
 
+int arm_smmu_of_xlate(struct device *dev, struct of_phandle_args *args)
+{
+	/*
+	 * Nothing to do here because SMMU is already aware of all
+	 * MMU masters and their stream IDs using mmu-master attibute
+	 * SMMU DT node.
+	 */
+	return 0;
+}
+
 static int arm_smmu_add_device(struct device *dev)
 {
 	struct iommu_group *group;
@@ -1495,6 +1505,7 @@ static struct iommu_ops arm_smmu_ops = {
 	.unmap			= arm_smmu_unmap,
 	.map_sg			= default_iommu_map_sg,
 	.iova_to_phys		= arm_smmu_iova_to_phys,
+	.of_xlate		= arm_smmu_of_xlate,
 	.add_device		= arm_smmu_add_device,
 	.remove_device		= arm_smmu_remove_device,
 	.device_group		= arm_smmu_device_group,
