@@ -72,6 +72,18 @@
 	status = "ok";
 };
 
+&sata_phy0 {
+	status = "ok";
+};
+
+&sata_phy1 {
+	status = "ok";
+};
+
+&sata {
+	status = "ok";
+};
+
 &sdio0 {
 	status = "ok";
 };
