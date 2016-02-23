@@ -1,0 +1,76 @@
+Broadcom iProc Shared MDIO Controller
+
+Required properties:
+- compatible:
+    "brcm,iproc-shared-mdio" for shared MDIO controller.
+- reg: specifies the base physical address and size of the registers
+- reg-names: should be "mdio"
+- #address-cells: must be 1.
+- #size-cells: must be 0.
+
+optional:
+child nodes: Masters are represented as a child node of shared MDIO controller
+and all the PHYs handled by this master are represented as its child node.
+
+Master nodes properties are defined as-
+
+Required properties:
+- compatible: Used to match driver of this PHY.
+- reg: MDIO master ID.
+- #address-cells: must be 1.
+- #size-cells: must be 0.
+
+optional:
+-brcm,phy-internal: if presents, PHYs are internal. Absence shows phy is
+external.
+-brcm,is-c45: if presents, Controller uses Clause-45 to issue MDIO transaction.
+else Controller uses Clause-22 for transactions.
+
+PHY nodes are represented as the child node of Master. Child nodes properties
+are defined as-
+
+Required properties:
+-reg: phy id of attached PHY.
+
+optional:
+There could be additional properties required to configure the specific phy like
+phy-mode in case of gpphy node below. These should be defined here and used by
+respective drivers.
+
+Example:
+iproc_mdio: iproc_mdio@663f0000 {
+	compatible = "brcm,iproc-shared-mdio";
+	reg = <0x6602023c 0x14>;
+	reg-names = "mdio";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	sata-master@6 {
+		compatible = "brcm,iproc-ns2-sata-phy";
+		reg = <0x6>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		brcm,phy-internal;
+
+		sata_phy0: sata-phy@1 {
+			reg = <0x1>;
+			#phy-cells = <0>;
+		};
+
+		sata_phy1: sata-phy@2 {
+			reg = <0x2>;
+			#phy-cells = <0>;
+		};
+	};
+
+	eth-master@0 {
+		compatible = "brcm,iproc-mdio-master-eth";
+		reg = <0x0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		gphy0: eth-phy@10 {
+			reg = <0x10>;
+			phy-mode = "mii";
+		};
+	};
+};
