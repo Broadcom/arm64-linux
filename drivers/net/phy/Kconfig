@@ -271,6 +271,17 @@ config MDIO_BCM_IPROC
 	  This module provides a driver for the MDIO busses found in the
 	  Broadcom iProc SoC's.
 
+config MDIO_BCM_IPROC_SHARED
+	tristate "Ethernet Master for Broadcom iProc Shared MDIO Controller"
+	depends on OF && OF_MDIO && (ARCH_BCM_IPROC || COMPILE_TEST)
+	default ARCH_BCM_IPROC
+	help
+	  This module provides a driver for the ethernet master found in
+	  shared MDIO controller in the Broadcom iProc SoC's.
+
+	  Enable this to support the Shared MDIO controller.
+	  if unsure, say N.
+
 endif # PHYLIB
 
 config MICREL_KS8995MA
