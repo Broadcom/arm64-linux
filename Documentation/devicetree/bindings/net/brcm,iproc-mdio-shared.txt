@@ -1,0 +1,32 @@
+Broadcom Ethernet master for shared mdio controller
+
+Required properties:
+- compatible: must be "brcm,iproc-mdio-master-eth"
+- reg: master id of Ethernet block
+- address-cells: should be 1
+- size-cells: should be 0
+
+Sub-nodes:
+  Each port's PHY should be represented as a sub-node.
+
+Sub-nodes required properties:
+- reg: the PHY number
+- phy-mode: media type connecting the PHY and MAC.
+
+
+Example:
+	eth-master@0 {
+		compatible = "brcm,iproc-mdio-master-eth";
+		reg = <0x0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		gphy0: eth-phy@10 {
+			reg = <0x10>;
+			phy-mode = "mii";
+		};
+		status = "ok"
+	};
+
+For more info on ethernet phy binding, please,refer to:
+Documentation/devicetree/bindings/net/phy.txt
+Documentation/devicetree/bindings/net/ethernet.txt
