@@ -87,3 +87,18 @@
 		#size-cells = <1>;
 	};
 };
+
+&iproc_shared_mdio {
+	eth-master@0 {
+		compatible = "brcm,iproc-mdio-master-eth";
+		reg = <0x0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "ok";
+
+		gphy0: eth-phy@10 {
+			reg = <0x10>;
+			phy-mode = "mii";
+		};
+	};
+};

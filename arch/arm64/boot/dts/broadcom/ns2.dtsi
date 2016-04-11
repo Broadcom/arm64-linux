@@ -330,6 +330,14 @@
 			      <0x65260000 0x1000>;
 		};
 
+		iproc_shared_mdio: iproc_shared_mdio@6602023c {
+			compatible = "brcm,iproc-shared-mdio";
+			reg = <0x6602023c 0x14>;
+			reg-names = "mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
 		timer0: timer@66030000 {
 			compatible = "arm,sp804", "arm,primecell";
 			reg = <0x66030000 0x1000>;
