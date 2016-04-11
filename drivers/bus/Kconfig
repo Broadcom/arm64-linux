@@ -118,6 +118,17 @@ config SHARED_MDIO
 	  Respective drivers would be called matching a compatible string
 	  provided in master node.
 
+config IPROC_SHARED_MDIO
+	tristate "iProc Shared MDIO Driver"
+	depends on OF
+	select SHARED_MDIO
+	default ARCH_BCM_IPROC
+	help
+	  Platform driver for shared MDIO controller. Broadcom's iProc based
+	  SoCs have many masters which uses one shared bus to accessed its PHY.
+	  This platform driver populates all master to Shared bus and provide
+	  the MDIO controller specific implementation.
+
 config SIMPLE_PM_BUS
 	bool "Simple Power-Managed Bus Driver"
 	depends on OF && PM
