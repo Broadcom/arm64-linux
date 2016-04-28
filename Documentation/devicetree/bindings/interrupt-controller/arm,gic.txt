@@ -140,6 +140,12 @@ Optional properties:
   		      value, this property should contain the number of
 		      SPIs assigned to the frame, overriding the HW value.
 
+- arm,msi-offset-spi: Some implementations of gicv2m have an erratum where
+		      the MSI data is the SPI number subtracted by an offset.
+		      This is required for the correct MSI interrupt to be
+		      triggered. This property should contain the required
+		      offset.
+
 Example:
 
 	interrupt-controller@e1101000 {
