@@ -5,12 +5,19 @@ numbered uniquely in a device dependent manner.  The nodes for an MDIO
 bus multiplexer/switch will have one child node for each child bus.
 
 Required properties:
-- mdio-parent-bus : phandle to the parent MDIO bus.
 - #address-cells = <1>;
 - #size-cells = <0>;
 
 Optional properties:
+- mdio-parent-bus : phandle to the parent MDIO bus. Should be used
+		if parent mdio bus is not part of multiplexer.
+- mdio-integrated-mux: boolean property indicateing that the hardware
+		is an integrated multiplex supporting muxed bus selection
+		and MDIO transaction logic generation.
 - Other properties specific to the multiplexer/switch hardware.
+
+Note: one of mdio-parent-bus and mdio-integrated-mux is mandatory to
+get parent bus regsitered.
 
 Required properties for child nodes:
 - #address-cells = <1>;
