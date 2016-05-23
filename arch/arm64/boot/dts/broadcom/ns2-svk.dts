@@ -87,3 +87,15 @@
 		#size-cells = <1>;
 	};
 };
+
+&mdio_mux_iproc {
+	mdio@10 {
+		reg = <0x10>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gphy0: eth-phy@10 {
+			reg = <0x10>;
+		};
+	};
+};
