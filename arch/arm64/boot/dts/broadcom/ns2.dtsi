@@ -299,6 +299,18 @@
 			};
 		};
 
+		usbdrd_phy: phy@66000960 {
+			#phy-cells = <0>;
+			compatible = "brcm,ns2-drd-phy";
+			reg = <0x66000960 0x24>,
+			      <0x67012800 0x4>,
+			      <0x6501d148 0x4>,
+			      <0x664d0700 0x4>;
+			id-gpios = <&gpio_g 30 0>;
+			vbus-gpios = <&gpio_g 31 0>;
+			status = "disabled";
+		};
+
 		mdio_mux_iproc: mdio-mux@6602023c {
 			compatible = "brcm,mdio-mux-iproc";
 			reg = <0x6602023c 0x14>;
@@ -556,6 +568,34 @@
 			#size-cells = <0>;
 
 			brcm,nand-has-wp;
+		};
+
+		ehci2: usb@664c0000 {
+			compatible = "generic-ehci";
+			reg = <0x664c0000 0x100>;
+			interrupts = <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>;
+			phys = <&usbdrd_phy>;
+			phy-names = "usb2h";
+			status = "disabled";
+		};
+
+		ohci2: usb@664c0800 {
+			compatible = "generic-ohci";
+			reg = <0x664c0800 0x100>;
+			interrupts = <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>;
+			phys = <&usbdrd_phy>;
+			phy-names = "usb2h";
+			status = "disabled";
+		};
+
+		udc_dwc: usb@664e0000 {
+			compatible = "snps,dw-ahb-udc";
+			reg = <0x664e0000 0x2000>;
+			interrupts = <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>;
+			phys = <&usbdrd_phy>;
+			phy-names = "usb2drd";
+			extcon = <&usbdrd_phy>;
+			status = "disabled";
 		};
 	};
 };

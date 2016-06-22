@@ -185,3 +185,15 @@
 		groups = "nand_grp";
 	};
 };
+
+&ehci2 {
+	status = "ok";
+};
+
+&ohci2 {
+	status = "ok";
+};
+
+&udc_dwc {
+	status = "ok";
+};
