@@ -239,6 +239,18 @@ config USB_MV_U3D
 	  MARVELL PXA2128 Processor series include a super speed USB3.0 device
 	  controller, which support super speed USB peripheral.
 
+config USB_SNP_UDC
+	tristate "Synopsys USB 2.0 Device controller"
+	select USB_GADGET_DUALSPEED
+	depends on (ARM || ARM64) && USB_GADGET
+	default ARCH_BCM_IPROC
+	help
+	  This adds Device support for Synopsys Designware core
+	  AHB subsystem USB2.0 Device Controller(UDC) .
+
+	  This driver works with Synopsys UDC20 products.
+	  If unsure, say N.
+
 #
 # Controllers available in both integrated and discrete versions
 #
