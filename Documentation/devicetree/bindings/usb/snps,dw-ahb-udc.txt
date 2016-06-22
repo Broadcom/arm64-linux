@@ -1,0 +1,29 @@
+Synopsys USB Device controller.
+
+The device node is used for Synopsys Designware Cores AHB
+Subsystem Device Controller (UDC).
+
+Required properties:
+ - compatible: should be "snps,dw-ahbudc"
+ - reg: Offset and length of UDC register set
+ - interrupts: description of interrupt line
+ - phys: phandle to phy node.
+ - phy-names: name of phy node. Must be usb2drd.
+ - extcon: phandle to the extcon device
+
+Example:
+
+	usbdrd_phy: phy@6501c000 {
+		#phy-cells = <0>;
+		compatible = "brcm,ns2-drd-phy";
+		reg = <0x66000000 0x1000>,
+	}
+
+	udc_dwc: usb@664e0000 {
+		compatible = "snps,dw-ahb-udc";
+		reg = <0x664e0000 0x2000>;
+		interrupts = <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>;
+		phys = <&usbdrd_phy>;
+		phy-names = "usb2drd";
+		extcon = <&usbdrd_phy>";
+	};
