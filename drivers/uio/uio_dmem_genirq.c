@@ -327,7 +327,7 @@ static int uio_dmem_genirq_probe(struct platform_device *pdev)
 			break;
 		}
 
-		uiomem->memtype = UIO_MEM_PHYS;
+		uiomem->memtype = UIO_MEM_DEVICE;
 		uiomem->addr = r->start;
 		uiomem->size = resource_size(r);
 		++uiomem;
@@ -343,7 +343,12 @@ static int uio_dmem_genirq_probe(struct platform_device *pdev)
 					" dynamic and fixed memory regions.\n");
 			break;
 		}
-		uiomem->memtype = UIO_MEM_PHYS;
+
+		if (pdev->dev.of_node &&
+		    of_dma_is_coherent(pdev->dev.of_node))
+			uiomem->memtype = UIO_MEM_PHYS_CACHE;
+		else
+			uiomem->memtype = UIO_MEM_PHYS;
 		uiomem->addr = DMEM_MAP_ERROR;
 		uiomem->size = pdata->dynamic_region_sizes[i];
 		++uiomem;
