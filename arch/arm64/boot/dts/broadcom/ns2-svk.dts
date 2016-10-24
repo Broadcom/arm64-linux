@@ -185,3 +185,7 @@
 		groups = "nand_grp";
 	};
 };
+
+&usbdrd_phy {
+	status = "ok";
+};
