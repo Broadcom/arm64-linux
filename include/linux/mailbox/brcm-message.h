@@ -16,6 +16,7 @@
 
 enum brcm_message_type {
 	BRCM_MESSAGE_UNKNOWN = 0,
+	BRCM_MESSAGE_BATCH,
 	BRCM_MESSAGE_SPU,
 	BRCM_MESSAGE_SBA,
 	BRCM_MESSAGE_MAX,
@@ -29,17 +30,20 @@ struct brcm_sba_command {
 #define BRCM_SBA_CMD_HAS_RESP		BIT(3)
 #define BRCM_SBA_CMD_HAS_OUTPUT		BIT(4)
 	u64 flags;
-	dma_addr_t input;
-	size_t input_len;
 	dma_addr_t resp;
 	size_t resp_len;
-	dma_addr_t output;
-	size_t output_len;
+	dma_addr_t data;
+	size_t data_len;
 };
 
 struct brcm_message {
 	enum brcm_message_type type;
 	union {
+		struct {
+			struct brcm_message *msgs;
+			unsigned int msgs_queued;
+			unsigned int msgs_count;
+		} batch;
 		struct {
 			struct scatterlist *src;
 			struct scatterlist *dst;
