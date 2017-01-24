@@ -1,0 +1,24 @@
+Broadcom IPROC USB Device controller.
+
+The device node is used for UDCs integrated into Broadcom's
+iProc family of SoCs'. The UDC is based on Synopsys Designware
+Cores AHB Subsystem Device Controller.
+
+Required properties:
+ - compatible: should be "brcm,iproc-snps-udc"
+ - reg: Offset and length of UDC register set
+ - interrupts: description of interrupt line
+ - phys: phandle to phy node.
+ - extcon: phandle to the extcon device. This is optional and
+   not required for those that don't require extcon support.
+   Extcon support will be required if the UDC is connected to
+   a Dual Role Device Phy that supports both Host and Device
+   mode based on the external cable.
+
+Example:
+	udc_dwc: usb@664e0000 {
+		compatible = "brcm,iproc-snps-udc";
+		reg = <0x664e0000 0x2000>;
+		interrupts = <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>;
+		phys = <&usbdrd_phy>;
+		extcon = <&usbdrd_phy>";
