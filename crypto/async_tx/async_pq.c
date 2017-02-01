@@ -187,6 +187,9 @@ async_gen_syndrome(struct page **blocks, unsigned int offset, int disks,
 
 	BUG_ON(disks > 255 || !(P(blocks, disks) || Q(blocks, disks)));
 
+	if (device && dma_maxpqcoef(device) < src_cnt)
+		device = NULL;
+
 	if (device)
 		unmap = dmaengine_get_unmap_data(device->dev, disks, GFP_NOWAIT);
 

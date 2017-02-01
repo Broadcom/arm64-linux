@@ -352,6 +352,7 @@ async_raid6_2data_recov(int disks, size_t bytes, int faila, int failb,
 {
 	void *scribble = submit->scribble;
 	int non_zero_srcs, i;
+	struct dma_chan *chan = async_dma_find_channel(DMA_PQ);
 
 	BUG_ON(faila == failb);
 	if (failb < faila)
@@ -359,12 +360,15 @@ async_raid6_2data_recov(int disks, size_t bytes, int faila, int failb,
 
 	pr_debug("%s: disks: %d len: %zu\n", __func__, disks, bytes);
 
+	if (chan && dma_maxpqcoef(chan->device) < RAID6_PQ_MAX_COEF)
+		chan = NULL;
+
 	/* if a dma resource is not available or a scribble buffer is not
 	 * available punt to the synchronous path.  In the 'dma not
 	 * available' case be sure to use the scribble buffer to
 	 * preserve the content of 'blocks' as the caller intended.
 	 */
-	if (!async_dma_find_channel(DMA_PQ) || !scribble) {
+	if (!chan || !scribble) {
 		void **ptrs = scribble ? scribble : (void **) blocks;
 
 		async_tx_quiesce(&submit->depend_tx);
@@ -432,15 +436,19 @@ async_raid6_datap_recov(int disks, size_t bytes, int faila,
 	void *scribble = submit->scribble;
 	int good_srcs, good, i;
 	struct page *srcs[2];
+	struct dma_chan *chan = async_dma_find_channel(DMA_PQ);
 
 	pr_debug("%s: disks: %d len: %zu\n", __func__, disks, bytes);
+
+	if (chan && dma_maxpqcoef(chan->device) < RAID6_PQ_MAX_COEF)
+		chan = NULL;
 
 	/* if a dma resource is not available or a scribble buffer is not
 	 * available punt to the synchronous path.  In the 'dma not
 	 * available' case be sure to use the scribble buffer to
 	 * preserve the content of 'blocks' as the caller intended.
 	 */
-	if (!async_dma_find_channel(DMA_PQ) || !scribble) {
+	if (!chan || !scribble) {
 		void **ptrs = scribble ? scribble : (void **) blocks;
 
 		async_tx_quiesce(&submit->depend_tx);
