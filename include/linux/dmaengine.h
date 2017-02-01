@@ -24,6 +24,7 @@
 #include <linux/scatterlist.h>
 #include <linux/bitmap.h>
 #include <linux/types.h>
+#include <linux/raid/pq.h>
 #include <asm/page.h>
 
 /**
@@ -668,6 +669,7 @@ struct dma_filter {
  * @cap_mask: one or more dma_capability flags
  * @max_xor: maximum number of xor sources, 0 if no capability
  * @max_pq: maximum number of PQ sources and PQ-continue capability
+ * @max_pqcoef: maximum number of PQ coefficients, 0 if all supported
  * @copy_align: alignment shift for memcpy operations
  * @xor_align: alignment shift for xor operations
  * @pq_align: alignment shift for pq operations
@@ -727,11 +729,13 @@ struct dma_device {
 	dma_cap_mask_t  cap_mask;
 	unsigned short max_xor;
 	unsigned short max_pq;
+	unsigned short max_pqcoef;
 	enum dmaengine_alignment copy_align;
 	enum dmaengine_alignment xor_align;
 	enum dmaengine_alignment pq_align;
 	enum dmaengine_alignment fill_align;
 	#define DMA_HAS_PQ_CONTINUE (1 << 15)
+	#define DMA_HAS_FEWER_PQ_COEF (1 << 15)
 
 	int dev_id;
 	struct device *dev;
@@ -1120,6 +1124,21 @@ static inline int dma_maxpq(struct dma_device *dma, enum dma_ctrl_flags flags)
 	else if (dmaf_continue(flags))
 		return dma_dev_to_maxpq(dma) - 3;
 	BUG();
+}
+
+static inline void dma_set_maxpqcoef(struct dma_device *dma,
+				     unsigned short max_pqcoef)
+{
+	if (max_pqcoef < RAID6_PQ_MAX_COEF) {
+		dma->max_pqcoef = max_pqcoef;
+		dma->max_pqcoef |= DMA_HAS_FEWER_PQ_COEF;
+	}
+}
+
+static inline unsigned short dma_maxpqcoef(struct dma_device *dma)
+{
+	return (dma->max_pqcoef & DMA_HAS_FEWER_PQ_COEF) ?
+		(dma->max_pqcoef & ~DMA_HAS_FEWER_PQ_COEF) : RAID6_PQ_MAX_COEF;
 }
 
 static inline size_t dmaengine_get_icg(bool inc, bool sgl, size_t icg,

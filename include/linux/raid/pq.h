@@ -15,6 +15,9 @@
 
 #ifdef __KERNEL__
 
+/* Max number of PQ coefficients */
+#define RAID6_PQ_MAX_COEF 256
+
 /* Set to 1 to use kernel-wide empty_zero_page */
 #define RAID6_USE_EMPTY_ZERO_PAGE 0
 #include <linux/blkdev.h>
