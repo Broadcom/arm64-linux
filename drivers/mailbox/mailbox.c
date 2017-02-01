@@ -281,6 +281,27 @@ int mbox_send_message(struct mbox_chan *chan, void *mssg)
 EXPORT_SYMBOL_GPL(mbox_send_message);
 
 /**
+ * mbox_channel_device - Get device pointer of a mailbox channel.
+ * @chan: Mailbox channel assigned to this client.
+ *
+ * The remote processor can have DMAENGINE capabilities and client
+ * can pass data to be processed via main memory. In such cases,
+ * the client will require struct device pointer of the mailbox
+ * channel to map/unmap/allocate/free DMAble memory.
+ *
+ * Return: Pointer to the struct device of mailbox channel.
+ *	   ERR_PTR on failure.
+ */
+struct device *mbox_channel_device(struct mbox_chan *chan)
+{
+	if (!chan || !chan->cl)
+		return ERR_PTR(-EINVAL);
+
+	return chan->mbox->dev;
+}
+EXPORT_SYMBOL_GPL(mbox_channel_device);
+
+/**
  * mbox_request_channel - Request a mailbox channel.
  * @cl: Identity of the client requesting the channel.
  * @index: Index of mailbox specifier in 'mboxes' property.
