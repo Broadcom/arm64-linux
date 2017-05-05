@@ -255,6 +255,8 @@
 		#size-cells = <1>;
 		ranges = <0 0 0 0xffffffff>;
 
+		#include "stingray-clock.dtsi"
+
 		uart0: uart@68a00000 {
 			device_type = "serial";
 			compatible = "snps,dw-apb-uart";
