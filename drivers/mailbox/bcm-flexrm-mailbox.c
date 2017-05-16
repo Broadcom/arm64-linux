@@ -1479,8 +1479,8 @@ static int flexrm_mbox_probe(struct platform_device *pdev)
 		ring->cmpl_read_offset = 0;
 	}
 
-	/* FlexRM is capable of 40-bit physical addresses only */
-	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(40));
+	/* FlexRM is capable of 39-bit physical addresses only */
+	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(39));
 	if (ret) {
 		ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
 		if (ret)
