@@ -34,7 +34,7 @@ static int add_to_rbuf(struct mbox_chan *chan, void *mssg)
 	spin_lock_irqsave(&chan->lock, flags);
 
 	/* See if there is any space left */
-	if (chan->msg_count == MBOX_TX_QUEUE_LEN) {
+	if (chan->msg_count == chan->msg_queue_len) {
 		spin_unlock_irqrestore(&chan->lock, flags);
 		return -ENOBUFS;
 	}
@@ -43,7 +43,7 @@ static int add_to_rbuf(struct mbox_chan *chan, void *mssg)
 	chan->msg_data[idx] = mssg;
 	chan->msg_count++;
 
-	if (idx == MBOX_TX_QUEUE_LEN - 1)
+	if (idx == chan->msg_queue_len - 1)
 		chan->msg_free = 0;
 	else
 		chan->msg_free++;
@@ -70,7 +70,7 @@ static void msg_submit(struct mbox_chan *chan)
 	if (idx >= count)
 		idx -= count;
 	else
-		idx += MBOX_TX_QUEUE_LEN - count;
+		idx += chan->msg_queue_len - count;
 
 	data = chan->msg_data[idx];
 
@@ -346,6 +346,12 @@ struct mbox_chan *mbox_request_channel(struct mbox_client *cl, int index)
 	spin_lock_irqsave(&chan->lock, flags);
 	chan->msg_free = 0;
 	chan->msg_count = 0;
+	chan->msg_data = kcalloc(chan->msg_queue_len,
+				 sizeof(void *), GFP_ATOMIC);
+	if (!chan->msg_data) {
+		spin_unlock_irqrestore(&chan->lock, flags);
+		return ERR_PTR(-ENOMEM);
+	}
 	chan->active_req = NULL;
 	chan->cl = cl;
 	init_completion(&chan->tx_complete);
@@ -420,6 +426,7 @@ void mbox_free_channel(struct mbox_chan *chan)
 	chan->active_req = NULL;
 	if (chan->txdone_method == (TXDONE_BY_POLL | TXDONE_BY_ACK))
 		chan->txdone_method = TXDONE_BY_POLL;
+	kfree(chan->msg_data);
 
 	module_put(chan->mbox->dev->driver->owner);
 	spin_unlock_irqrestore(&chan->lock, flags);
@@ -477,6 +484,8 @@ int mbox_controller_register(struct mbox_controller *mbox)
 		chan->cl = NULL;
 		chan->mbox = mbox;
 		chan->txdone_method = txdone;
+		if (chan->msg_queue_len < MBOX_TX_QUEUE_LEN)
+			chan->msg_queue_len = MBOX_TX_QUEUE_LEN;
 		spin_lock_init(&chan->lock);
 	}
 
