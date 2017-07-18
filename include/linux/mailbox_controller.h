@@ -110,6 +110,7 @@ struct mbox_controller {
  * @active_req:		Currently active request hook
  * @msg_count:		No. of mssg currently queued
  * @msg_free:		Index of next available mssg slot
+ * @msg_queue_len:	Max number of mssg which can be queued
  * @msg_data:		Hook for data packet
  * @lock:		Serialise access to the channel
  * @con_priv:		Hook for controller driver to attach private data
@@ -120,8 +121,8 @@ struct mbox_chan {
 	struct mbox_client *cl;
 	struct completion tx_complete;
 	void *active_req;
-	unsigned msg_count, msg_free;
-	void *msg_data[MBOX_TX_QUEUE_LEN];
+	unsigned int msg_count, msg_free, msg_queue_len;
+	void **msg_data;
 	spinlock_t lock; /* Serialise access to the channel */
 	void *con_priv;
 };
