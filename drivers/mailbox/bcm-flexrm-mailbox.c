@@ -1683,8 +1683,11 @@ skip_debugfs:
 		ret = -ENOMEM;
 		goto fail_free_debugfs_root;
 	}
-	for (index = 0; index < mbox->num_rings; index++)
+	for (index = 0; index < mbox->num_rings; index++) {
+		mbox->controller.chans[index].msg_queue_len =
+						RING_MAX_REQ_COUNT;
 		mbox->controller.chans[index].con_priv = &mbox->rings[index];
+	}
 
 	/* Register mailbox controller */
 	ret = mbox_controller_register(&mbox->controller);
