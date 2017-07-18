@@ -261,6 +261,8 @@
 		};
 	};
 
+	#include "stingray-fs4.dtsi"
+
 	hsls {
 		compatible = "simple-bus";
 		#address-cells = <1>;
