@@ -124,11 +124,10 @@ struct iommu_group *vfio_iommu_group_get(struct device *dev)
 #ifdef CONFIG_VFIO_NOIOMMU
 	/*
 	 * With noiommu enabled, an IOMMU group will be created for a device
-	 * that doesn't already have one and doesn't have an iommu_ops on their
-	 * bus.  We set iommudata simply to be able to identify these groups
-	 * as special use and for reclamation later.
+	 * that doesn't already have one.  We set iommudata simply to be able
+	 * to identify these groups as special use and for reclamation later.
 	 */
-	if (group || !noiommu || iommu_present(dev->bus))
+	if (group || !noiommu)
 		return group;
 
 	group = iommu_group_alloc();
