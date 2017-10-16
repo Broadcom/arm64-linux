@@ -1,6 +1,20 @@
 #
 # Phy drivers for Broadcom platforms
 #
+config PHY_BCM_CYGNUS_USB
+	tristate "Broadcom Cygnus USB PHY support"
+	depends on OF
+	depends on ARCH_BCM_CYGNUS || COMPILE_TEST
+	select GENERIC_PHY
+	select EXTCON_USB_GPIO
+	default ARCH_BCM_CYGNUS
+	help
+	  Enable this to support three USB PHY's present in Broadcom's
+	  Cygnus chip.
+
+	  The phys are capable of supporting host mode on all ports and
+	  device mode for port 2.
+
 config PHY_CYGNUS_PCIE
 	tristate "Broadcom Cygnus PCIe PHY driver"
 	depends on OF && (ARCH_BCM_CYGNUS || COMPILE_TEST)
