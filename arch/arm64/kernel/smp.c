@@ -822,8 +822,13 @@ static void ipi_cpu_stop(unsigned int cpu)
 	local_daif_mask();
 	sdei_mask_local_cpu();
 
+#ifdef CONFIG_HOTPLUG_CPU
+	if (cpu_ops[cpu]->cpu_die)
+		cpu_ops[cpu]->cpu_die(cpu);
+#else
 	while (1)
 		cpu_relax();
+#endif
 }
 
 #ifdef CONFIG_KEXEC_CORE
