@@ -18,6 +18,8 @@ Required properties:
 
 Optional properties:
 - interrupts : Should specify WDT interrupt number.
+timeout-sec : Should specify default WDT timeout in seconds. If unset, the
+              default timeout in the driver is 30 seconds
 
 Example:
 	watchdog@66090000 {
