@@ -116,9 +116,14 @@
 		reg = <0 0x20020000 0 0x1000>;
 		dma-coherent;
 
+		interrupt-controller;
 		#interrupt-cells = <1>;
-		interrupt-map-mask = <0 0 0 0>;
-		interrupt-map = <0 0 0 0 &gic 0 GIC_SPI 281 IRQ_TYPE_NONE>;
+		interrupt-map-mask = <0 0 0 7>;
+		interrupt-map = <0 0 0 1 &pcie0 1>,
+				<0 0 0 2 &pcie0 2>,
+				<0 0 0 3 &pcie0 3>,
+				<0 0 0 4 &pcie0 4>;
+		interrupts = <GIC_SPI 281 IRQ_TYPE_NONE>;
 
 		linux,pci-domain = <0>;
 
@@ -147,9 +152,14 @@
 		reg = <0 0x50020000 0 0x1000>;
 		dma-coherent;
 
+		interrupt-controller;
 		#interrupt-cells = <1>;
-		interrupt-map-mask = <0 0 0 0>;
-		interrupt-map = <0 0 0 0 &gic 0 GIC_SPI 305 IRQ_TYPE_NONE>;
+		interrupt-map-mask = <0 0 0 7>;
+		interrupt-map = <0 0 0 1 &pcie4 1>,
+				<0 0 0 2 &pcie4 2>,
+				<0 0 0 3 &pcie4 3>,
+				<0 0 0 4 &pcie4 4>;
+		interrupts = <GIC_SPI 305 IRQ_TYPE_NONE>;
 
 		linux,pci-domain = <4>;
 
@@ -169,7 +179,6 @@
 
 		phys = <&pci_phy1>;
 		phy-names = "pcie-phy";
-
 		msi-parent = <&v2m0>;
 	};
 
