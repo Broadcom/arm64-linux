@@ -70,6 +70,8 @@ static int iproc_pcie_pltfm_probe(struct platform_device *pdev)
 	}
 	pcie->base_addr = reg.start;
 
+	pcie->irq = platform_get_irq(pdev, 0);
+
 	if (of_property_read_bool(np, "brcm,pcie-ob")) {
 		u32 val;
 
