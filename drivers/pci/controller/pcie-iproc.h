@@ -124,4 +124,12 @@ static inline void iproc_msi_exit(struct iproc_pcie *pcie)
 }
 #endif
 
+int iproc_pcie_rev_init(struct iproc_pcie *pcie);
+void __iomem *iproc_pcie_bus_map_cfg_bus(struct pci_bus *bus,
+					 unsigned int devfn, int where);
+int iproc_pcie_config_read32(struct pci_bus *bus, unsigned int devfn,
+			     int where, int size, u32 *val);
+int iproc_pcie_config_write32(struct pci_bus *bus, unsigned int devfn,
+			      int where, int size, u32 val);
+
 #endif /* _PCIE_IPROC_H */

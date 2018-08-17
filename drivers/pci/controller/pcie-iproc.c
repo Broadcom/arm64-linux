@@ -4,6 +4,7 @@
  * Copyright (C) 2015 Broadcom Corporation
  */
 
+#include <linux/acpi.h>
 #include <linux/kernel.h>
 #include <linux/pci.h>
 #include <linux/msi.h>
@@ -14,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/irqchip/arm-gic-v3.h>
+#include <linux/pci-ecam.h>
 #include <linux/platform_device.h>
 #include <linux/of_address.h>
 #include <linux/of_pci.h>
@@ -390,7 +392,16 @@ static const u16 iproc_pcie_corrupt_cap_did[] = {
 
 static inline struct iproc_pcie *iproc_data(struct pci_bus *bus)
 {
-	struct iproc_pcie *pcie = bus->sysdata;
+	struct iproc_pcie *pcie;
+	struct pci_config_window *cfg;
+
+	if (acpi_disabled) {
+		pcie = bus->sysdata;
+	} else {
+		cfg = bus->sysdata;
+		pcie = cfg->priv;
+	}
+
 	return pcie;
 }
 
@@ -633,9 +644,9 @@ static void __iomem *iproc_pcie_map_cfg_bus(struct iproc_pcie *pcie,
 	return iproc_pcie_map_ep_cfg_reg(pcie, busno, slot, fn, where);
 }
 
-static void __iomem *iproc_pcie_bus_map_cfg_bus(struct pci_bus *bus,
-						unsigned int devfn,
-						int where)
+void __iomem *iproc_pcie_bus_map_cfg_bus(struct pci_bus *bus,
+					 unsigned int devfn,
+					 int where)
 {
 	return iproc_pcie_map_cfg_bus(iproc_data(bus), bus->number, devfn,
 				      where);
@@ -685,8 +696,8 @@ static int iproc_pci_raw_config_write32(struct iproc_pcie *pcie,
 	return PCIBIOS_SUCCESSFUL;
 }
 
-static int iproc_pcie_config_read32(struct pci_bus *bus, unsigned int devfn,
-				    int where, int size, u32 *val)
+int iproc_pcie_config_read32(struct pci_bus *bus, unsigned int devfn,
+			     int where, int size, u32 *val)
 {
 	int ret;
 	struct iproc_pcie *pcie = iproc_data(bus);
@@ -701,8 +712,8 @@ static int iproc_pcie_config_read32(struct pci_bus *bus, unsigned int devfn,
 	return ret;
 }
 
-static int iproc_pcie_config_write32(struct pci_bus *bus, unsigned int devfn,
-				     int where, int size, u32 val)
+int iproc_pcie_config_write32(struct pci_bus *bus, unsigned int devfn,
+			      int where, int size, u32 val)
 {
 	int ret;
 
@@ -1335,7 +1346,7 @@ static void iproc_pcie_msi_disable(struct iproc_pcie *pcie)
 	iproc_msi_exit(pcie);
 }
 
-static int iproc_pcie_rev_init(struct iproc_pcie *pcie)
+int iproc_pcie_rev_init(struct iproc_pcie *pcie)
 {
 	struct device *dev = pcie->dev;
 	unsigned int reg_idx;
