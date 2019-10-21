@@ -1,0 +1,44 @@
+Broadcom iProc Interconnect Device Management (IDM) device
+
+The Broadcom iProc IDM device allows control and monitoring of ASIC internal
+bus transactions. Most importantly, it can be configured to detect bus
+transaction timeout. In such case, critical information such as transaction
+address that caused the error, bus master ID of the transaction that caused
+the error, and etc., are made available from the IDM device.
+
+-------------------------------------------------------------------------------
+
+Required properties for IDM device node:
+- compatible: must be "brcm,iproc-idm"
+- reg: base address and length of the IDM register space
+- interrupt: IDM interrupt number
+- brcm,iproc-idm-bus: IDM bus string
+
+Optional properties for IDM device node:
+- brcm,iproc-idm-elog: phandle to the device node of the IDM logging device
+
+-------------------------------------------------------------------------------
+
+Required properties for IDM error logging device node:
+- compatible: must be "brcm,iproc-idm-elog";
+- reg: base address and length of reserved memory location where IDM error
+  events can be saved
+
+-------------------------------------------------------------------------------
+
+Example:
+
+idm {
+	idm-elog {
+		compatible = "brcm,iproc-idm-elog";
+		reg = <0x8f221000 0x1000>;
+	};
+
+	idm-mhb-paxc-axi {
+		compatible = "brcm,iproc-idm";
+		reg = <0x60406900 0x200>;
+		interrupt = <GIC_SPI 516 IRQ_TYPE_LEVEL_HIGH>;
+		brcm,iproc-idm-bus = "idm-mhb-paxc-axi";
+		brcm,iproc-idm-elog = <&idm-elog>;
+	};
+};
